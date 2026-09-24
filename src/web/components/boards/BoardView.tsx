@@ -25,7 +25,6 @@ import {
 } from 'lucide-react'
 import {
   useBoard,
-  useCreateCard,
   useCreateColumn,
   useDeleteBoard,
   useDeleteColumn,
@@ -34,6 +33,7 @@ import {
   useUpdateColumn,
 } from '../../lib/queries'
 import { CardPanel } from './CardPanel'
+import { QuickAddCard } from './QuickAddCard'
 import { useNavigate } from '@tanstack/react-router'
 
 interface BoardViewProps {
@@ -181,30 +181,23 @@ function CardTile({
 
 function ColumnComponent({
   column,
+  boardId,
+  projectId,
   onCardClick,
   onDeleteColumn,
   onRenameColumn,
-  onAddCard,
 }: {
   column: ColumnItem
+  boardId: string
+  projectId: string
   onCardClick: (cardId: string) => void
   onDeleteColumn: (columnId: string, cardCount: number) => void
   onRenameColumn: (columnId: string, currentName: string) => void
-  onAddCard: (columnId: string, title: string) => void
 }) {
   const [isAdding, setIsAdding] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
   const [showMenu, setShowMenu] = useState(false)
 
   const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards])
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTitle.trim()) return
-    onAddCard(column.id, newTitle.trim())
-    setNewTitle('')
-    setIsAdding(false)
-  }
 
   return (
     <div className="w-72 shrink-0 bg-neutral-100/60 dark:bg-neutral-900/40 rounded-2xl p-3 flex flex-col max-h-full border border-neutral-200/50 dark:border-neutral-800/50">
@@ -276,34 +269,12 @@ function ColumnComponent({
       {/* Add Card Bottom Button / Form */}
       <div className="mt-2 pt-1 border-t border-neutral-200/40 dark:border-neutral-800/40">
         {isAdding ? (
-          <form onSubmit={handleCreate} className="space-y-1.5">
-            <input
-              type="text"
-              autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="What needs to be done?"
-              className="w-full p-2 text-xs rounded-xl bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <div className="flex items-center gap-1.5">
-              <button
-                type="submit"
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Add card
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdding(false)
-                  setNewTitle('')
-                }}
-                className="px-2.5 py-1 text-xs rounded-lg text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-800"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          <QuickAddCard
+            boardId={boardId}
+            columnId={column.id}
+            projectId={projectId}
+            onClose={() => setIsAdding(false)}
+          />
         ) : (
           <button
             onClick={() => setIsAdding(true)}
@@ -321,7 +292,6 @@ function ColumnComponent({
 export function BoardView({ boardId, projectId }: BoardViewProps) {
   const navigate = useNavigate()
   const { data: board, isLoading } = useBoard(boardId)
-  const createCardMutation = useCreateCard()
   const moveCardMutation = useMoveCard()
   const createColumnMutation = useCreateColumn()
   const updateColumnMutation = useUpdateColumn()
@@ -558,10 +528,11 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
             <ColumnComponent
               key={column.id}
               column={column}
+              boardId={boardId}
+              projectId={projectId}
               onCardClick={(id) => setSelectedCardId(id)}
               onDeleteColumn={handleDeleteColumn}
               onRenameColumn={handleRenameColumn}
-              onAddCard={handleAddCard}
             />
           ))}
 

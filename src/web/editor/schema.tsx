@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   BlockNoteSchema,
   defaultBlockSpecs,
@@ -72,6 +73,60 @@ export const Mention = createReactInlineContentSpec(
 )
 
 /**
+function LiveNotepadLink({ notepadId }: { notepadId: string }) {
+  const [data, setData] = useState<{ title: string; icon?: string | null; deleted: boolean } | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/notepads/${notepadId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error()
+        return res.json()
+      })
+      .then((json: any) => setData({ title: json.title, icon: json.icon, deleted: !!json.deletedAt }))
+      .catch(() => setData({ title: 'Deleted Notepad', deleted: true }))
+  }, [notepadId])
+
+  if (!data) {
+    return (
+      <div className="my-2 p-2.5 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 flex items-center gap-2 text-xs text-neutral-400">
+        <FileText className="w-3.5 h-3.5 text-purple-400" />
+        <span>Loading notepad…</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onClick={() => {
+        if (!data.deleted) {
+          const pid = window.location.pathname.split('/')[2]
+          if (pid) {
+            window.location.href = `/p/${pid}/notepads/${notepadId}`
+          }
+        }
+      }}
+      className={`my-2 p-3 border rounded-xl flex items-center justify-between gap-3 text-sm transition cursor-pointer select-none ${
+        data.deleted
+          ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/30 text-neutral-400 opacity-70'
+          : 'border-purple-200/80 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/20 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs'
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="text-base">{data.icon || '📄'}</span>
+        <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+          {data.title || 'Untitled'}
+        </span>
+      </div>
+      {data.deleted && (
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500">
+          Deleted
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
  * Custom block for notepadLink.
  */
 export const NotepadLinkBlock = createReactBlockSpec(
@@ -85,20 +140,85 @@ export const NotepadLinkBlock = createReactBlockSpec(
   {
     render: (props) => {
       const { notepadId } = props.block.props
-      return (
-        <div className="my-2 p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 flex items-center justify-between gap-3 text-sm hover:border-neutral-300 dark:hover:border-neutral-700 transition">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-purple-500 shrink-0" />
-            <span className="font-medium text-neutral-800 dark:text-neutral-200">
-              Linked Notepad
-            </span>
-          </div>
-          <span className="text-xs font-mono text-neutral-400">{notepadId}</span>
-        </div>
-      )
+      return <LiveNotepadLink notepadId={notepadId} />
     },
   },
 )
+
+function LiveCardLink({ cardId }: { cardId: string }) {
+  const [data, setData] = useState<{
+    title: string
+    boardName: string
+    columnName: string
+    priority?: string | null
+    deleted: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/cards/summary?ids=${cardId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error()
+        return res.json()
+      })
+      .then((list: any[]) => {
+        if (list.length > 0) {
+          const item = list[0]
+          setData({
+            title: item.title,
+            boardName: item.boardName,
+            columnName: item.columnName,
+            priority: item.priority,
+            deleted: false,
+          })
+        } else {
+          setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true })
+        }
+      })
+      .catch(() => setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true }))
+  }, [cardId])
+
+  if (!data) {
+    return (
+      <div className="my-2 p-2.5 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 flex items-center gap-2 text-xs text-neutral-400">
+        <Kanban className="w-3.5 h-3.5 text-emerald-400" />
+        <span>Loading task card…</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`my-2 p-3 border rounded-xl flex items-center justify-between gap-3 text-sm transition select-none ${
+        data.deleted
+          ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/30 text-neutral-400 opacity-70'
+          : 'border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/20 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs'
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <Kanban className="w-4 h-4 text-emerald-500 shrink-0" />
+        <div>
+          <div className="font-semibold text-neutral-800 dark:text-neutral-200">
+            {data.title || 'Untitled'}
+          </div>
+          {!data.deleted && (
+            <div className="text-[11px] text-neutral-400">
+              {data.boardName} &bull; {data.columnName}
+            </div>
+          )}
+        </div>
+      </div>
+      {data.deleted ? (
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500">
+          Deleted
+        </span>
+      ) : data.priority ? (
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+          {data.priority}
+        </span>
+      ) : null}
+    </div>
+  )
+}
 
 /**
  * Custom block for cardLink.
@@ -114,17 +234,7 @@ export const CardLinkBlock = createReactBlockSpec(
   {
     render: (props) => {
       const { cardId } = props.block.props
-      return (
-        <div className="my-2 p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 flex items-center justify-between gap-3 text-sm hover:border-neutral-300 dark:hover:border-neutral-700 transition">
-          <div className="flex items-center gap-2">
-            <Kanban className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="font-medium text-neutral-800 dark:text-neutral-200">
-              Linked Task Card
-            </span>
-          </div>
-          <span className="text-xs font-mono text-neutral-400">{cardId}</span>
-        </div>
-      )
+      return <LiveCardLink cardId={cardId} />
     },
   },
 )

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useCreateBlockNote } from '@blocknote/react'
+import {
+  getDefaultReactSlashMenuItems,
+  SuggestionMenuController,
+  useCreateBlockNote,
+} from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import '@blocknote/shadcn/style.css'
 import { nanoid } from 'nanoid'
@@ -12,6 +16,13 @@ import {
   Star,
 } from 'lucide-react'
 import { schema } from './schema'
+import {
+  getAtMenuSuggestions,
+  getCustomSlashItems,
+  getHashMenuSuggestions,
+  type SuggestionDialogState,
+} from './suggestionItems'
+import { NotepadPickerModal, TaskPickerModal } from './ReferenceDialogs'
 
 interface NotepadEditorProps {
   notepadId: string
@@ -21,6 +32,8 @@ interface NotepadEditorProps {
 
 interface NotepadData {
   id: string
+  projectId: string
+  kind: 'notepad' | 'card'
   title: string
   icon?: string | null
   coverKey?: string | null
@@ -43,6 +56,7 @@ export function NotepadEditor({
   const [lockBanner, setLockBanner] = useState<{ holderName: string } | null>(null)
   const [conflictBanner, setConflictBanner] = useState(false)
   const [showBacklinks, setShowBacklinks] = useState(true)
+  const [dialogState, setDialogState] = useState<SuggestionDialogState>({ type: null })
 
   const clientIdRef = useRef(nanoid())
   const currentVersionRef = useRef(1)
@@ -345,15 +359,104 @@ export function NotepadEditor({
           <BlockNoteView
             editor={editor}
             editable={isEditable}
+            slashMenu={false}
             theme={
               typeof document !== 'undefined' &&
               document.documentElement.classList.contains('dark')
                 ? 'dark'
                 : 'light'
             }
-          />
+          >
+            {/* Custom Slash Menu */}
+            <SuggestionMenuController
+              triggerCharacter="/"
+              getItems={async (query) => {
+                const defaultItems = getDefaultReactSlashMenuItems(editor)
+                const customItems = getCustomSlashItems(
+                  editor,
+                  data?.kind === 'card' ? 'card' : 'notepad',
+                  data?.projectId || '',
+                  setDialogState,
+                )
+                const all = [...customItems, ...defaultItems]
+                const q = query.toLowerCase()
+                return all.filter(
+                  (item) =>
+                    item.title.toLowerCase().includes(q) ||
+                    item.aliases?.some((a) => a.toLowerCase().includes(q)),
+                )
+              }}
+            />
+
+            {/* At (@) Menu: People, Notepads, Cards, Dates */}
+            <SuggestionMenuController
+              triggerCharacter="@"
+              getItems={async (query) => {
+                return getAtMenuSuggestions(query, data?.projectId || '', editor)
+              }}
+            />
+
+            {/* Hash (#) Menu: Project Tags */}
+            <SuggestionMenuController
+              triggerCharacter="#"
+              getItems={async (query) => {
+                return getHashMenuSuggestions(
+                  query,
+                  data?.projectId || '',
+                  notepadId,
+                  editor,
+                  async (tagId) => {
+                    const currentTags = data?.tags.map((t) => t.id) || []
+                    if (!currentTags.includes(tagId)) {
+                      await fetch(`/api/notepads/${notepadId}/tags`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tagIds: [...currentTags, tagId] }),
+                      })
+                      loadNotepad()
+                    }
+                  },
+                )
+              }}
+            />
+          </BlockNoteView>
         )}
       </div>
+
+      {/* Reference Dialogs: /notepad and /task */}
+      {dialogState.type === 'notepad' && data?.projectId && (
+        <NotepadPickerModal
+          projectId={data.projectId}
+          onClose={() => setDialogState({ type: null })}
+          onSelectNotepad={(selectedId) => {
+            if (editor) {
+              const currentBlock = editor.getTextCursorPosition().block
+              editor.insertBlocks(
+                [{ type: 'notepadLink', props: { notepadId: selectedId } }],
+                currentBlock,
+                'after',
+              )
+            }
+          }}
+        />
+      )}
+
+      {dialogState.type === 'task' && data?.projectId && (
+        <TaskPickerModal
+          projectId={data.projectId}
+          onClose={() => setDialogState({ type: null })}
+          onCardCreated={(createdCardId) => {
+            if (editor) {
+              const currentBlock = editor.getTextCursorPosition().block
+              editor.insertBlocks(
+                [{ type: 'cardLink', props: { cardId: createdCardId } }],
+                currentBlock,
+                'after',
+              )
+            }
+          }}
+        />
+      )}
 
       {/* Backlinks Section */}
       {data && data.backlinks && data.backlinks.length > 0 && (

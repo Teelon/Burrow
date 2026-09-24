@@ -12,6 +12,7 @@ import { filesRoutes } from './routes/files'
 import { boardsRoutes } from './routes/boards'
 import { columnsRoutes } from './routes/columns'
 import { cardsRoutes } from './routes/cards'
+import { suggestRoutes } from './routes/suggest'
 
 /**
  * NOTE (Hono RPC): route registration returns a NEW type; a plain
@@ -32,6 +33,7 @@ export const app = new Hono<Env>()
   .route('', boardsRoutes)
   .route('', columnsRoutes)
   .route('', cardsRoutes)
+  .route('', suggestRoutes)
   .onError((err, c) => {
     if (isHttpError(err)) {
       return c.json(
