@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
+import type { IStorageAdapter } from '../adapters/storage/types'
 import type { DB } from '../db/client'
 import * as t from '../db/schema'
 import { extractFromContent, extractPlainText } from '../../shared/extract'
@@ -29,6 +30,7 @@ import {
   wouldCauseCycle,
 } from '../lib/tree'
 import { chunkByParamBudget } from '../lib/chunk'
+import { SqlLockAdapter } from '../adapters/lock/sql-lock'
 
 /** Root notepads are depth 1; reject anything deeper than 8 (PLAN.md section 6). */
 export const MAX_NOTEPAD_DEPTH = 8
@@ -398,7 +400,7 @@ export async function restoreNotepad(db: DB, args: RestoreNotepadArgs) {
 export interface PermanentDeleteNotepadArgs {
   workspaceId: string
   notepadId: string
-  filesBucket?: R2Bucket | null
+  storage?: IStorageAdapter | null
 }
 
 export async function permanentDeleteNotepad(
@@ -445,9 +447,9 @@ export async function permanentDeleteNotepad(
 
   await runBatch(db, statements)
 
-  if (args.filesBucket && r2Keys.length > 0) {
+  if (args.storage && r2Keys.length > 0) {
     try {
-      await Promise.allSettled(r2Keys.map((k) => args.filesBucket!.delete(k)))
+      await Promise.allSettled(r2Keys.map((k) => args.storage!.delete(k)))
     } catch (err) {
       console.warn('R2 cleanup error', err)
     }
@@ -657,75 +659,48 @@ export interface ClaimLockArgs {
   takeover?: boolean
 }
 
+/** Rolling edit-lock window (ms). Passed as ttlMs to the lock adapter. */
+export const LOCK_TTL_MS = 60_000
+
 export async function claimLock(db: DB, args: ClaimLockArgs) {
-  const now = Date.now()
-  const expiresAt = now + 60_000 // 60-second rolling window
+  const adapter = new SqlLockAdapter(db, async (userId) => {
+    const [holder] = await db
+      .select({ name: t.user.name })
+      .from(t.user)
+      .where(eq(t.user.id, userId))
+    return holder?.name ?? null
+  })
 
-  const [existingLock] = await db
-    .select()
-    .from(t.editLocks)
-    .where(eq(t.editLocks.notepadId, args.notepadId))
+  const result = await adapter.acquire(
+    args.notepadId,
+    args.userId,
+    args.clientId,
+    LOCK_TTL_MS,
+    { takeover: args.takeover },
+  )
 
-  if (
-    existingLock &&
-    existingLock.expiresAt > now &&
-    (existingLock.userId !== args.userId || existingLock.clientId !== args.clientId)
-  ) {
-    if (existingLock.userId === args.userId && args.takeover) {
-      // Allowed: same user taking over lock from another tab or window
-    } else {
-      const [holder] = await db
-        .select({ name: t.user.name })
-        .from(t.user)
-        .where(eq(t.user.id, existingLock.userId))
-
-      throw new HttpError(
-        409,
-        'locked',
-        JSON.stringify({
-          code: 'locked',
-          holder: {
-            userId: existingLock.userId,
-            name: holder?.name || 'Someone',
-            isMe: existingLock.userId === args.userId,
-          },
-          expiresAt: existingLock.expiresAt,
-        }),
-      )
-    }
+  if (!result.acquired) {
+    throw new HttpError(
+      409,
+      'locked',
+      JSON.stringify({
+        code: 'locked',
+        holder: {
+          userId: result.holderUserId,
+          name: result.holderName || 'Someone',
+          isMe: result.holderUserId === args.userId,
+        },
+        expiresAt: result.expiresAt,
+      }),
+    )
   }
 
-  // Atomic claim / upsert
-  await db
-    .insert(t.editLocks)
-    .values({
-      notepadId: args.notepadId,
-      userId: args.userId,
-      clientId: args.clientId,
-      expiresAt,
-    })
-    .onConflictDoUpdate({
-      target: t.editLocks.notepadId,
-      set: {
-        userId: args.userId,
-        clientId: args.clientId,
-        expiresAt,
-      },
-    })
-
-  return { expiresAt }
+  return { expiresAt: result.expiresAt! }
 }
 
 export async function releaseLock(db: DB, args: ClaimLockArgs) {
-  await db
-    .delete(t.editLocks)
-    .where(
-      and(
-        eq(t.editLocks.notepadId, args.notepadId),
-        eq(t.editLocks.userId, args.userId),
-        eq(t.editLocks.clientId, args.clientId),
-      ),
-    )
+  const adapter = new SqlLockAdapter(db)
+  await adapter.release(args.notepadId, args.clientId, { userId: args.userId })
 }
 
 // ---------------------------------------------------------------------------

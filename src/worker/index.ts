@@ -1,59 +1,41 @@
-import { Hono } from 'hono'
+import { createCoreApp } from '../core/app'
+import { createD1Infrastructure } from '../core/adapters/db/d1'
+import { createDb } from './db/client'
 import type { Env } from './env'
-import { httpError, isHttpError } from './lib/errors'
-import { bodyLimit, securityHeaders } from './middleware/security'
-import { sessionMiddleware } from './middleware/session'
-import { authRoutes } from './routes/auth'
-import { membersRoutes } from './routes/members'
-import { invitesRoutes } from './routes/invites'
-import { projectsRoutes } from './routes/projects'
-import { notepadsRoutes } from './routes/notepads'
-import { filesRoutes } from './routes/files'
-import { boardsRoutes } from './routes/boards'
-import { columnsRoutes } from './routes/columns'
-import { cardsRoutes } from './routes/cards'
-import { suggestRoutes } from './routes/suggest'
-import { notificationsRoutes } from './routes/notifications'
-import { tagsRoutes } from './routes/tags'
-import { searchRoutes } from './routes/search'
+import type { Hono } from 'hono'
+import type { ExecutionContext } from 'hono'
 
 /**
- * NOTE (Hono RPC): route registration returns a NEW type; a plain
- * `const app = new Hono(); app.get(...)` would export a schema-less app type
- * and the typed client (`hc`) would collapse to `unknown`. Always chain.
+ * Type for Cloudflare Workers fetch handler with environment bindings.
  */
-export const app = new Hono<Env>()
-  .use('*', securityHeaders)
-  .use('/api/*', bodyLimit())
-  .use('/api/*', sessionMiddleware)
-  .get('/api/health', (c) => c.json({ ok: true, now: Date.now() }))
-  .route('', authRoutes)
-  .route('', membersRoutes)
-  .route('', invitesRoutes)
-  .route('', projectsRoutes)
-  .route('', notepadsRoutes)
-  .route('', filesRoutes)
-  .route('', boardsRoutes)
-  .route('', columnsRoutes)
-  .route('', cardsRoutes)
-  .route('', suggestRoutes)
-  .route('', notificationsRoutes)
-  .route('', tagsRoutes)
-  .route('', searchRoutes)
-  .onError((err, c) => {
-    if (isHttpError(err)) {
-      return c.json(
-        { error: { code: err.code, message: err.message } },
-        err.status,
-      )
-    }
-    console.error('unhandled error', err)
-    return httpError(c, 500, 'internal_error', 'Internal server error')
+type ExportedHandler<Env> = {
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response>
+}
+
+/**
+ * Create the Hono app for a given Worker environment.
+ * Used by tests and the production fetch handler.
+ */
+export function createWorkerApp(env: Env['Bindings']): Hono<any, any, any> {
+  const infra = createD1Infrastructure(createDb(env.DB), {
+    FILES: env.FILES,
+    BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: env.BETTER_AUTH_URL,
+    BOOTSTRAP_TOKEN: env.BOOTSTRAP_TOKEN,
   })
-  .notFound((c) =>
-    c.json({ error: { code: 'not_found', message: 'Not found' } }, 404),
-  )
+  return createCoreApp(infra)
+}
 
-export type AppType = typeof app
+/**
+ * Worker entrypoint - creates the app with D1 infrastructure from Cloudflare bindings.
+ * The infrastructure is created per-request since bindings come from the fetch handler.
+ */
+export default {
+  async fetch(request: Request, env: Env['Bindings'], ctx: ExecutionContext): Promise<Response> {
+    const app = createWorkerApp(env)
+    return app.fetch(request, env, ctx)
+  },
+} satisfies ExportedHandler<Env['Bindings']>
 
-export default app
+// Re-export AppType for Hono RPC clients (web frontend)
+export type { AppType } from './types-app'

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import type { IStorageAdapter } from '../adapters/storage/types'
 import type { DB } from '../db/client'
 import * as t from '../db/schema'
 import { HttpError } from '../lib/errors'
@@ -32,7 +33,7 @@ export interface PermanentDeleteProjectArgs {
   workspaceId: string
   projectId: string
   confirmName: string
-  filesBucket?: R2Bucket | null
+  storage?: IStorageAdapter | null
 }
 
 export async function listProjects(db: DB, workspaceId: string) {
@@ -178,9 +179,9 @@ export async function permanentDeleteProject(db: DB, args: PermanentDeleteProjec
   ])
 
   // Post-batch best-effort cleanup of R2 files
-  if (args.filesBucket && r2Keys.length > 0) {
+  if (args.storage && r2Keys.length > 0) {
     try {
-      await Promise.allSettled(r2Keys.map((k) => args.filesBucket!.delete(k)))
+      await Promise.allSettled(r2Keys.map((k) => args.storage!.delete(k)))
     } catch (err) {
       console.warn('R2 cleanup error after project deletion', err)
     }

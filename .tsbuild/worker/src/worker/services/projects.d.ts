@@ -1,3 +1,4 @@
+import type { IStorageAdapter } from '../adapters/storage/types';
 import type { DB } from '../db/client';
 export interface CreateProjectArgs {
     workspaceId: string;
@@ -22,7 +23,7 @@ export interface PermanentDeleteProjectArgs {
     workspaceId: string;
     projectId: string;
     confirmName: string;
-    filesBucket?: R2Bucket | null;
+    storage?: IStorageAdapter | null;
 }
 export declare function listProjects(db: DB, workspaceId: string): Promise<{
     id: string;

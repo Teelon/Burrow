@@ -1,4 +1,5 @@
 import type { BatchItem } from 'drizzle-orm/batch';
+import type { IStorageAdapter } from '../adapters/storage/types';
 import type { DB } from '../db/client';
 import { type StoredLink } from '../lib/links';
 /** Root notepads are depth 1; reject anything deeper than 8 (PLAN.md section 6). */
@@ -42,7 +43,7 @@ export declare function restoreNotepad(db: DB, args: RestoreNotepadArgs): Promis
 export interface PermanentDeleteNotepadArgs {
     workspaceId: string;
     notepadId: string;
-    filesBucket?: R2Bucket | null;
+    storage?: IStorageAdapter | null;
 }
 export declare function permanentDeleteNotepad(db: DB, args: PermanentDeleteNotepadArgs): Promise<void>;
 export interface SaveContentArgs {
@@ -87,6 +88,8 @@ export interface ClaimLockArgs {
     clientId: string;
     takeover?: boolean;
 }
+/** Rolling edit-lock window (ms). Passed as ttlMs to the lock adapter. */
+export declare const LOCK_TTL_MS = 60000;
 export declare function claimLock(db: DB, args: ClaimLockArgs): Promise<{
     expiresAt: number;
 }>;

@@ -1,14 +1,7 @@
 import { z } from 'zod';
 import type { Env } from '../env';
-export interface SearchResult {
-    id: string;
-    title: string;
-    icon?: string | null;
-    kind: 'notepad' | 'card';
-    projectId: string;
-    projectName: string;
-    snippet: string;
-}
+import type { SearchHit } from '../adapters/search/types';
+export type SearchResult = SearchHit;
 export declare const searchRoutes: import("hono/hono-base").HonoBase<Env, {
     "/api/search": {
         $get: {

@@ -1375,7 +1375,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        status?: "completed" | "all" | "open" | undefined;
+                        status?: "open" | "completed" | "all" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -1390,7 +1390,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        status?: "completed" | "all" | "open" | undefined;
+                        status?: "open" | "completed" | "all" | undefined;
                         projectId?: string | undefined;
                     };
                 };

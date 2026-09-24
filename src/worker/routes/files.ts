@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
+import { createStorageFromEnv } from '../adapters/storage/factory'
 import type { Env } from '../env'
 import { requireRole, requireSession } from '../middleware/session'
 import { HttpError } from '../lib/errors'
@@ -47,10 +48,9 @@ export const filesRoutes = new Hono<Env>()
     const ext = EXTENSION_MAP[file.type] || 'bin'
     const key = `${workspaceId}/${nanoid()}.${ext}`
 
-    if (c.env.FILES) {
-      await c.env.FILES.put(key, await file.arrayBuffer(), {
-        httpMetadata: { contentType: file.type },
-      })
+    const storage = c.env.FILES ? createStorageFromEnv(c.env) : null
+    if (storage) {
+      await storage.put(key, await file.arrayBuffer(), file.type)
     }
 
     const origin = new URL(c.req.url).origin
@@ -72,14 +72,15 @@ export const filesRoutes = new Hono<Env>()
       throw new HttpError(404, 'not_found', 'File storage not configured')
     }
 
-    const object = await c.env.FILES.get(key)
+    const storage = createStorageFromEnv(c.env)
+    const object = await storage.get(key)
     if (!object) {
       throw new HttpError(404, 'not_found', 'File not found')
     }
 
     const headers = new Headers()
-    headers.set('Content-Type', object.httpMetadata?.contentType || 'application/octet-stream')
+    headers.set('Content-Type', object.contentType || 'application/octet-stream')
     headers.set('Cache-Control', 'public, max-age=31536000, immutable')
 
-    return new Response(object.body, { headers })
+    return new Response(object.body as BodyInit, { headers })
   })

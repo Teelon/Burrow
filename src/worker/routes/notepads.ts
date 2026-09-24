@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import { createStorageFromEnv } from '../adapters/storage/factory'
 import type { Env } from '../env'
 import { createDb } from '../db/client'
 import * as t from '../db/schema'
@@ -325,7 +326,7 @@ export const notepadsRoutes = new Hono<Env>()
       await permanentDeleteNotepad(db, {
         workspaceId,
         notepadId,
-        filesBucket: c.env.FILES,
+        storage: createStorageFromEnv(c.env),
       })
       return c.json({ ok: true, permanentlyDeletedId: notepadId })
     },

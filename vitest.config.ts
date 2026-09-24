@@ -17,15 +17,32 @@ if (!fs.existsSync(indexPath)) {
 const TEST_MIGRATIONS = await readD1Migrations('./migrations')
 
 export default defineConfig({
-  plugins: [
-    cloudflareTest({
-      wrangler: { configPath: './wrangler.jsonc' },
-      miniflare: { bindings: { TEST_MIGRATIONS } },
-    }),
-  ],
   test: {
-    include: ['tests/api/**/*.test.ts', 'tests/unit/**/*.test.ts'],
     exclude: ['tests/e2e/**'],
-    setupFiles: ['./tests/api/setup.ts'],
+    projects: [
+      {
+        plugins: [
+          cloudflareTest({
+            wrangler: { configPath: './wrangler.jsonc' },
+            miniflare: { bindings: { TEST_MIGRATIONS } },
+          }),
+        ],
+        test: {
+          include: [
+            'tests/api/**/*.test.ts',
+            'tests/unit/**/*.test.ts',
+            'tests/adapters/lock.contract.test.ts',
+            'tests/adapters/search.contract.test.ts',
+          ],
+          setupFiles: ['./tests/api/setup.ts'],
+        },
+      },
+      {
+        test: {
+          include: ['tests/adapters/storage-local.test.ts'],
+          environment: 'node',
+        },
+      },
+    ],
   },
 })

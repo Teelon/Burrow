@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { createStorageFromEnv } from '../adapters/storage/factory'
 import type { Env } from '../env'
 import { createDb } from '../db/client'
 import { requireRole, requireSession } from '../middleware/session'
@@ -118,7 +119,7 @@ export const projectsRoutes = new Hono<Env>()
         workspaceId,
         projectId,
         confirmName,
-        filesBucket: c.env.FILES,
+        storage: createStorageFromEnv(c.env),
       })
 
       return c.json({ ok: true, deletedProjectId: projectId })

@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/worker", "src/shared", "tests/api", "tests/unit"]
+  "include": ["src/worker", "src/server", "src/shared", "src/core", "tests/api", "tests/unit", "tests/adapters"]
 }

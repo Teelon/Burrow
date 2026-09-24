@@ -1,7 +1,9 @@
 import { env } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { app } from '../../src/worker/index'
+import { createWorkerApp } from '../../src/worker/index'
 import { expectInvariantsHold } from './helpers'
+
+const app = createWorkerApp(env)
 
 describe('Phase 6: Organization, Search & Trash', () => {
   const bootstrapToken = env.BOOTSTRAP_TOKEN || 'test-bootstrap-token'

@@ -1,7 +1,9 @@
 import { env } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { app } from '../../src/worker/index'
+import { createWorkerApp } from '../../src/worker/index'
 import { createDb } from '../../src/worker/db/client'
+
+const app = createWorkerApp(env)
 import * as t from '../../src/worker/db/schema'
 import { expectInvariantsHold } from './helpers'
 

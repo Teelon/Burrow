@@ -1,5 +1,5 @@
 import type { BatchItem } from 'drizzle-orm/batch'
-import type { DB } from '../db/client'
+import type { DB, NodeDb } from '../db/client'
 
 type D1BindValue = Parameters<D1PreparedStatement['bind']>[number]
 
@@ -28,17 +28,28 @@ function compileStatement(chunk: BatchItem<'sqlite'>): CompiledStatement {
   return query
 }
 
+/** True when the drizzle `$client` is a D1Database (has native batch()). */
+function isD1Client(client: unknown): client is D1Database {
+  return (
+    typeof client === 'object' &&
+    client !== null &&
+    typeof (client as { batch?: unknown }).batch === 'function'
+  )
+}
+
 /**
- * Run a batch of statements as one atomic D1 batch.
+ * Run a batch of statements atomically on either runtime.
  *
- * D1's batch() commits everything or nothing, which the service layer relies
- * on for save/createCard atomicity (content + FTS + links + notifications).
- *
- * This goes through the native `db.$client.batch()` instead of drizzle's
- * `db.batch()`: drizzle 0.45's SQLiteD1Session.batch() crashes with
+ * D1 (`db.$client.batch` exists) takes the original path unchanged: compile
+ * via getQuery()/toSQL() and prepare natively, because drizzle 0.45's
+ * SQLiteD1Session.batch() crashes with
  * `Cannot read properties of undefined (reading 'bind')` on any statement
  * that carries bound params (raw statements have no `.stmt`). Compiling via
  * getQuery()/toSQL() and preparing natively sidesteps that entirely.
+ *
+ * Node (better-sqlite3 `$client`, no `batch` method) runs the same compiled
+ * statements through `prepare(sql).run(...params)` inside a
+ * `better-sqlite3` transaction, which is likewise all-or-nothing.
  *
  * The helper also refuses to send an empty batch: drizzle types batch() as a
  * non-empty tuple because `batch([])` would be a silent no-op, which is never
@@ -46,16 +57,30 @@ function compileStatement(chunk: BatchItem<'sqlite'>): CompiledStatement {
  * callers must skip the write instead).
  */
 export async function runBatch(
-  db: DB,
+  db: DB | NodeDb,
   statements: BatchItem<'sqlite'>[],
 ): Promise<unknown> {
   const [first, ...rest] = statements
   if (first === undefined) {
     throw new Error('runBatch: refusing to execute an empty statement batch')
   }
-  const batch = [first, ...rest].map((chunk) => {
-    const query = compileStatement(chunk)
-    return db.$client.prepare(query.sql).bind(...(query.params as D1BindValue[]))
-  })
-  return db.$client.batch(batch)
+  const client = (db as { $client: unknown }).$client
+  if (isD1Client(client)) {
+    const batch = [first, ...rest].map((chunk) => {
+      const query = compileStatement(chunk)
+      return client.prepare(query.sql).bind(...(query.params as D1BindValue[]))
+    })
+    return client.batch(batch)
+  }
+  const compiled = [first, ...rest].map(compileStatement)
+  const sqlite = client as {
+    prepare(sql: string): { run(...params: unknown[]): unknown }
+    transaction<T>(fn: () => T): () => T
+  }
+  sqlite.transaction(() => {
+    for (const query of compiled) {
+      sqlite.prepare(query.sql).run(...query.params)
+    }
+  })()
+  return []
 }
