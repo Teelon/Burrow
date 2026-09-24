@@ -76,11 +76,13 @@ export interface IBoardRepository {
   listDeletedByProject(projectId: string): Promise<Board[]>
   // Columns
   listColumns(boardId: string): Promise<BoardColumn[]>
+  findColumnById(id: string): Promise<BoardColumn | null>
   findColumnByIdAndWorkspace(columnId: string, workspaceId: string): Promise<BoardColumn | null>
   createColumn(data: CreateColumnData): Promise<BoardColumn>
   updateColumn(id: string, data: UpdateColumnData): Promise<void>
   moveColumn(id: string, position: string): Promise<void>
   deleteColumn(id: string): Promise<void>
+  getBoardWithDetails(boardId: string, workspaceId: string): Promise<BoardWithDetails | null>
 }
 
 export interface ICardRepository {
@@ -286,6 +288,27 @@ export interface BoardColumn {
   wipLimit: number | null
 }
 
+export interface BoardWithDetails extends Board {
+  columns: Array<
+    BoardColumn & {
+      cards: Array<{
+        id: string
+        columnId: string
+        notepadId: string
+        title: string
+        position: string
+        priority: CardPriority | null
+        dueDate: number | null
+        createdAt: number
+        assignees: Array<{ userId: string; name: string; image?: string | null }>
+        tags: Array<{ id: string; name: string; color?: string | null }>
+        totalSubtasks: number
+        completedSubtasks: number
+      }>
+    }
+  >
+}
+
 export interface CreateColumnData {
   id: string
   boardId: string
@@ -434,6 +457,9 @@ export interface Member {
   userId: string
   role: 'owner' | 'editor' | 'viewer'
   joinedAt: number
+  name?: string
+  email?: string
+  image?: string | null
 }
 
 export interface CreateMemberData {

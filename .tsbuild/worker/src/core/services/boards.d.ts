@@ -1,4 +1,4 @@
-import type { IBoardRepository, Board, BoardColumn } from '../infrastructure/types';
+import type { IBoardRepository, ICardRepository, Board, BoardColumn, BoardWithDetails } from '../infrastructure/types';
 export interface CreateBoardArgs {
     workspaceId: string;
     projectId: string;
@@ -9,17 +9,18 @@ export declare class BoardService {
     private readonly repos;
     constructor(repos: {
         boards: IBoardRepository;
+        cards?: ICardRepository;
     });
     listBoards(_workspaceId: string, projectId: string): Promise<Board[]>;
     createBoard(args: CreateBoardArgs): Promise<{
         id: string;
         position: string;
     }>;
-    getBoard(workspaceId: string, boardId: string): Promise<Board & {
+    getBoard(workspaceId: string, boardId: string): Promise<BoardWithDetails | (Board & {
         columns: (BoardColumn & {
             cards: any[];
         })[];
-    }>;
+    })>;
     updateBoard(_workspaceId: string, boardId: string, updates: {
         name?: string;
         icon?: string | null;

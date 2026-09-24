@@ -1,8 +1,10 @@
 import { nanoid } from 'nanoid'
 import type {
   IBoardRepository,
+  ICardRepository,
   Board,
   BoardColumn,
+  BoardWithDetails,
 } from '../infrastructure/types'
 import { notFound, badRequest } from './errors'
 import { positionAfterLast, positionBetween } from './utils/ordering'
@@ -16,7 +18,10 @@ export interface CreateBoardArgs {
 
 export class BoardService {
   constructor(
-    private readonly repos: { boards: IBoardRepository },
+    private readonly repos: {
+      boards: IBoardRepository
+      cards?: ICardRepository
+    },
   ) {}
 
   async listBoards(_workspaceId: string, projectId: string): Promise<Board[]> {
@@ -63,17 +68,17 @@ export class BoardService {
     return { id: boardId, position: boardPosition }
   }
 
-  async getBoard(workspaceId: string, boardId: string): Promise<Board & { columns: (BoardColumn & { cards: any[] })[] }> {
+  async getBoard(workspaceId: string, boardId: string): Promise<BoardWithDetails | (Board & { columns: (BoardColumn & { cards: any[] })[] })> {
+    if (this.repos.boards.getBoardWithDetails) {
+      const board = await this.repos.boards.getBoardWithDetails(boardId, workspaceId)
+      if (!board) throw notFound('not_found', 'Board not found')
+      return board
+    }
+
     const board = await this.repos.boards.findByIdAndWorkspace(boardId, workspaceId)
     if (!board) throw notFound('not_found', 'Board not found')
 
     const columns = await this.repos.boards.listColumns(boardId)
-
-    // The detailed card data with assignees, tags, subtasks would be fetched
-    // by the repository or composed here. For Phase 1, we'll return the basic
-    // board structure and let the route handler compose the full response.
-    // The worker routes did this composition inline.
-
     return {
       ...board,
       columns: columns.map((col) => ({ ...col, cards: [] })),
@@ -202,15 +207,25 @@ export class BoardService {
     const column = await this.findColumnInWorkspace(columnId, _workspaceId)
     if (!column) throw notFound('not_found', 'Column not found')
 
-    // Check if column has cards (this would need a cards repository method)
-    // For now, we'll assume the repository handles this or we add a method
+    if (this.repos.cards) {
+      const columnCards = await this.repos.cards.listByColumn(columnId)
+      if (columnCards.length > 0) {
+        if (!moveToColumnId) {
+          throw badRequest(
+            'destination_required',
+            'Column has cards; specify ?moveTo=<columnId> to migrate them',
+          )
+        }
 
-    if (moveToColumnId) {
-      const dest = await this.findColumnInWorkspace(moveToColumnId, _workspaceId)
-      if (!dest || dest.boardId !== column.boardId) {
-        throw badRequest('invalid_destination', 'Destination column not found on this board')
+        const dest = await this.findColumnInWorkspace(moveToColumnId, _workspaceId)
+        if (!dest || dest.boardId !== column.boardId) {
+          throw badRequest('invalid_destination', 'Destination column not found on this board')
+        }
+
+        for (const card of columnCards) {
+          await this.repos.cards.move(card.id, moveToColumnId, card.position)
+        }
       }
-      // Move cards would be handled by card service
     }
 
     await this.repos.boards.deleteColumn(columnId)

@@ -11,16 +11,29 @@ export class PostgresMemberRepository implements IMemberRepository {
   constructor(private db: PostgresDb) {}
 
   async listByWorkspace(workspaceId: string): Promise<Member[]> {
-    return this.db
+    const rows = await this.db
       .select({
         workspaceId: members.workspaceId,
         userId: members.userId,
         role: members.role,
         joinedAt: members.joinedAt,
+        name: user.name,
+        email: user.email,
+        image: user.image,
       })
       .from(members)
+      .leftJoin(user, eq(user.id, members.userId))
       .where(eq(members.workspaceId, workspaceId))
       .orderBy(members.joinedAt)
+    return rows.map((r) => ({
+      workspaceId: r.workspaceId,
+      userId: r.userId,
+      role: r.role,
+      joinedAt: r.joinedAt,
+      name: r.name ?? undefined,
+      email: r.email ?? undefined,
+      image: r.image ?? null,
+    }))
   }
 
   async findByUserId(workspaceId: string, userId: string): Promise<Member | null> {

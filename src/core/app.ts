@@ -43,13 +43,15 @@ export function createCoreApp(infra: Infrastructure) {
     locks,
     storage,
   )
-  const boards = new BoardService({ boards: repositories.boards })
+  const boards = new BoardService({
+    boards: repositories.boards,
+    cards: repositories.cards,
+  })
   const cards = new CardService({
     cards: repositories.cards,
     notepads: repositories.notepads,
     tags: repositories.tags,
     boards: repositories.boards,
-    boardColumns: repositories.boards,
   })
   const members = new MemberService({ members: repositories.members })
   const comments = new CommentService({

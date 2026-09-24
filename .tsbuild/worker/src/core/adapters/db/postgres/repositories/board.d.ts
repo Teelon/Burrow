@@ -1,4 +1,4 @@
-import type { IBoardRepository, Board, CreateBoardData, UpdateBoardData, BoardColumn, CreateColumnData, UpdateColumnData } from '../../../../infrastructure/types';
+import type { IBoardRepository, Board, CreateBoardData, UpdateBoardData, BoardColumn, BoardWithDetails, CreateColumnData, UpdateColumnData } from '../../../../infrastructure/types';
 import type { PostgresDb } from '../index';
 export declare class PostgresBoardRepository implements IBoardRepository {
     private db;
@@ -13,9 +13,11 @@ export declare class PostgresBoardRepository implements IBoardRepository {
     restore(id: string): Promise<void>;
     hardDelete(id: string): Promise<void>;
     listColumns(boardId: string): Promise<BoardColumn[]>;
+    findColumnById(id: string): Promise<BoardColumn | null>;
     findColumnByIdAndWorkspace(columnId: string, workspaceId: string): Promise<BoardColumn | null>;
     createColumn(data: CreateColumnData): Promise<BoardColumn>;
     updateColumn(id: string, data: UpdateColumnData): Promise<void>;
     moveColumn(id: string, position: string): Promise<void>;
     deleteColumn(id: string): Promise<void>;
+    getBoardWithDetails(boardId: string, workspaceId: string): Promise<BoardWithDetails | null>;
 }

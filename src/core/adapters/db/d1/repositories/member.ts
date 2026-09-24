@@ -13,8 +13,12 @@ export function createMemberRepository(db: DB): IMemberRepository {
           userId: t.members.userId,
           role: t.members.role,
           joinedAt: t.members.joinedAt,
+          name: t.user.name,
+          email: t.user.email,
+          image: t.user.image,
         })
         .from(t.members)
+        .leftJoin(t.user, eq(t.user.id, t.members.userId))
         .where(eq(t.members.workspaceId, workspaceId))
       return rows.map(mapMember)
     },
@@ -115,11 +119,17 @@ function mapMember(row: {
   userId: string
   role: 'owner' | 'editor' | 'viewer'
   joinedAt: number
+  name?: string | null
+  email?: string | null
+  image?: string | null
 }): Member {
   return {
     workspaceId: row.workspaceId,
     userId: row.userId,
     role: row.role,
     joinedAt: row.joinedAt,
+    name: row.name ?? undefined,
+    email: row.email ?? undefined,
+    image: row.image ?? null,
   }
 }

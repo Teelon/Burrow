@@ -3,6 +3,7 @@ import type {
   ICardRepository,
   INotepadRepository,
   ITagRepository,
+  IBoardRepository,
   CardPriority,
   MyTasksFilters,
   MyTaskItem,
@@ -61,8 +62,8 @@ export class CardService {
       cards: ICardRepository
       notepads: INotepadRepository
       tags: ITagRepository
-      boards: { findById: (id: string) => Promise<any>; findByIdAndWorkspace: (id: string, workspaceId: string) => Promise<any> }
-      boardColumns: { findById: (id: string) => Promise<any> }
+      boards: IBoardRepository
+      boardColumns?: { findById: (id: string) => Promise<any> }
     },
   ) {}
 
@@ -71,7 +72,7 @@ export class CardService {
     if (!board || board.workspaceId !== input.workspaceId || board.deletedAt !== null) {
       throw notFound('not_found', 'Board not found')
     }
-    const column = await this.repos.boardColumns.findById(input.columnId)
+    const column = await this.repos.boards.findColumnById(input.columnId)
     if (!column || column.boardId !== board.id) {
       throw notFound('not_found', 'Column not found')
     }
@@ -227,7 +228,7 @@ export class CardService {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId)
     if (!card) throw notFound('not_found', 'Card not found')
 
-    const column = await this.repos.boardColumns.findById(columnId)
+    const column = await this.repos.boards.findColumnById(columnId)
     if (!column || column.boardId !== card.boardId) {
       throw notFound('not_found', 'Destination column not found on this board')
     }

@@ -329,7 +329,7 @@ function ColumnComponent({
     <div
       ref={setNodeRef}
       style={style}
-      className={`chamfer-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col max-h-full border transition-all duration-150 ${
+      className={`rounded-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col h-full min-h-[520px] border transition-all duration-150 ${
         isDragging ? 'z-10 relative' : ''
       } ${
         isOver
@@ -860,7 +860,7 @@ export function KanbanView({
   return (
     <>
       {/* Columns Container (Horizontal Scroll with mobile snap) */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 flex items-start gap-4 snap-x snap-mandatory md:snap-none bg-[var(--bg)]">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 flex items-stretch gap-4 snap-x snap-mandatory md:snap-none bg-[var(--bg)]">
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetectionStrategy}
