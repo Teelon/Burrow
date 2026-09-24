@@ -13,6 +13,7 @@ import { ProjectSwitcher } from './ProjectSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { useBoards, useCreateBoard, useMe } from '../../lib/queries'
 import { NotepadTree } from '../notepads/NotepadTree'
+import { NotificationsBell } from './NotificationsBell'
 
 interface SidebarProps {
   onCloseMobile?: () => void
@@ -37,6 +38,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         <div className="flex-1 min-w-0">
           <ProjectSwitcher currentProjectId={currentProjectId} />
         </div>
+        <NotificationsBell projectId={currentProjectId} />
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}

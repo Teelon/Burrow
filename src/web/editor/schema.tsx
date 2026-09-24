@@ -73,6 +73,8 @@ export const Mention = createReactInlineContentSpec(
 )
 
 /**
+ * Live notepad link preview component
+ */
 function LiveNotepadLink({ notepadId }: { notepadId: string }) {
   const [data, setData] = useState<{ title: string; icon?: string | null; deleted: boolean } | null>(null)
 

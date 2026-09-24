@@ -533,3 +533,37 @@ export function useDeleteCard() {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export function useNotifications(unreadOnly?: boolean) {
+  return useQuery({
+    queryKey: ['notifications', unreadOnly],
+    queryFn: async () => {
+      const res = await api.api.notifications.$get({
+        query: unreadOnly ? { unread: '1' } : {},
+      })
+      if (!res.ok) throw new Error(`Failed to load notifications: ${res.status}`)
+      return res.json()
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+export function useMarkNotificationsRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids?: string[]) => {
+      const res = await api.api.notifications.read.$post({
+        json: { ids },
+      })
+      if (!res.ok) throw new Error('Failed to mark notifications read')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+

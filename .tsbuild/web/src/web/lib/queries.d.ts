@@ -13,7 +13,7 @@ export declare function useMe(): import("@tanstack/react-query").UseQueryResult<
         id: string;
         name: string;
     } | undefined;
-    role: "viewer" | "editor" | "owner";
+    role: "owner" | "editor" | "viewer";
     lastProjectId: string | null;
 } | null, Error>;
 export declare function useProjects(): import("@tanstack/react-query").UseQueryResult<{
@@ -57,20 +57,20 @@ export declare function useMembers(): import("@tanstack/react-query").UseQueryRe
     name: string;
     email: string;
     image: string | null;
-    role: "viewer" | "editor" | "owner";
+    role: "owner" | "editor" | "viewer";
     joinedAt: number;
 }[], Error>;
 export declare function useInvites(): import("@tanstack/react-query").UseQueryResult<{
     id: string;
     email: string;
-    role: "viewer" | "editor";
+    role: "editor" | "viewer";
     expiresAt: number;
     createdAt: number;
 }[], Error>;
 export declare function useCreateInvite(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     email: string;
-    role: "viewer" | "editor";
+    role: "editor" | "viewer";
     token: string;
     expiresAt: number;
     url: string;
@@ -243,3 +243,20 @@ export declare function useDeleteCard(): import("@tanstack/react-query").UseMuta
     cardId: string;
     boardId: string;
 }, unknown>;
+export declare function useNotifications(unreadOnly?: boolean): import("@tanstack/react-query").UseQueryResult<{
+    id: string;
+    type: "mention" | "assigned";
+    actor: {
+        id: string;
+        name: string;
+        image: string | null;
+    };
+    notepadId: string | null;
+    cardId: string | null;
+    targetTitle: string | undefined;
+    readAt: number | null;
+    createdAt: number;
+}[], Error>;
+export declare function useMarkNotificationsRead(): import("@tanstack/react-query").UseMutationResult<{
+    ok: true;
+}, Error, string[] | undefined, unknown>;

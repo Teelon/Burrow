@@ -437,13 +437,6 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     }
   }
 
-  const handleAddCard = (columnId: string, title: string) => {
-    createCardMutation.mutate({
-      boardId,
-      columnId,
-      title,
-    })
-  }
 
   const handleBoardNameSave = () => {
     if (boardName.trim() && boardName !== board.name) {

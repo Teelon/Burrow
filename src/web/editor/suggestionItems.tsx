@@ -10,7 +10,6 @@ import {
   Tag,
   User,
 } from 'lucide-react'
-import type { BurrowSchema } from './schema'
 import type { SlashContext } from '../../shared/slash'
 
 export interface SuggestionDialogState {
@@ -19,7 +18,7 @@ export interface SuggestionDialogState {
 }
 
 export function getCustomSlashItems(
-  editor: BlockNoteEditor<BurrowSchema['blockSpecs'], BurrowSchema['inlineContentSpecs'], BurrowSchema['styleSpecs']>,
+  editor: BlockNoteEditor<any, any, any>,
   context: SlashContext,
   projectId: string,
   onOpenDialog: (state: SuggestionDialogState) => void,
@@ -136,7 +135,7 @@ export function getCustomSlashItems(
 export async function getAtMenuSuggestions(
   query: string,
   projectId: string,
-  editor: BlockNoteEditor<BurrowSchema['blockSpecs'], BurrowSchema['inlineContentSpecs'], BurrowSchema['styleSpecs']>,
+  editor: BlockNoteEditor<any, any, any>,
 ): Promise<DefaultReactSuggestionItem[]> {
   const items: DefaultReactSuggestionItem[] = []
   const cleanQ = query.trim()
@@ -303,8 +302,8 @@ export async function getAtMenuSuggestions(
 export async function getHashMenuSuggestions(
   query: string,
   projectId: string,
-  notepadId: string,
-  editor: BlockNoteEditor<BurrowSchema['blockSpecs'], BurrowSchema['inlineContentSpecs'], BurrowSchema['styleSpecs']>,
+  _notepadId: string,
+  editor: BlockNoteEditor<any, any, any>,
   onAttachTag?: (tagId: string) => void,
 ): Promise<DefaultReactSuggestionItem[]> {
   const cleanQ = query.trim()

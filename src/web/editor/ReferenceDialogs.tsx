@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Kanban, Plus, Search, X } from 'lucide-react'
+import { FileText, Kanban, Search, X } from 'lucide-react'
 import { useBoards, useCreateCard } from '../lib/queries'
 
 interface NotepadPickerModalProps {

@@ -49,7 +49,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                     id: string;
                     name: string;
                 } | undefined;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
                 lastProjectId: string | null;
             };
             outputFormat: "json";
@@ -65,7 +65,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 name: string;
                 email: string;
                 image: string | null;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
                 joinedAt: number;
             }[];
             outputFormat: "json";
@@ -77,7 +77,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         $patch: {
             input: {
                 json: {
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                 };
             } & {
                 param: {
@@ -95,7 +95,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 json: {
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                 };
             } & {
                 param: {
@@ -105,7 +105,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 userId: string;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -133,7 +133,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
@@ -148,13 +148,13 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 token: string;
                 expiresAt: number;
                 url: string;
@@ -170,7 +170,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 expiresAt: number;
                 createdAt: number;
             }[];
@@ -219,7 +219,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 workspaceId: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -1486,6 +1486,143 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 permanentlyDeletedId: string;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/"> | import("hono/types").MergeSchemaPath<{
+    "/api/suggest": {
+        $get: {
+            input: {
+                query: {
+                    type: "user" | "notepad" | "card" | "tag";
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                query: {
+                    type: "user" | "notepad" | "card" | "tag";
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                id: string;
+                label: string;
+                description: string;
+                image: string | null;
+                kind: "user";
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        } | {
+            input: {
+                query: {
+                    type: "user" | "notepad" | "card" | "tag";
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                id: string;
+                label: string;
+                icon: string | null;
+                kind: "notepad";
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        } | {
+            input: {
+                query: {
+                    type: "user" | "notepad" | "card" | "tag";
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                id: string;
+                label: string;
+                description: string;
+                priority: "low" | "medium" | "high" | "urgent" | null;
+                kind: "card";
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        } | {
+            input: {
+                query: {
+                    type: "user" | "notepad" | "card" | "tag";
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                id: string;
+                label: string;
+                color: string | null;
+                kind: "tag";
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/"> | import("hono/types").MergeSchemaPath<{
+    "/api/notifications": {
+        $get: {
+            input: {};
+            output: {
+                id: string;
+                type: "mention" | "assigned";
+                actor: {
+                    id: string;
+                    name: string;
+                    image: string | null;
+                };
+                notepadId: string | null;
+                cardId: string | null;
+                targetTitle: string | undefined;
+                readAt: number | null;
+                createdAt: number;
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/notifications/read": {
+        $post: {
+            input: {
+                json: {
+                    ids?: string[] | undefined;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    ids?: string[] | undefined;
+                };
+            };
+            output: {
+                ok: true;
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;

@@ -4,7 +4,6 @@ import {
   Calendar,
   FileText,
   Flag,
-  Plus,
   Tag,
   User,
   X,
@@ -36,11 +35,7 @@ export function QuickAddCard({
   const [chips, setChips] = useState<QuickAddChips>({ assignees: [], tags: [] })
   const [menuMode, setMenuMode] = useState<'none' | 'slash' | 'at' | 'hash'>('none')
   const [menuQuery, setMenuQuery] = useState('')
-  const [menuIndex, setMenuIndex] = useState(0)
 
-  const [notepadPickerOpen, setNotepadPickerOpen] = useState(false)
-  const [tagPickerOpen, setTagPickerOpen] = useState(false)
-  const [memberPickerOpen, setMemberPickerOpen] = useState(false)
   const [dateInputOpen, setDateInputOpen] = useState(false)
   const [dateInputValue, setDateInputValue] = useState('')
 
@@ -64,15 +59,12 @@ export function QuickAddCard({
     if (val.endsWith('/')) {
       setMenuMode('slash')
       setMenuQuery('')
-      setMenuIndex(0)
     } else if (val.endsWith('@')) {
       setMenuMode('at')
       setMenuQuery('')
-      setMenuIndex(0)
     } else if (val.endsWith('#')) {
       setMenuMode('hash')
       setMenuQuery('')
-      setMenuIndex(0)
     } else if (menuMode !== 'none') {
       const lastWord = val.split(' ').pop() || ''
       if (lastWord.startsWith('/') || lastWord.startsWith('@') || lastWord.startsWith('#')) {
@@ -178,7 +170,6 @@ export function QuickAddCard({
       return { ...c, assignees: [...c.assignees, { userId, name }] }
     })
     setTitle(cleanLastTrigger(title))
-    setMemberPickerOpen(false)
     setMenuMode('none')
     inputRef.current?.focus()
   }
@@ -189,7 +180,6 @@ export function QuickAddCard({
       return { ...c, tags: [...c.tags, { tagId, name, color }] }
     })
     setTitle(cleanLastTrigger(title))
-    setTagPickerOpen(false)
     setMenuMode('none')
     inputRef.current?.focus()
   }

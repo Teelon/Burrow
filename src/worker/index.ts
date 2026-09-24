@@ -13,6 +13,7 @@ import { boardsRoutes } from './routes/boards'
 import { columnsRoutes } from './routes/columns'
 import { cardsRoutes } from './routes/cards'
 import { suggestRoutes } from './routes/suggest'
+import { notificationsRoutes } from './routes/notifications'
 
 /**
  * NOTE (Hono RPC): route registration returns a NEW type; a plain
@@ -34,6 +35,7 @@ export const app = new Hono<Env>()
   .route('', columnsRoutes)
   .route('', cardsRoutes)
   .route('', suggestRoutes)
+  .route('', notificationsRoutes)
   .onError((err, c) => {
     if (isHttpError(err)) {
       return c.json(
