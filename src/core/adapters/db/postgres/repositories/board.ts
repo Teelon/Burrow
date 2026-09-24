@@ -7,7 +7,7 @@ import type {
   CreateColumnData,
   UpdateColumnData,
 } from '../../../../infrastructure/types'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, isNotNull, desc } from 'drizzle-orm'
 import type { PostgresDb } from '../index'
 import { boards, boardColumns } from '../schema'
 
@@ -20,6 +20,14 @@ export class PostgresBoardRepository implements IBoardRepository {
       .from(boards)
       .where(eq(boards.projectId, projectId))
       .orderBy(boards.position)
+  }
+
+  async listDeletedByProject(projectId: string): Promise<Board[]> {
+    return this.db
+      .select()
+      .from(boards)
+      .where(and(eq(boards.projectId, projectId), isNotNull(boards.deletedAt)))
+      .orderBy(desc(boards.deletedAt))
   }
 
   async findById(id: string): Promise<Board | null> {

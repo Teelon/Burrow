@@ -32,17 +32,16 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
   const isPostgres = config.DATABASE_URL?.startsWith('postgres://') || config.DATABASE_URL?.startsWith('postgresql://')
 
   let db: PostgresDb
-  let sqlClient: ReturnType<typeof postgres> | null = null
 
   if (isPostgres && config.DATABASE_URL) {
     // PostgreSQL connection
-    sqlClient = postgres(config.DATABASE_URL, {
+    const client = postgres(config.DATABASE_URL, {
       max: 10,
       idle_timeout: 30,
       connect_timeout: 10,
     })
-    db = drizzle(sqlClient, { schema })
-    await applyMigrations(sqlClient, join(process.cwd(), 'migrations'))
+    db = drizzle(client, { schema })
+    await applyMigrations(client, join(process.cwd(), 'migrations'))
   } else {
     // SQLite fallback for development - use dynamic import to avoid tsconfig issues
     const { openNodeDb } = await import('../../../../server/db')

@@ -1,9 +1,10 @@
-import type { IInviteRepository, IMemberRepository, Invite } from '../infrastructure/types';
+import type { IInviteRepository, IMemberRepository, IWorkspaceRepository, Invite } from '../infrastructure/types';
 export declare class InviteService {
     private readonly repos;
     constructor(repos: {
         invites: IInviteRepository;
         members: IMemberRepository;
+        workspaces: IWorkspaceRepository;
     });
     createInvite(workspaceId: string, userId: string, email: string, role: 'editor' | 'viewer'): Promise<{
         invite: Invite;

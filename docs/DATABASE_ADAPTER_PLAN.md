@@ -1,11 +1,10 @@
 # Burrow — Dual-Runtime & Multi-Engine Architecture Plan
 
-> **Status:** Implementation plan  
-> **Target:** Deploy Burrow across Cloudflare, Docker, VPS, Kubernetes, and local/offline environments without Cloudflare lock-in.  
+> **Status:** Groundwork Established — Phase 1 Cloudflare Focus (Active)  
+> **Strategy:** Lay clean domain groundwork and interface boundaries, but build, stabilize, and harden exclusively for **Cloudflare (Workers + D1 + R2 + SQLite FTS5)** first. Other adapters (PostgreSQL, Node, Docker, MongoDB) are staged for future phases once Cloudflare is rock-solid.  
 >  
-> **Supported runtimes:** Cloudflare Workers, Node.js  
-> **Supported databases:** Cloudflare D1/SQLite, PostgreSQL, MongoDB  
-> **Supported object storage:** Cloudflare R2, S3-compatible storage, local filesystem  
+> **Primary Target (Active):** Cloudflare Workers, Cloudflare D1/SQLite, Cloudflare R2  
+> **Future Targets (Groundwork Ready / Staged):** Node.js runtime, PostgreSQL, MongoDB, S3/MinIO/Local storage  
 
 ---
 
@@ -2240,41 +2239,39 @@ The first model preserves database-specific strengths while keeping the applicat
 
 # 65. Final Implementation Order
 
-The implementation sequence is therefore:
+The implementation sequence is structured in two major stages:
 
+### Stage 1: Groundwork & Production Cloudflare Focus (Active)
 ```text
-1. Decouple Storage
+1. Decouple Auxiliary Systems (Storage, Search, Locks)     [DONE]
         ↓
-2. Decouple Search
+2. Extract Core Domain Entities & Repository Contracts      [DONE]
         ↓
-3. Decouple Locks
+3. Extract Shared Hono Core App & Dependency Injection      [DONE]
         ↓
-4. Extract Core Domain
+4. Wire D1 Reference Implementation & R2 Storage Adapters   [DONE]
         ↓
-5. Extract Shared Hono App
-        ↓
-6. Rebuild D1 through adapters
-        ↓
-7. Verify zero Cloudflare regressions
-        ↓
-8. Build Node runtime
-        ↓
-9. Build PostgreSQL adapter
-        ↓
-10. Stabilize Node/Postgres deployment
-        ↓
-11. Dockerize
-        ↓
-12. Build MongoDB adapter
-        ↓
-13. Add search projection/reconciliation
-        ↓
-14. Build cross-engine migration CLI
-        ↓
-15. Run cross-engine contract tests
+5. Harden & Stabilize Cloudflare Workers Deployment         [IN PROGRESS]
+   - Type safety across all domain models and D1 repos (0 errors)
+   - Ensure D1 migrations and SQLite FTS5 are seamless
+   - Polish web frontend + Workers RPC contract
+   - Verify zero regressions in core workflows
 ```
 
-This order deliberately establishes **D1 → PostgreSQL → MongoDB**, rather than attempting all three simultaneously.
+### Stage 2: Multi-Engine & Multi-Runtime Expansion (Deferred)
+```text
+6. Complete PostgreSQL Repositories & Migrations
+        ↓
+7. Harden Node Runtime & Docker Packaging
+        ↓
+8. Build MongoDB Adapter & Projection Reconciler
+        ↓
+9. Build Cross-Engine Migration CLI
+        ↓
+10. Run Full Matrix Contract Tests
+```
+
+This ensures we do not prematurely optimize or destabilize the project across multiple databases before Cloudflare Workers + D1 is rock-solid.
 
 The end state is a single Burrow application with interchangeable infrastructure compositions:
 

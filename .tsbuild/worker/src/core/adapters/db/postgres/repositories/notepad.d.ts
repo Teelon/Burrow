@@ -4,6 +4,7 @@ export declare class PostgresNotepadRepository implements INotepadRepository {
     private db;
     constructor(db: PostgresDb);
     listByProject(projectId: string): Promise<Notepad[]>;
+    listDeletedByProject(projectId: string): Promise<Notepad[]>;
     findById(id: string): Promise<Notepad | null>;
     findByIdAndWorkspace(id: string, workspaceId: string): Promise<Notepad | null>;
     create(data: CreateNotepadData): Promise<Notepad>;

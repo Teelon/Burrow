@@ -1,5 +1,5 @@
 import type { Env } from './env';
-declare const typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
+declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
     "/api/health": {
         $get: {
             input: {};
@@ -1260,7 +1260,7 @@ declare const typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    status?: "open" | "completed" | "all" | undefined;
+                    status?: "completed" | "all" | "open" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -1275,7 +1275,7 @@ declare const typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    status?: "open" | "completed" | "all" | undefined;
+                    status?: "completed" | "all" | "open" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -2074,5 +2074,5 @@ declare const typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         };
     };
 }, "/">, "/", "/api/health">;
-export type AppType = typeof typeOnlyApp;
+export type AppType = typeof _typeOnlyApp;
 export {};

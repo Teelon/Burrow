@@ -4,6 +4,7 @@ export declare class PostgresBoardRepository implements IBoardRepository {
     private db;
     constructor(db: PostgresDb);
     listByProject(projectId: string): Promise<Board[]>;
+    listDeletedByProject(projectId: string): Promise<Board[]>;
     findById(id: string): Promise<Board | null>;
     findByIdAndWorkspace(id: string, workspaceId: string): Promise<Board | null>;
     create(data: CreateBoardData): Promise<Board>;

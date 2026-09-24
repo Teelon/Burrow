@@ -23,7 +23,7 @@ import { notificationsRoutes } from './routes/notifications'
 import { tagsRoutes } from './routes/tags'
 import { searchRoutes } from './routes/search'
 
-const typeOnlyApp = new Hono<Env>()
+const _typeOnlyApp = new Hono<Env>()
   .use('*', securityHeaders)
   .use('/api/*', bodyLimit())
   .use('/api/*', sessionMiddleware)
@@ -55,4 +55,4 @@ const typeOnlyApp = new Hono<Env>()
     c.json({ error: { code: 'not_found', message: 'Not found' } }, 404),
   )
 
-export type AppType = typeof typeOnlyApp
+export type AppType = typeof _typeOnlyApp

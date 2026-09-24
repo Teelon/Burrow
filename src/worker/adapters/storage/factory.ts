@@ -10,20 +10,21 @@ export function createStorageFromEnv(
   if (env.FILES) {
     return new R2StorageAdapter(env.FILES)
   }
+  const procEnv = typeof process !== 'undefined' && process.env ? process.env : {}
   const e = env as Record<string, unknown>
   if (e.S3_ENDPOINT && e.S3_BUCKET) {
     return new S3StorageAdapter({
       endpoint: e.S3_ENDPOINT as string,
-      region: (e.S3_REGION as string) || process.env.S3_REGION || 'us-east-1',
+      region: (e.S3_REGION as string) || procEnv.S3_REGION || 'us-east-1',
       bucket: e.S3_BUCKET as string,
-      accessKey: ((e.S3_ACCESS_KEY as string) ?? process.env.S3_ACCESS_KEY ?? '') as string,
-      secretKey: ((e.S3_SECRET_KEY as string) ?? process.env.S3_SECRET_KEY ?? '') as string,
+      accessKey: ((e.S3_ACCESS_KEY as string) ?? procEnv.S3_ACCESS_KEY ?? '') as string,
+      secretKey: ((e.S3_SECRET_KEY as string) ?? procEnv.S3_SECRET_KEY ?? '') as string,
       forcePathStyle:
         (e.S3_FORCE_PATH_STYLE as string) === 'true' ||
-        process.env.S3_FORCE_PATH_STYLE === 'true',
+        procEnv.S3_FORCE_PATH_STYLE === 'true',
     })
   }
   const root =
-    env.LOCAL_STORAGE_PATH ?? process.env.LOCAL_STORAGE_PATH ?? './data/uploads'
+    env.LOCAL_STORAGE_PATH ?? procEnv.LOCAL_STORAGE_PATH ?? './data/uploads'
   return new LocalStorageAdapter(root)
 }

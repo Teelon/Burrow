@@ -4,7 +4,7 @@ import type {
 } from '../../../../infrastructure/types'
 import { eq, and, inArray, desc, isNull } from 'drizzle-orm'
 import type { PostgresDb } from '../index'
-import { notifications } from '../schema'
+import { notifications, user } from '../schema'
 
 export class PostgresNotificationRepository implements INotificationRepository {
   constructor(private db: PostgresDb) {}
@@ -15,8 +15,20 @@ export class PostgresNotificationRepository implements INotificationRepository {
       whereConditions.push(isNull(notifications.readAt))
     }
     return this.db
-      .select()
+      .select({
+        id: notifications.id,
+        workspaceId: notifications.workspaceId,
+        userId: notifications.userId,
+        type: notifications.type,
+        actorId: notifications.actorId,
+        actorName: user.name,
+        notepadId: notifications.notepadId,
+        cardId: notifications.cardId,
+        readAt: notifications.readAt,
+        createdAt: notifications.createdAt,
+      })
       .from(notifications)
+      .innerJoin(user, eq(user.id, notifications.actorId))
       .where(and(...whereConditions))
       .orderBy(desc(notifications.createdAt))
   }

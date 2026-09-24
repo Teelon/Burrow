@@ -44,11 +44,15 @@ function killTree(pid) {
   if (process.platform === 'win32') {
     try {
       spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' })
-    } catch {}
+    } catch {
+      // Process may already have exited
+    }
   } else {
     try {
       process.kill(pid, 'SIGTERM')
-    } catch {}
+    } catch {
+      // Process may already have exited
+    }
   }
 }
 

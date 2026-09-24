@@ -1,4 +1,4 @@
-import type { IProjectRepository, Project } from '../infrastructure/types';
+import type { IProjectRepository, INotepadRepository, IBoardRepository, ITagRepository, Project } from '../infrastructure/types';
 export interface CreateProjectArgs {
     workspaceId: string;
     name: string;
@@ -27,6 +27,9 @@ export declare class ProjectService {
     private readonly repos;
     constructor(repos: {
         projects: IProjectRepository;
+        notepads: INotepadRepository;
+        boards: IBoardRepository;
+        tags: ITagRepository;
     });
     listProjects(workspaceId: string): Promise<Project[]>;
     createProject(args: CreateProjectArgs): Promise<{

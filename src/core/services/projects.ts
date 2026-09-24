@@ -9,7 +9,6 @@ import type {
 } from '../infrastructure/types'
 import { notFound, badRequest } from './errors'
 import { positionAfterLast, positionBetween } from './utils/ordering'
-import { extractPlainText } from '../shared/extract'
 
 export interface CreateProjectArgs {
   workspaceId: string

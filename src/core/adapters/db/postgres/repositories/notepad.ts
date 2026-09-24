@@ -10,7 +10,7 @@ import type {
   EditLock,
   MentionNotificationArgs,
 } from '../../../../infrastructure/types'
-import { eq, and, inArray, desc, sql, isNull } from 'drizzle-orm'
+import { eq, and, inArray, desc, sql, isNull, isNotNull } from 'drizzle-orm'
 import type { PostgresDb } from '../index'
 import {
   notepads,
@@ -35,6 +35,14 @@ export class PostgresNotepadRepository implements INotepadRepository {
       .from(notepads)
       .where(and(eq(notepads.projectId, projectId), isNull(notepads.deletedAt)))
       .orderBy(notepads.position)
+  }
+
+  async listDeletedByProject(projectId: string): Promise<Notepad[]> {
+    return this.db
+      .select()
+      .from(notepads)
+      .where(and(eq(notepads.projectId, projectId), isNotNull(notepads.deletedAt)))
+      .orderBy(desc(notepads.deletedAt))
   }
 
   async findById(id: string): Promise<Notepad | null> {

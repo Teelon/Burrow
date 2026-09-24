@@ -64,6 +64,7 @@ export interface IBoardRepository {
     softDelete(id: string, deletedAt: number): Promise<void>;
     restore(id: string): Promise<void>;
     hardDelete(id: string): Promise<void>;
+    listDeletedByProject(projectId: string): Promise<Board[]>;
     listColumns(boardId: string): Promise<BoardColumn[]>;
     findColumnByIdAndWorkspace(columnId: string, workspaceId: string): Promise<BoardColumn | null>;
     createColumn(data: CreateColumnData): Promise<BoardColumn>;
@@ -115,6 +116,7 @@ export interface INotepadRepository {
     softDelete(id: string, deletedAt: number): Promise<void>;
     restore(id: string, deleteTimestamp: number): Promise<RestoredNotepad[]>;
     hardDelete(id: string): Promise<HardDeletedNotepad[]>;
+    listDeletedByProject(projectId: string): Promise<Notepad[]>;
     getContent(id: string): Promise<NotepadContent | null>;
     saveContent(id: string, content: string, expectedVersion: number): Promise<number>;
     getChildren(parentIds: string[]): Promise<{
@@ -398,6 +400,7 @@ export interface Notification {
     userId: string;
     type: 'mention' | 'assigned';
     actorId: string;
+    actorName: string | null;
     notepadId: string | null;
     cardId: string | null;
     readAt: number | null;
