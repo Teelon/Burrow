@@ -1,11 +1,11 @@
 import { nanoid } from 'nanoid'
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { DB } from '../db/client'
 import * as t from '../db/schema'
 import { extractPlainText } from '../../shared/extract'
 import { HttpError } from '../lib/errors'
-import { positionAfterLast } from '../lib/ordering'
+import { positionAfterLast, positionBetween } from '../lib/ordering'
 import { chunkByParamBudget } from '../lib/chunk'
 import { runBatch } from '../lib/batch'
 import { ftsInsertNowStmt } from '../lib/search'
@@ -250,4 +250,484 @@ export function cardCreationStatements(db: DB, plan: CardPlan): BatchItem<'sqlit
   }
 
   return statements
+}
+
+export async function getCard(db: DB, workspaceId: string, cardId: string) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      boardId: t.cards.boardId,
+      columnId: t.cards.columnId,
+      notepadId: t.cards.notepadId,
+      position: t.cards.position,
+      priority: t.cards.priority,
+      dueDate: t.cards.dueDate,
+      createdAt: t.cards.createdAt,
+      title: t.notepads.title,
+      content: t.notepads.content,
+      version: t.notepads.version,
+      projectId: t.notepads.projectId,
+      workspaceId: t.notepads.workspaceId,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+
+  const [board] = await db
+    .select({ name: t.boards.name })
+    .from(t.boards)
+    .where(eq(t.boards.id, card.boardId))
+  const [column] = await db
+    .select({ name: t.boardColumns.name })
+    .from(t.boardColumns)
+    .where(eq(t.boardColumns.id, card.columnId))
+
+  const assignees = await db
+    .select({
+      userId: t.cardAssignees.userId,
+      name: t.user.name,
+      image: t.user.image,
+    })
+    .from(t.cardAssignees)
+    .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
+    .where(eq(t.cardAssignees.cardId, cardId))
+
+  const tags = await db
+    .select({
+      id: t.tags.id,
+      name: t.tags.name,
+      color: t.tags.color,
+    })
+    .from(t.notepadTags)
+    .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
+    .where(eq(t.notepadTags.notepadId, card.notepadId))
+
+  const now = Date.now()
+  const [lockRow] = await db
+    .select()
+    .from(t.editLocks)
+    .where(eq(t.editLocks.notepadId, card.notepadId))
+
+  let lock: { userId: string; name: string; expiresAt: number } | null = null
+  if (lockRow && lockRow.expiresAt > now) {
+    const [holder] = await db
+      .select({ name: t.user.name })
+      .from(t.user)
+      .where(eq(t.user.id, lockRow.userId))
+    lock = {
+      userId: lockRow.userId,
+      name: holder?.name || 'Someone',
+      expiresAt: lockRow.expiresAt,
+    }
+  }
+
+  return {
+    ...card,
+    boardName: board?.name ?? 'Board',
+    columnName: column?.name ?? 'Column',
+    assignees,
+    tags,
+    lock,
+  }
+}
+
+export async function moveCard(
+  db: DB,
+  workspaceId: string,
+  cardId: string,
+  columnId: string,
+  afterId?: string | null,
+) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      boardId: t.cards.boardId,
+      columnId: t.cards.columnId,
+      notepadId: t.cards.notepadId,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+
+  const [column] = await db
+    .select({ id: t.boardColumns.id })
+    .from(t.boardColumns)
+    .where(
+      and(
+        eq(t.boardColumns.id, columnId),
+        eq(t.boardColumns.boardId, card.boardId),
+      ),
+    )
+  if (!column) throw new HttpError(404, 'not_found', 'Destination column not found on this board')
+
+  const columnCards = await db
+    .select({ id: t.cards.id, position: t.cards.position })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.columnId, columnId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+    .orderBy(asc(t.cards.position))
+
+  const others = columnCards.filter((c) => c.id !== cardId)
+
+  let newPosition: string
+  if (!afterId) {
+    const next = others[0]?.position ?? null
+    newPosition = positionBetween(null, next)
+  } else {
+    const afterIndex = others.findIndex((c) => c.id === afterId)
+    if (afterIndex === -1) {
+      throw new HttpError(400, 'invalid_after_id', 'afterId not found in column')
+    }
+    const prev = others[afterIndex]!.position
+    const next = others[afterIndex + 1]?.position ?? null
+    newPosition = positionBetween(prev, next)
+  }
+
+  await db
+    .update(t.cards)
+    .set({ columnId, position: newPosition })
+    .where(eq(t.cards.id, cardId))
+
+  return { columnId, position: newPosition }
+}
+
+export interface UpdateCardArgs {
+  title?: string
+  priority?: CardPriority | null
+  dueDate?: number | null
+  assigneeIds?: string[]
+  tagIds?: string[]
+}
+
+export async function updateCard(
+  db: DB,
+  workspaceId: string,
+  cardId: string,
+  updates: UpdateCardArgs,
+  actorId?: string,
+) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      boardId: t.cards.boardId,
+      notepadId: t.cards.notepadId,
+      projectId: t.notepads.projectId,
+      currentTitle: t.notepads.title,
+      currentContent: t.notepads.content,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+
+  const now = Date.now()
+  const statements: BatchItem<'sqlite'>[] = []
+
+  // Assignees validation & update (I10)
+  if (updates.assigneeIds !== undefined) {
+    const cleanAssignees = [...new Set(updates.assigneeIds)]
+    if (cleanAssignees.length > 0) {
+      const members = await db
+        .select({ userId: t.members.userId })
+        .from(t.members)
+        .where(
+          and(
+            eq(t.members.workspaceId, workspaceId),
+            inArray(t.members.userId, cleanAssignees),
+          ),
+        )
+      if (members.length !== cleanAssignees.length) {
+        throw new HttpError(400, 'invalid_assignees', 'Assignees must be workspace members')
+      }
+    }
+
+    // Detect newly added assignees for notifications (excluding actor)
+    const existingAssignees = await db
+      .select({ userId: t.cardAssignees.userId })
+      .from(t.cardAssignees)
+      .where(eq(t.cardAssignees.cardId, cardId))
+    const existingSet = new Set(existingAssignees.map((a) => a.userId))
+    const newlyAdded = cleanAssignees.filter((uid) => !existingSet.has(uid) && uid !== actorId)
+
+    statements.push(
+      db.delete(t.cardAssignees).where(eq(t.cardAssignees.cardId, cardId)),
+    )
+    if (cleanAssignees.length > 0) {
+      for (const chunk of chunkByParamBudget(cleanAssignees, 2, 0)) {
+        const values = chunk.map((userId) => ({ cardId, userId }))
+        statements.push(db.insert(t.cardAssignees).values(values))
+      }
+    }
+
+    if (actorId && newlyAdded.length > 0) {
+      for (const chunk of chunkByParamBudget(newlyAdded, 5, 0)) {
+        const notifValues = chunk.map((recipientId) => ({
+          id: nanoid(),
+          workspaceId,
+          userId: recipientId,
+          type: 'assigned' as const,
+          actorId,
+          cardId,
+          notepadId: card.notepadId,
+          createdAt: now,
+        }))
+        statements.push(db.insert(t.notifications).values(notifValues))
+      }
+    }
+  }
+
+  // Tags validation & update (I9)
+  if (updates.tagIds !== undefined) {
+    const cleanTags = [...new Set(updates.tagIds)]
+    if (cleanTags.length > 0) {
+      const tags = await db
+        .select({ id: t.tags.id })
+        .from(t.tags)
+        .where(
+          and(
+            eq(t.tags.projectId, card.projectId),
+            inArray(t.tags.id, cleanTags),
+          ),
+        )
+      if (tags.length !== cleanTags.length) {
+        throw new HttpError(400, 'invalid_tags', 'Tags must belong to this project')
+      }
+    }
+
+    statements.push(
+      db.delete(t.notepadTags).where(eq(t.notepadTags.notepadId, card.notepadId)),
+    )
+    if (cleanTags.length > 0) {
+      for (const chunk of chunkByParamBudget(cleanTags, 2, 0)) {
+        const values = chunk.map((tagId) => ({ notepadId: card.notepadId, tagId }))
+        statements.push(db.insert(t.notepadTags).values(values))
+      }
+    }
+  }
+
+  // Priority and Due Date
+  const cardUpdates: Partial<typeof t.cards.$inferInsert> = {}
+  if (updates.priority !== undefined) cardUpdates.priority = updates.priority ?? null
+  if (updates.dueDate !== undefined) cardUpdates.dueDate = updates.dueDate ?? null
+
+  if (Object.keys(cardUpdates).length > 0) {
+    statements.push(
+      db.update(t.cards).set(cardUpdates).where(eq(t.cards.id, cardId)),
+    )
+  }
+
+  // Title update on notepad & FTS
+  if (updates.title !== undefined) {
+    const newTitle = updates.title.trim() || 'Untitled'
+    statements.push(
+      db
+        .update(t.notepads)
+        .set({ title: newTitle, updatedAt: now })
+        .where(eq(t.notepads.id, card.notepadId)),
+      db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
+      db.run(
+        ftsInsertNowStmt(
+          card.notepadId,
+          newTitle,
+          extractPlainText(card.currentContent),
+        ),
+      ),
+    )
+  }
+
+  if (statements.length > 0) {
+    await runBatch(db, statements)
+  }
+
+  return { ok: true, cardId }
+}
+
+export async function deleteCard(db: DB, workspaceId: string, cardId: string) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      notepadId: t.cards.notepadId,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+
+  const now = Date.now()
+  // Invariant I5: Card and its notepad always have the same soft-delete state (deleted_at equal)
+  await runBatch(db, [
+    db
+      .update(t.notepads)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(eq(t.notepads.id, card.notepadId)),
+    db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
+  ])
+
+  return { ok: true, cardId }
+}
+
+export async function restoreCard(db: DB, workspaceId: string, cardId: string) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      notepadId: t.cards.notepadId,
+      title: t.notepads.title,
+      content: t.notepads.content,
+      deletedAt: t.notepads.deletedAt,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+      ),
+    )
+  if (!card || card.deletedAt === null) {
+    throw new HttpError(404, 'not_found', 'Deleted card not found')
+  }
+
+  const now = Date.now()
+  const plainText = extractPlainText(card.content)
+
+  await runBatch(db, [
+    db
+      .update(t.notepads)
+      .set({ deletedAt: null, updatedAt: now })
+      .where(eq(t.notepads.id, card.notepadId)),
+    db.run(ftsInsertNowStmt(card.notepadId, card.title, plainText)),
+  ])
+
+  return { ok: true, cardId }
+}
+
+export async function permanentDeleteCard(db: DB, workspaceId: string, cardId: string) {
+  const [card] = await db
+    .select({
+      id: t.cards.id,
+      notepadId: t.cards.notepadId,
+      deletedAt: t.notepads.deletedAt,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+      ),
+    )
+  if (!card || card.deletedAt === null) {
+    throw new HttpError(404, 'not_found', 'Deleted card not found in trash')
+  }
+
+  // Deleting the notepad cascades to cards, cardAssignees, notepadTags
+  await runBatch(db, [
+    db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
+    db.delete(t.notepads).where(eq(t.notepads.id, card.notepadId)),
+  ])
+
+  return { ok: true, cardId }
+}
+
+export async function getCardsSummary(
+  db: DB,
+  workspaceId: string,
+  cardIds: string[],
+) {
+  if (cardIds.length === 0) return []
+  const cappedIds = cardIds.slice(0, 50)
+
+  const rows = await db
+    .select({
+      id: t.cards.id,
+      notepadId: t.cards.notepadId,
+      boardId: t.cards.boardId,
+      columnId: t.cards.columnId,
+      priority: t.cards.priority,
+      dueDate: t.cards.dueDate,
+      title: t.notepads.title,
+      boardName: t.boards.name,
+      columnName: t.boardColumns.name,
+    })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .innerJoin(t.boards, eq(t.boards.id, t.cards.boardId))
+    .innerJoin(t.boardColumns, eq(t.boardColumns.id, t.cards.columnId))
+    .where(
+      and(
+        inArray(t.cards.id, cappedIds),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+
+  if (rows.length === 0) return []
+
+  const fetchedCardIds = rows.map((r) => r.id)
+  const assignees = await db
+    .select({
+      cardId: t.cardAssignees.cardId,
+      userId: t.cardAssignees.userId,
+      name: t.user.name,
+      image: t.user.image,
+    })
+    .from(t.cardAssignees)
+    .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
+    .where(inArray(t.cardAssignees.cardId, fetchedCardIds))
+
+  const assigneesByCard = new Map<string, typeof assignees>()
+  for (const a of assignees) {
+    const list = assigneesByCard.get(a.cardId) || []
+    list.push(a)
+    assigneesByCard.set(a.cardId, list)
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    notepadId: r.notepadId,
+    title: r.title,
+    boardId: r.boardId,
+    boardName: r.boardName,
+    columnId: r.columnId,
+    columnName: r.columnName,
+    priority: r.priority,
+    dueDate: r.dueDate,
+    assignees: (assigneesByCard.get(r.id) || []).map((a) => ({
+      userId: a.userId,
+      name: a.name,
+      image: a.image,
+    })),
+  }))
 }

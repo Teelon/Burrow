@@ -56,14 +56,17 @@ function NotepadView() {
   return <NotepadEditor notepadId={notepadId} />
 }
 
-function BoardPlaceholder() {
-  const { boardId } = useParams({ strict: false }) as { boardId?: string }
-  return (
-    <div className="p-8 max-w-4xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold">Board</h2>
-      <p className="text-sm text-neutral-500">Board ID: {boardId}</p>
-    </div>
-  )
+import { BoardView } from './components/boards/BoardView'
+
+function BoardWrapper() {
+  const { projectId, boardId } = useParams({ strict: false }) as {
+    projectId?: string
+    boardId?: string
+  }
+  if (!projectId || !boardId) {
+    return <div className="p-8 text-sm text-neutral-400">Board not found</div>
+  }
+  return <BoardView boardId={boardId} projectId={projectId} />
 }
 
 function TrashPlaceholder() {
@@ -128,7 +131,7 @@ const notepadRoute = createRoute({
 const boardRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/p/$projectId/boards/$boardId',
-  component: BoardPlaceholder,
+  component: BoardWrapper,
 })
 
 const trashRoute = createRoute({

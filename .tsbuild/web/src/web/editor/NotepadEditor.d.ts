@@ -1,6 +1,8 @@
-import '@blocknote/shadcn/dist/style.css';
+import '@blocknote/shadcn/style.css';
 interface NotepadEditorProps {
     notepadId: string;
+    hideTitle?: boolean;
+    hideFavorite?: boolean;
 }
-export declare function NotepadEditor({ notepadId }: NotepadEditorProps): import("react").JSX.Element;
+export declare function NotepadEditor({ notepadId, hideTitle, hideFavorite, }: NotepadEditorProps): import("react").JSX.Element;
 export {};

@@ -15,6 +15,8 @@ import { schema } from './schema'
 
 interface NotepadEditorProps {
   notepadId: string
+  hideTitle?: boolean
+  hideFavorite?: boolean
 }
 
 interface NotepadData {
@@ -30,7 +32,11 @@ interface NotepadData {
   lock: { userId: string; name: string; expiresAt: number } | null
 }
 
-export function NotepadEditor({ notepadId }: NotepadEditorProps) {
+export function NotepadEditor({
+  notepadId,
+  hideTitle = false,
+  hideFavorite = false,
+}: NotepadEditorProps) {
   const [data, setData] = useState<NotepadData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'conflict' | 'error'>('saved')
@@ -296,17 +302,19 @@ export function NotepadEditor({ notepadId }: NotepadEditorProps) {
       {/* Header controls: icon, favorite, save status */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleFavorite}
-            className={`p-1.5 rounded-lg border transition ${
-              data?.isFavorite
-                ? 'text-amber-500 border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30'
-                : 'text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600'
-            }`}
-            title="Favorite"
-          >
-            <Star className={`w-4 h-4 ${data?.isFavorite ? 'fill-current' : ''}`} />
-          </button>
+          {!hideFavorite && (
+            <button
+              onClick={toggleFavorite}
+              className={`p-1.5 rounded-lg border transition ${
+                data?.isFavorite
+                  ? 'text-amber-500 border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30'
+                  : 'text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600'
+              }`}
+              title="Favorite"
+            >
+              <Star className={`w-4 h-4 ${data?.isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          )}
 
           <span className="text-xs text-neutral-400">
             {saveStatus === 'saving' && 'Saving…'}
@@ -318,16 +326,18 @@ export function NotepadEditor({ notepadId }: NotepadEditorProps) {
       </div>
 
       {/* Notepad Title Input */}
-      <div>
-        <input
-          type="text"
-          value={data?.title || ''}
-          onChange={(e) => handleTitleChange(e.target.value)}
-          placeholder="Untitled"
-          disabled={!isEditable}
-          className="w-full text-3xl font-bold tracking-tight bg-transparent border-none focus:outline-none placeholder-neutral-300 dark:placeholder-neutral-700"
-        />
-      </div>
+      {!hideTitle && (
+        <div>
+          <input
+            type="text"
+            value={data?.title || ''}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            placeholder="Untitled"
+            disabled={!isEditable}
+            className="w-full text-3xl font-bold tracking-tight bg-transparent border-none focus:outline-none placeholder-neutral-300 dark:placeholder-neutral-700"
+          />
+        </div>
+      )}
 
       {/* BlockNote Editor Surface */}
       <div className="border-t border-neutral-100 dark:border-neutral-800/60 pt-4 min-h-[350px]">

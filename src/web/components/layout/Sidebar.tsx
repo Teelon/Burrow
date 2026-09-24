@@ -1,7 +1,8 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import {
   FileText,
   Kanban,
+  Plus,
   Search,
   Star,
   Trash2,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import { useMe } from '../../lib/queries'
+import { useBoards, useCreateBoard, useMe } from '../../lib/queries'
 import { NotepadTree } from '../notepads/NotepadTree'
 
 interface SidebarProps {
@@ -18,9 +19,16 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
+  const navigate = useNavigate()
   const { data: me } = useMe()
-  const params = useParams({ strict: false }) as { projectId?: string }
+  const params = useParams({ strict: false }) as {
+    projectId?: string
+    boardId?: string
+  }
   const currentProjectId = params.projectId || me?.lastProjectId || undefined
+  const currentBoardId = params.boardId
+  const { data: boards = [] } = useBoards(currentProjectId)
+  const createBoardMutation = useCreateBoard()
 
   return (
     <aside className="w-64 h-screen flex flex-col bg-neutral-50/70 dark:bg-neutral-950/70 border-r border-neutral-200 dark:border-neutral-800 select-none">
@@ -110,12 +118,58 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               <Kanban className="w-3 h-3" />
               <span>Boards</span>
             </div>
+            {currentProjectId && me?.role !== 'viewer' && (
+              <button
+                onClick={async () => {
+                  const name = window.prompt('New Board Name:', 'Sprint Board')
+                  if (!name?.trim()) return
+                  const res = await createBoardMutation.mutateAsync({
+                    projectId: currentProjectId,
+                    name: name.trim(),
+                  })
+                  navigate({
+                    to: '/p/$projectId/boards/$boardId',
+                    params: {
+                      projectId: currentProjectId,
+                      boardId: res.id,
+                    },
+                  })
+                }}
+                className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition"
+                title="Create Board"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <div id="sidebar-boards-list" className="space-y-0.5 mt-1">
-            {/* Populated in Phase 4 */}
-            <div className="px-2 py-1 text-xs text-neutral-400">
-              Boards load here
-            </div>
+            {boards.length === 0 ? (
+              <div className="px-2 py-1 text-xs text-neutral-400 italic">
+                No boards yet
+              </div>
+            ) : (
+              boards.map((b) => {
+                const isActive = b.id === currentBoardId
+                return (
+                  <Link
+                    key={b.id}
+                    to="/p/$projectId/boards/$boardId"
+                    params={{
+                      projectId: currentProjectId!,
+                      boardId: b.id,
+                    }}
+                    className={`w-full flex items-center gap-2 px-2 py-1 rounded-lg text-xs font-medium transition ${
+                      isActive
+                        ? 'bg-neutral-200/80 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 hover:text-neutral-900 dark:hover:text-neutral-200'
+                    }`}
+                  >
+                    <span className="text-sm leading-none">{b.icon || '📋'}</span>
+                    <span className="truncate">{b.name}</span>
+                  </Link>
+                )
+              })
+            )}
           </div>
         </div>
       </div>

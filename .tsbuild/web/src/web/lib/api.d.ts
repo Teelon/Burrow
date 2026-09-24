@@ -57,7 +57,7 @@ export declare const api: {
                         id: string;
                         name: string;
                     } | undefined;
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                     lastProjectId: string | null;
                 };
                 outputFormat: "json";
@@ -75,7 +75,7 @@ export declare const api: {
                     name: string;
                     email: string;
                     image: string | null;
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                     joinedAt: number;
                 }[];
                 outputFormat: "json";
@@ -90,7 +90,7 @@ export declare const api: {
                 $patch: {
                     input: {
                         json: {
-                            role: "owner" | "editor" | "viewer";
+                            role: "viewer" | "editor" | "owner";
                         };
                     } & {
                         param: {
@@ -108,7 +108,7 @@ export declare const api: {
                 } | {
                     input: {
                         json: {
-                            role: "owner" | "editor" | "viewer";
+                            role: "viewer" | "editor" | "owner";
                         };
                     } & {
                         param: {
@@ -118,7 +118,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         userId: string;
-                        role: "owner" | "editor" | "viewer";
+                        role: "viewer" | "editor" | "owner";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -146,7 +146,7 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                 };
                 output: {
@@ -161,13 +161,13 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                 };
                 output: {
                     id: string;
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                     token: string;
                     expiresAt: number;
                     url: string;
@@ -180,7 +180,7 @@ export declare const api: {
                 output: {
                     id: string;
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                     expiresAt: number;
                     createdAt: number;
                 }[];
@@ -236,7 +236,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         workspaceId: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -968,6 +968,656 @@ export declare const api: {
                     status: import("hono/utils/http-status").StatusCode;
                 };
             }>;
+        };
+    };
+} & {
+    api: {
+        projects: {
+            ":pid": {
+                boards: import("hono/client").ClientRequest<string, "/api/projects/:pid/boards", {
+                    $get: {
+                        input: {
+                            param: {
+                                pid: string;
+                            };
+                        };
+                        output: {
+                            id: string;
+                            workspaceId: string;
+                            projectId: string;
+                            name: string;
+                            icon: string | null;
+                            position: string;
+                            deletedAt: number | null;
+                            createdAt: number;
+                            updatedAt: number;
+                        }[];
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                    $post: {
+                        input: {
+                            json: {
+                                name: string;
+                                icon?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                pid: string;
+                            };
+                        };
+                        output: {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                        outputFormat: "json";
+                        status: 400;
+                    } | {
+                        input: {
+                            json: {
+                                name: string;
+                                icon?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                pid: string;
+                            };
+                        };
+                        output: {
+                            id: string;
+                            position: string;
+                        };
+                        outputFormat: "json";
+                        status: 201;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        boards: {
+            ":id": import("hono/client").ClientRequest<string, "/api/boards/:id", {
+                $get: {
+                    input: {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        columns: {
+                            cards: any[];
+                            id: string;
+                            boardId: string;
+                            name: string;
+                            color: string | null;
+                            position: string;
+                        }[];
+                        id: string;
+                        workspaceId: string;
+                        projectId: string;
+                        name: string;
+                        icon: string | null;
+                        position: string;
+                        deletedAt: number | null;
+                        createdAt: number;
+                        updatedAt: number;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+                $patch: {
+                    input: {
+                        json: {
+                            name?: string | undefined;
+                            icon?: string | null | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                    outputFormat: "json";
+                    status: 400;
+                } | {
+                    input: {
+                        json: {
+                            name?: string | undefined;
+                            icon?: string | null | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: true;
+                        boardId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+                $delete: {
+                    input: {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: true;
+                        deletedId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+            }>;
+        };
+    };
+} & {
+    api: {
+        boards: {
+            ":id": {
+                restore: import("hono/client").ClientRequest<string, "/api/boards/:id/restore", {
+                    $post: {
+                        input: {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            ok: true;
+                            restoredId: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        boards: {
+            ":id": {
+                permanent: import("hono/client").ClientRequest<string, "/api/boards/:id/permanent", {
+                    $delete: {
+                        input: {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            ok: true;
+                            permanentlyDeletedId: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        boards: {
+            ":id": {
+                columns: import("hono/client").ClientRequest<string, "/api/boards/:id/columns", {
+                    $post: {
+                        input: {
+                            json: {
+                                name: string;
+                                color?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                        outputFormat: "json";
+                        status: 400;
+                    } | {
+                        input: {
+                            json: {
+                                name: string;
+                                color?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            id: string;
+                            position: string;
+                        };
+                        outputFormat: "json";
+                        status: 201;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        columns: {
+            ":id": import("hono/client").ClientRequest<string, "/api/columns/:id", {
+                $patch: {
+                    input: {
+                        json: {
+                            name?: string | undefined;
+                            color?: string | null | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                    outputFormat: "json";
+                    status: 400;
+                } | {
+                    input: {
+                        json: {
+                            name?: string | undefined;
+                            color?: string | null | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: true;
+                        columnId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+                $delete: {
+                    input: {
+                        query: {
+                            moveTo?: string | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                    outputFormat: "json";
+                    status: 400;
+                } | {
+                    input: {
+                        query: {
+                            moveTo?: string | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: true;
+                        deletedId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+            }>;
+        };
+    };
+} & {
+    api: {
+        columns: {
+            ":id": {
+                move: import("hono/client").ClientRequest<string, "/api/columns/:id/move", {
+                    $post: {
+                        input: {
+                            json: {
+                                afterId?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                        outputFormat: "json";
+                        status: 400;
+                    } | {
+                        input: {
+                            json: {
+                                afterId?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            position: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        cards: {
+            summary: import("hono/client").ClientRequest<string, "/api/cards/summary", {
+                $get: {
+                    input: {};
+                    output: {
+                        id: string;
+                        notepadId: string;
+                        title: string;
+                        boardId: string;
+                        boardName: string;
+                        columnId: string;
+                        columnName: string;
+                        priority: "low" | "medium" | "high" | "urgent" | null;
+                        dueDate: number | null;
+                        assignees: {
+                            userId: string;
+                            name: string;
+                            image: string | null;
+                        }[];
+                    }[];
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+            }>;
+        };
+    };
+} & {
+    api: {
+        columns: {
+            ":id": {
+                cards: import("hono/client").ClientRequest<string, "/api/columns/:id/cards", {
+                    $post: {
+                        input: {
+                            json: {
+                                title: string;
+                                priority?: "low" | "medium" | "high" | "urgent" | null | undefined;
+                                dueDate?: number | null | undefined;
+                                assigneeIds?: string[] | undefined;
+                                tagIds?: string[] | undefined;
+                                notepad?: {
+                                    mode: "new";
+                                } | {
+                                    mode: "existing";
+                                    id: string;
+                                } | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                        outputFormat: "json";
+                        status: 400;
+                    } | {
+                        input: {
+                            json: {
+                                title: string;
+                                priority?: "low" | "medium" | "high" | "urgent" | null | undefined;
+                                dueDate?: number | null | undefined;
+                                assigneeIds?: string[] | undefined;
+                                tagIds?: string[] | undefined;
+                                notepad?: {
+                                    mode: "new";
+                                } | {
+                                    mode: "existing";
+                                    id: string;
+                                } | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            cardId: string;
+                            notepadId: string;
+                            linkedNotepadId: string | null;
+                        };
+                        outputFormat: "json";
+                        status: 201;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        cards: {
+            ":id": import("hono/client").ClientRequest<string, "/api/cards/:id", {
+                $get: {
+                    input: {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        boardName: string;
+                        columnName: string;
+                        assignees: {
+                            userId: string;
+                            name: string;
+                            image: string | null;
+                        }[];
+                        tags: {
+                            id: string;
+                            name: string;
+                            color: string | null;
+                        }[];
+                        lock: {
+                            userId: string;
+                            name: string;
+                            expiresAt: number;
+                        } | null;
+                        id: string;
+                        boardId: string;
+                        columnId: string;
+                        notepadId: string;
+                        position: string;
+                        priority: "low" | "medium" | "high" | "urgent" | null;
+                        dueDate: number | null;
+                        createdAt: number;
+                        title: string;
+                        content: string;
+                        version: number;
+                        projectId: string;
+                        workspaceId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+                $patch: {
+                    input: {
+                        json: {
+                            title?: string | undefined;
+                            priority?: "low" | "medium" | "high" | "urgent" | null | undefined;
+                            dueDate?: number | null | undefined;
+                            assigneeIds?: string[] | undefined;
+                            tagIds?: string[] | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                    outputFormat: "json";
+                    status: 400;
+                } | {
+                    input: {
+                        json: {
+                            title?: string | undefined;
+                            priority?: "low" | "medium" | "high" | "urgent" | null | undefined;
+                            dueDate?: number | null | undefined;
+                            assigneeIds?: string[] | undefined;
+                            tagIds?: string[] | undefined;
+                        };
+                    } & {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: boolean;
+                        cardId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+                $delete: {
+                    input: {
+                        param: {
+                            id: string;
+                        };
+                    };
+                    output: {
+                        ok: true;
+                        deletedId: string;
+                    };
+                    outputFormat: "json";
+                    status: import("hono/utils/http-status").ContentfulStatusCode;
+                };
+            }>;
+        };
+    };
+} & {
+    api: {
+        cards: {
+            ":id": {
+                move: import("hono/client").ClientRequest<string, "/api/cards/:id/move", {
+                    $post: {
+                        input: {
+                            json: {
+                                columnId: string;
+                                afterId?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                        outputFormat: "json";
+                        status: 400;
+                    } | {
+                        input: {
+                            json: {
+                                columnId: string;
+                                afterId?: string | null | undefined;
+                            };
+                        } & {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            columnId: string;
+                            position: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        cards: {
+            ":id": {
+                restore: import("hono/client").ClientRequest<string, "/api/cards/:id/restore", {
+                    $post: {
+                        input: {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            ok: true;
+                            restoredId: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
+    };
+} & {
+    api: {
+        cards: {
+            ":id": {
+                permanent: import("hono/client").ClientRequest<string, "/api/cards/:id/permanent", {
+                    $delete: {
+                        input: {
+                            param: {
+                                id: string;
+                            };
+                        };
+                        output: {
+                            ok: true;
+                            permanentlyDeletedId: string;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
         };
     };
 };
