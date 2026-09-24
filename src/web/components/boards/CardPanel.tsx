@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import {
   Calendar,
   Flag,
@@ -7,7 +7,10 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { NotepadEditor } from '../../editor/NotepadEditor'
+
+const LazyNotepadEditor = lazy(() =>
+  import('../../editor/NotepadEditor').then((m) => ({ default: m.NotepadEditor })),
+)
 import {
   useCard,
   useDeleteCard,
@@ -270,7 +273,13 @@ export function CardPanel({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
             Card Notes & Body
           </h3>
-          <NotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />
+          <Suspense
+            fallback={
+              <div className="p-4 text-xs text-neutral-400">Loading card notes…</div>
+            }
+          >
+            <LazyNotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />
+          </Suspense>
         </div>
       </div>
     </div>

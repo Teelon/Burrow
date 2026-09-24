@@ -48,12 +48,26 @@ function IndexRedirect() {
   )
 }
 
-import { NotepadEditor } from './editor/NotepadEditor'
+import { lazy, Suspense } from 'react'
+
+const LazyNotepadEditor = lazy(() =>
+  import('./editor/NotepadEditor').then((m) => ({ default: m.NotepadEditor })),
+)
 
 function NotepadView() {
   const { notepadId } = useParams({ strict: false }) as { notepadId?: string }
   if (!notepadId) return <div>Select a notepad</div>
-  return <NotepadEditor notepadId={notepadId} />
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
+          Loading editor…
+        </div>
+      }
+    >
+      <LazyNotepadEditor notepadId={notepadId} />
+    </Suspense>
+  )
 }
 
 import { BoardView } from './components/boards/BoardView'
