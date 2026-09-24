@@ -57,7 +57,7 @@ export declare const api: {
                         id: string;
                         name: string;
                     } | undefined;
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                     lastProjectId: string | null;
                 };
                 outputFormat: "json";
@@ -75,7 +75,7 @@ export declare const api: {
                     name: string;
                     email: string;
                     image: string | null;
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                     joinedAt: number;
                 }[];
                 outputFormat: "json";
@@ -90,7 +90,7 @@ export declare const api: {
                 $patch: {
                     input: {
                         json: {
-                            role: "viewer" | "editor" | "owner";
+                            role: "owner" | "editor" | "viewer";
                         };
                     } & {
                         param: {
@@ -108,7 +108,7 @@ export declare const api: {
                 } | {
                     input: {
                         json: {
-                            role: "viewer" | "editor" | "owner";
+                            role: "owner" | "editor" | "viewer";
                         };
                     } & {
                         param: {
@@ -118,7 +118,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         userId: string;
-                        role: "viewer" | "editor" | "owner";
+                        role: "owner" | "editor" | "viewer";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -146,7 +146,7 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "viewer" | "editor";
+                        role: "editor" | "viewer";
                     };
                 };
                 output: {
@@ -161,13 +161,13 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "viewer" | "editor";
+                        role: "editor" | "viewer";
                     };
                 };
                 output: {
                     id: string;
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                     token: string;
                     expiresAt: number;
                     url: string;
@@ -180,7 +180,7 @@ export declare const api: {
                 output: {
                     id: string;
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                     expiresAt: number;
                     createdAt: number;
                 }[];
@@ -204,7 +204,7 @@ export declare const api: {
                             valid: true;
                             token: string;
                             email: string;
-                            role: "viewer" | "editor";
+                            role: "editor" | "viewer";
                             workspaceName: string;
                             expiresAt: number;
                         };
@@ -262,7 +262,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         workspaceId: string;
-                        role: "viewer" | "editor";
+                        role: "editor" | "viewer";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -537,8 +537,10 @@ export declare const api: {
                         }[];
                         lock: {
                             userId: string;
+                            clientId: string;
                             name: string;
                             expiresAt: number;
+                            isMe: boolean;
                         } | null;
                         id: string;
                         workspaceId: string;
@@ -837,6 +839,7 @@ export declare const api: {
                         input: {
                             json: {
                                 clientId: string;
+                                takeover?: boolean | undefined;
                             };
                         } & {
                             param: {
@@ -855,6 +858,7 @@ export declare const api: {
                         input: {
                             json: {
                                 clientId: string;
+                                takeover?: boolean | undefined;
                             };
                         } & {
                             param: {
@@ -870,6 +874,7 @@ export declare const api: {
                         input: {
                             json: {
                                 clientId: string;
+                                takeover?: boolean | undefined;
                             };
                         } & {
                             param: {
@@ -886,6 +891,7 @@ export declare const api: {
                         input: {
                             json: {
                                 clientId: string;
+                                takeover?: boolean | undefined;
                             };
                         } & {
                             param: {
@@ -904,6 +910,7 @@ export declare const api: {
                         input: {
                             json: {
                                 clientId: string;
+                                takeover?: boolean | undefined;
                             };
                         } & {
                             param: {
@@ -1477,6 +1484,7 @@ export declare const api: {
                         }[];
                         lock: {
                             userId: string;
+                            clientId: string;
                             name: string;
                             expiresAt: number;
                         } | null;

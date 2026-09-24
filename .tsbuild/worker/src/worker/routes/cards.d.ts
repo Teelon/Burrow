@@ -105,6 +105,7 @@ export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
                 }[];
                 lock: {
                     userId: string;
+                    clientId: string;
                     name: string;
                     expiresAt: number;
                 } | null;

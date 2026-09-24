@@ -81,8 +81,10 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
                 }[];
                 lock: {
                     userId: string;
+                    clientId: string;
                     name: string;
                     expiresAt: number;
+                    isMe: boolean;
                 } | null;
                 id: string;
                 workspaceId: string;
@@ -346,6 +348,7 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -364,6 +367,7 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -379,6 +383,7 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -398,6 +403,7 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -416,6 +422,7 @@ export declare const notepadsRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {

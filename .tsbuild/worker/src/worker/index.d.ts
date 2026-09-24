@@ -49,7 +49,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                     id: string;
                     name: string;
                 } | undefined;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
                 lastProjectId: string | null;
             };
             outputFormat: "json";
@@ -65,7 +65,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 name: string;
                 email: string;
                 image: string | null;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
                 joinedAt: number;
             }[];
             outputFormat: "json";
@@ -77,7 +77,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         $patch: {
             input: {
                 json: {
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                 };
             } & {
                 param: {
@@ -95,7 +95,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 json: {
-                    role: "viewer" | "editor" | "owner";
+                    role: "owner" | "editor" | "viewer";
                 };
             } & {
                 param: {
@@ -105,7 +105,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 userId: string;
-                role: "viewer" | "editor" | "owner";
+                role: "owner" | "editor" | "viewer";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -133,7 +133,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
@@ -148,13 +148,13 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 token: string;
                 expiresAt: number;
                 url: string;
@@ -170,7 +170,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 expiresAt: number;
                 createdAt: number;
             }[];
@@ -190,7 +190,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 valid: true;
                 token: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 workspaceName: string;
                 expiresAt: number;
             };
@@ -239,7 +239,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 workspaceId: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -501,8 +501,10 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 }[];
                 lock: {
                     userId: string;
+                    clientId: string;
                     name: string;
                     expiresAt: number;
+                    isMe: boolean;
                 } | null;
                 id: string;
                 workspaceId: string;
@@ -766,6 +768,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -784,6 +787,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -799,6 +803,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -818,6 +823,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -836,6 +842,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     clientId: string;
+                    takeover?: boolean | undefined;
                 };
             } & {
                 param: {
@@ -1356,6 +1363,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 }[];
                 lock: {
                     userId: string;
+                    clientId: string;
                     name: string;
                     expiresAt: number;
                 } | null;

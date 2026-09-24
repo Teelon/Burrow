@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import {
   getDefaultReactSlashMenuItems,
   SuggestionMenuController,
@@ -6,6 +6,7 @@ import {
 } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import '@blocknote/shadcn/style.css'
+import { useQueryClient } from '@tanstack/react-query'
 import { nanoid } from 'nanoid'
 import {
   AlertTriangle,
@@ -40,7 +41,7 @@ function getTabClientId(): string {
   }
 }
 
-interface NotepadEditorProps {
+export interface NotepadEditorProps {
   notepadId: string
   hideTitle?: boolean
   hideFavorite?: boolean
@@ -73,91 +74,124 @@ interface LockBannerState {
   expiresAt?: number
 }
 
-export function NotepadEditor({
-  notepadId,
+interface NotepadEditorInnerProps {
+  initialData: NotepadData
+  hideTitle?: boolean
+  hideFavorite?: boolean
+  onReload: () => void
+}
+
+function NotepadEditorInner({
+  initialData,
   hideTitle = false,
   hideFavorite = false,
-}: NotepadEditorProps) {
-  const [data, setData] = useState<NotepadData | null>(null)
-  const [loading, setLoading] = useState(true)
+  onReload,
+}: NotepadEditorInnerProps) {
+  const queryClient = useQueryClient()
+  const [data, setData] = useState<NotepadData>(initialData)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'conflict' | 'error'>('saved')
-  const [lockBanner, setLockBanner] = useState<LockBannerState | null>(null)
   const [availableBanner, setAvailableBanner] = useState(false)
   const [conflictBanner, setConflictBanner] = useState(false)
   const [showBacklinks, setShowBacklinks] = useState(true)
   const [dialogState, setDialogState] = useState<SuggestionDialogState>({ type: null })
 
   const clientIdRef = useRef(getTabClientId())
-  const hasLockRef = useRef(false)
+  const hasLockRef = useRef<boolean>(
+    Boolean(
+      initialData.lock &&
+        initialData.lock.expiresAt > Date.now() &&
+        initialData.lock.clientId === clientIdRef.current,
+    ),
+  )
+  const [lockBanner, setLockBanner] = useState<LockBannerState | null>(() => {
+    if (initialData.lock && initialData.lock.expiresAt > Date.now()) {
+      const isCurrentClient = initialData.lock.clientId === clientIdRef.current
+      if (!isCurrentClient) {
+        return {
+          holderName: initialData.lock.name,
+          isMe: !!initialData.lock.isMe,
+          expiresAt: initialData.lock.expiresAt,
+        }
+      }
+    }
+    return null
+  })
+
   const isFocusedRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const currentVersionRef = useRef(1)
+  const currentVersionRef = useRef<number>(initialData.version)
   const isSavingRef = useRef(false)
   const queuedContentRef = useRef<string | null>(null)
-  const lastSavedContentRef = useRef<string>('')
   const saveTimeoutRef = useRef<number | null>(null)
+  const titleTimeoutRef = useRef<number | null>(null)
+  const retryTimeoutRef = useRef<number | null>(null)
   const heartbeatIntervalRef = useRef<number | null>(null)
 
-  // 1. Load notepad data
-  const loadNotepad = useCallback(async () => {
+  // Parse initial content safely
+  const initialContent = useMemo(() => {
+    if (!initialData.content) return undefined
     try {
-      const res = await fetch(`/api/notepads/${notepadId}`)
-      if (!res.ok) throw new Error('Failed to load notepad')
-      const json = (await res.json()) as NotepadData
-      setData(json)
-      currentVersionRef.current = json.version
-      lastSavedContentRef.current = json.content
-
-      if (json.lock && json.lock.expiresAt > Date.now()) {
-        const isCurrentClient = json.lock.clientId === clientIdRef.current
-        if (!isCurrentClient) {
-          hasLockRef.current = false
-          setLockBanner({
-            holderName: json.lock.name,
-            isMe: !!json.lock.isMe,
-            expiresAt: json.lock.expiresAt,
-          })
-          setAvailableBanner(false)
-        } else {
-          // Lock is held by this tab
-          hasLockRef.current = true
-          setLockBanner(null)
-          setAvailableBanner(false)
-        }
-      } else {
-        hasLockRef.current = false
-        setLockBanner((prev) => {
-          if (prev) {
-            setAvailableBanner(true)
-          }
-          return null
-        })
+      const parsed = JSON.parse(initialData.content)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
       }
     } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+      console.warn('Failed to parse initial notepad content', err)
     }
-  }, [notepadId])
+    return undefined
+  }, [initialData.content])
 
-  useEffect(() => {
-    loadNotepad()
-  }, [loadNotepad])
+  // Instantiate BlockNote editor with preloaded content
+  const isEditable = !lockBanner
+  const editor = useCreateBlockNote(
+    {
+      schema,
+      initialContent,
+    },
+    [initialData.id],
+  )
+
+  const lastSavedContentRef = useRef<string>(
+    initialContent ? initialData.content : JSON.stringify(editor.document),
+  )
 
   // Polling when locked by another client/user (every 10 seconds)
   useEffect(() => {
     if (!lockBanner) return
-    const pollInterval = window.setInterval(() => {
-      loadNotepad()
+    const pollInterval = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/notepads/${initialData.id}`)
+        if (!res.ok) return
+        const json = (await res.json()) as NotepadData
+        if (json.lock && json.lock.expiresAt > Date.now()) {
+          const isCurrentClient = json.lock.clientId === clientIdRef.current
+          if (!isCurrentClient) {
+            setLockBanner({
+              holderName: json.lock.name,
+              isMe: !!json.lock.isMe,
+              expiresAt: json.lock.expiresAt,
+            })
+          } else {
+            hasLockRef.current = true
+            setLockBanner(null)
+            setAvailableBanner(false)
+          }
+        } else {
+          setLockBanner(null)
+          setAvailableBanner(true)
+        }
+      } catch (err) {
+        console.warn('Lock poll error', err)
+      }
     }, 10_000)
     return () => window.clearInterval(pollInterval)
-  }, [lockBanner, loadNotepad])
+  }, [lockBanner, initialData.id])
 
-  // 2. Lock claim & release
+  // Lock claim & release
   const claimLock = useCallback(
     async (takeover = false) => {
       try {
-        const res = await fetch(`/api/notepads/${notepadId}/lock`, {
+        const res = await fetch(`/api/notepads/${initialData.id}/lock`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -188,18 +222,18 @@ export function NotepadEditor({
       }
       return false
     },
-    [notepadId],
+    [initialData.id],
   )
 
   const releaseLock = useCallback(() => {
     hasLockRef.current = false
-    fetch(`/api/notepads/${notepadId}/lock`, {
+    fetch(`/api/notepads/${initialData.id}/lock`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clientId: clientIdRef.current }),
       keepalive: true,
     }).catch(() => {})
-  }, [notepadId])
+  }, [initialData.id])
 
   const startHeartbeat = useCallback(() => {
     if (heartbeatIntervalRef.current) return
@@ -217,9 +251,9 @@ export function NotepadEditor({
     }
   }, [])
 
-  // 3. Save function (single-flight, queued)
+  // Save function (single-flight, queued)
   const executeSave = useCallback(
-    async (contentToSave: string) => {
+    async (contentToSave: string, options?: { isUnload?: boolean }) => {
       if (contentToSave === lastSavedContentRef.current) {
         setSaveStatus('saved')
         return
@@ -234,14 +268,21 @@ export function NotepadEditor({
       setSaveStatus('saving')
 
       try {
-        const res = await fetch(`/api/notepads/${notepadId}/content`, {
+        const bodyStr = JSON.stringify({
+          content: contentToSave,
+          baseVersion: currentVersionRef.current,
+          clientId: clientIdRef.current,
+        })
+
+        // Browsers strictly limit keepalive requests to 64KB across all active requests.
+        // Never use keepalive for normal saves; only use keepalive on page unload if safely under 60KB.
+        const useKeepalive = Boolean(options?.isUnload && bodyStr.length < 60_000)
+
+        const res = await fetch(`/api/notepads/${initialData.id}/content`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: contentToSave,
-            baseVersion: currentVersionRef.current,
-            clientId: clientIdRef.current,
-          }),
+          keepalive: useKeepalive,
+          body: bodyStr,
         })
 
         if (res.status === 409) {
@@ -270,9 +311,23 @@ export function NotepadEditor({
         lastSavedContentRef.current = contentToSave
         setSaveStatus('saved')
         setConflictBanner(false)
+        if (retryTimeoutRef.current) {
+          window.clearTimeout(retryTimeoutRef.current)
+          retryTimeoutRef.current = null
+        }
       } catch (err) {
         console.error('Save error', err)
         setSaveStatus('error')
+        // Automatically retry saving after 3 seconds
+        if (retryTimeoutRef.current) window.clearTimeout(retryTimeoutRef.current)
+        retryTimeoutRef.current = window.setTimeout(() => {
+          if (editor) {
+            const currentDoc = JSON.stringify(editor.document)
+            if (currentDoc !== lastSavedContentRef.current) {
+              executeSave(currentDoc)
+            }
+          }
+        }, 3000)
       } finally {
         isSavingRef.current = false
         if (queuedContentRef.current !== null) {
@@ -282,7 +337,7 @@ export function NotepadEditor({
         }
       }
     },
-    [notepadId],
+    [initialData.id, editor],
   )
 
   const scheduleSave = useCallback(
@@ -295,13 +350,6 @@ export function NotepadEditor({
     },
     [executeSave],
   )
-
-  // 4. BlockNote editor instantiation
-  const isEditable = !lockBanner
-  const editor = useCreateBlockNote({
-    schema,
-    initialContent: data?.content ? JSON.parse(data.content) : undefined,
-  })
 
   // Listen to editor changes
   useEffect(() => {
@@ -338,7 +386,10 @@ export function NotepadEditor({
         saveTimeoutRef.current = null
       }
       if (editor) {
-        executeSave(JSON.stringify(editor.document))
+        const docJson = JSON.stringify(editor.document)
+        if (docJson !== lastSavedContentRef.current) {
+          executeSave(docJson)
+        }
       }
       if (hasLockRef.current) {
         releaseLock()
@@ -352,7 +403,10 @@ export function NotepadEditor({
     const handlePageHide = () => {
       if (hasLockRef.current) {
         if (editor) {
-          executeSave(JSON.stringify(editor.document))
+          const docJson = JSON.stringify(editor.document)
+          if (docJson !== lastSavedContentRef.current) {
+            executeSave(docJson, { isUnload: true })
+          }
         }
         releaseLock()
       }
@@ -366,9 +420,14 @@ export function NotepadEditor({
       window.removeEventListener('beforeunload', handlePageHide)
       stopHeartbeat()
       if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current)
+      if (titleTimeoutRef.current) window.clearTimeout(titleTimeoutRef.current)
+      if (retryTimeoutRef.current) window.clearTimeout(retryTimeoutRef.current)
       if (hasLockRef.current) {
         if (editor) {
-          executeSave(JSON.stringify(editor.document))
+          const docJson = JSON.stringify(editor.document)
+          if (docJson !== lastSavedContentRef.current) {
+            executeSave(docJson, { isUnload: true })
+          }
         }
         releaseLock()
       }
@@ -376,33 +435,31 @@ export function NotepadEditor({
   }, [editor, executeSave, releaseLock, stopHeartbeat])
 
   const toggleFavorite = async () => {
-    if (!data) return
     const next = !data.isFavorite
-    setData({ ...data, isFavorite: next })
-    await fetch(`/api/notepads/${notepadId}`, {
+    setData((prev) => ({ ...prev, isFavorite: next }))
+    await fetch(`/api/notepads/${initialData.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isFavorite: next }),
     })
+    queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] })
   }
 
   const handleTitleChange = (newTitle: string) => {
-    if (!data) return
-    setData({ ...data, title: newTitle })
-    fetch(`/api/notepads/${notepadId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle }),
-    })
-  }
-
-  if (loading) {
-    return (
-      <div className="p-8 max-w-3xl mx-auto space-y-4">
-        <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
-        <div className="h-64 bg-neutral-100 dark:bg-neutral-800/50 rounded-xl animate-pulse" />
-      </div>
-    )
+    setData((prev) => ({ ...prev, title: newTitle }))
+    if (titleTimeoutRef.current) window.clearTimeout(titleTimeoutRef.current)
+    titleTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await fetch(`/api/notepads/${initialData.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle }),
+        })
+        queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] })
+      } catch (err) {
+        console.error('Title save error', err)
+      }
+    }, 400)
   }
 
   return (
@@ -484,10 +541,7 @@ export function NotepadEditor({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                loadNotepad()
-                setConflictBanner(false)
-              }}
+              onClick={onReload}
               className="px-2.5 py-1 rounded bg-white dark:bg-neutral-900 border border-rose-300 dark:border-rose-700 text-xs font-medium hover:bg-rose-100/50"
             >
               Reload
@@ -495,7 +549,7 @@ export function NotepadEditor({
             <button
               onClick={() => {
                 if (editor) {
-                  currentVersionRef.current = data?.version ? data.version + 1 : 1
+                  currentVersionRef.current = data.version + 1
                   executeSave(JSON.stringify(editor.document))
                 }
               }}
@@ -514,13 +568,13 @@ export function NotepadEditor({
             <button
               onClick={toggleFavorite}
               className={`p-1.5 rounded-lg border transition ${
-                data?.isFavorite
+                data.isFavorite
                   ? 'text-amber-500 border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30'
                   : 'text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600'
               }`}
               title="Favorite"
             >
-              <Star className={`w-4 h-4 ${data?.isFavorite ? 'fill-current' : ''}`} />
+              <Star className={`w-4 h-4 ${data.isFavorite ? 'fill-current' : ''}`} />
             </button>
           )}
 
@@ -528,7 +582,20 @@ export function NotepadEditor({
             {saveStatus === 'saving' && 'Saving…'}
             {saveStatus === 'saved' && 'Saved'}
             {saveStatus === 'conflict' && 'Conflict'}
-            {saveStatus === 'error' && 'Offline, retrying'}
+            {saveStatus === 'error' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (editor) {
+                    executeSave(JSON.stringify(editor.document))
+                  }
+                }}
+                className="text-rose-500 hover:text-rose-600 underline font-medium cursor-pointer"
+                title="Click to retry saving"
+              >
+                Offline, retrying… (click to retry)
+              </button>
+            )}
           </span>
         </div>
       </div>
@@ -538,7 +605,7 @@ export function NotepadEditor({
         <div>
           <input
             type="text"
-            value={data?.title || ''}
+            value={data.title || ''}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="Untitled"
             disabled={!isEditable}
@@ -568,8 +635,8 @@ export function NotepadEditor({
                 const defaultItems = getDefaultReactSlashMenuItems(editor)
                 const customItems = getCustomSlashItems(
                   editor,
-                  data?.kind === 'card' ? 'card' : 'notepad',
-                  data?.projectId || '',
+                  data.kind === 'card' ? 'card' : 'notepad',
+                  data.projectId || '',
                   setDialogState,
                 )
                 const all = [...customItems, ...defaultItems]
@@ -586,7 +653,7 @@ export function NotepadEditor({
             <SuggestionMenuController
               triggerCharacter="@"
               getItems={async (query) => {
-                return getAtMenuSuggestions(query, data?.projectId || '', editor)
+                return getAtMenuSuggestions(query, data.projectId || '', editor)
               }}
             />
 
@@ -596,18 +663,22 @@ export function NotepadEditor({
               getItems={async (query) => {
                 return getHashMenuSuggestions(
                   query,
-                  data?.projectId || '',
-                  notepadId,
+                  data.projectId || '',
+                  initialData.id,
                   editor,
                   async (tagId) => {
-                    const currentTags = data?.tags.map((t) => t.id) || []
+                    const currentTags = data.tags.map((t) => t.id) || []
                     if (!currentTags.includes(tagId)) {
-                      await fetch(`/api/notepads/${notepadId}/tags`, {
+                      await fetch(`/api/notepads/${initialData.id}/tags`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ tagIds: [...currentTags, tagId] }),
                       })
-                      loadNotepad()
+                      const res = await fetch(`/api/notepads/${initialData.id}`)
+                      if (res.ok) {
+                        const json = (await res.json()) as NotepadData
+                        setData(json)
+                      }
                     }
                   },
                 )
@@ -618,7 +689,7 @@ export function NotepadEditor({
       </div>
 
       {/* Reference Dialogs: /notepad and /task */}
-      {dialogState.type === 'notepad' && data?.projectId && (
+      {dialogState.type === 'notepad' && data.projectId && (
         <NotepadPickerModal
           projectId={data.projectId}
           onClose={() => setDialogState({ type: null })}
@@ -635,7 +706,7 @@ export function NotepadEditor({
         />
       )}
 
-      {dialogState.type === 'task' && data?.projectId && (
+      {dialogState.type === 'task' && data.projectId && (
         <TaskPickerModal
           projectId={data.projectId}
           onClose={() => setDialogState({ type: null })}
@@ -653,7 +724,7 @@ export function NotepadEditor({
       )}
 
       {/* Backlinks Section */}
-      {data && data.backlinks && data.backlinks.length > 0 && (
+      {data.backlinks && data.backlinks.length > 0 && (
         <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 pt-6">
           <button
             onClick={() => setShowBacklinks(!showBacklinks)}
@@ -668,7 +739,7 @@ export function NotepadEditor({
               {data.backlinks.map((link) => (
                 <a
                   key={link.id}
-                  href={`/p/${data.id}/notepads/${link.id}`}
+                  href={`/p/${data.projectId}/notepads/${link.id}`}
                   className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 flex items-center gap-2 text-xs transition"
                 >
                   <FileText className="w-3.5 h-3.5 text-purple-500" />
@@ -680,5 +751,55 @@ export function NotepadEditor({
         </div>
       )}
     </div>
+  )
+}
+
+export function NotepadEditor({
+  notepadId,
+  hideTitle = false,
+  hideFavorite = false,
+}: NotepadEditorProps) {
+  const [data, setData] = useState<NotepadData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  const loadNotepad = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/notepads/${notepadId}`)
+      if (!res.ok) throw new Error('Failed to load notepad')
+      const json = (await res.json()) as NotepadData
+      setData(json)
+    } catch (err) {
+      console.error('Failed to load notepad', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [notepadId])
+
+  useEffect(() => {
+    setLoading(true)
+    loadNotepad()
+  }, [loadNotepad])
+
+  if (loading || !data) {
+    return (
+      <div className="p-8 max-w-3xl mx-auto space-y-4">
+        <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+        <div className="h-64 bg-neutral-100 dark:bg-neutral-800/50 rounded-xl animate-pulse" />
+      </div>
+    )
+  }
+
+  return (
+    <NotepadEditorInner
+      key={`${notepadId}-${reloadKey}`}
+      initialData={data}
+      hideTitle={hideTitle}
+      hideFavorite={hideFavorite}
+      onReload={() => {
+        setReloadKey((k) => k + 1)
+        loadNotepad()
+      }}
+    />
   )
 }

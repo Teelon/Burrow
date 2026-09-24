@@ -315,7 +315,7 @@ export function useCreateColumn() {
     }) => {
       const res = await api.api.boards[':id'].columns.$post({
         param: { id: boardId },
-        json: { name, color },
+        json: { name, color: color || null },
       })
       if (!res.ok) {
         const err = (await res.json()) as { error?: { message?: string } }

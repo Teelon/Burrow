@@ -70,6 +70,7 @@ export declare function getCard(db: DB, workspaceId: string, cardId: string): Pr
     }[];
     lock: {
         userId: string;
+        clientId: string;
         name: string;
         expiresAt: number;
     } | null;

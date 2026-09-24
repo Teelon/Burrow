@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -206,6 +206,8 @@ function ColumnComponent({
 }) {
   const [isAdding, setIsAdding] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [columnName, setColumnName] = useState(column.name)
 
   const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards])
 
@@ -228,17 +230,48 @@ function ColumnComponent({
     >
       {/* Column Header */}
       <div className="flex items-center justify-between px-1 py-1.5 mb-2 relative">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {column.color && (
             <span
-              className="w-2.5 h-2.5 rounded-full"
+              className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: column.color }}
             />
           )}
-          <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-            {column.name}
-          </h3>
-          <span className="text-xs px-1.5 py-0.2 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500 font-medium">
+          {isEditingName ? (
+            <input
+              type="text"
+              autoFocus
+              value={columnName}
+              onChange={(e) => setColumnName(e.target.value)}
+              onBlur={() => {
+                if (columnName.trim() && columnName.trim() !== column.name) {
+                  onRenameColumn(column.id, columnName.trim())
+                } else {
+                  setColumnName(column.name)
+                }
+                setIsEditingName(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                }
+                if (e.key === 'Escape') {
+                  setColumnName(column.name)
+                  setIsEditingName(false)
+                }
+              }}
+              className="text-sm font-semibold bg-white dark:bg-neutral-800 border border-primary px-1.5 py-0.5 rounded text-neutral-800 dark:text-neutral-200 focus:outline-none w-full"
+            />
+          ) : (
+            <h3
+              onDoubleClick={() => setIsEditingName(true)}
+              className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 truncate cursor-pointer hover:opacity-80"
+              title="Double-click to rename"
+            >
+              {column.name}
+            </h3>
+          )}
+          <span className="text-xs px-1.5 py-0.2 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500 font-medium shrink-0">
             {column.cards.length}
           </span>
         </div>
@@ -256,7 +289,8 @@ function ColumnComponent({
               <button
                 onClick={() => {
                   setShowMenu(false)
-                  onRenameColumn(column.id, column.name)
+                  setColumnName(column.name)
+                  setIsEditingName(true)
                 }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
@@ -339,6 +373,9 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [isEditingBoardName, setIsEditingBoardName] = useState(false)
   const [boardName, setBoardName] = useState('')
+  const [isAddingColumn, setIsAddingColumn] = useState(false)
+  const [newColumnName, setNewColumnName] = useState('')
+  const newColumnInputRef = useRef<HTMLInputElement>(null)
 
   // Board filters
   const [filterSearch, setFilterSearch] = useState('')
@@ -543,23 +580,35 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     })
   }
 
-  const handleAddColumn = () => {
-    const name = window.prompt('Column name:', 'New Column')
-    if (name?.trim()) {
-      createColumnMutation.mutate({
+  const handleOpenAddColumn = () => {
+    setIsAddingColumn(true)
+    setTimeout(() => {
+      newColumnInputRef.current?.focus()
+      newColumnInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' })
+    }, 50)
+  }
+
+  const handleCreateColumn = async () => {
+    const trimmed = newColumnName.trim()
+    if (!trimmed || createColumnMutation.isPending) return
+    try {
+      await createColumnMutation.mutateAsync({
         boardId,
-        name: name.trim(),
+        name: trimmed,
       })
+      setNewColumnName('')
+      setIsAddingColumn(false)
+    } catch (err: any) {
+      alert(err.message || 'Failed to create column')
     }
   }
 
   const handleRenameColumn = (columnId: string, currentName: string) => {
-    const name = window.prompt('Rename column:', currentName)
-    if (name?.trim() && name.trim() !== currentName) {
+    if (currentName?.trim()) {
       updateColumnMutation.mutate({
         boardId,
         columnId,
-        name: name.trim(),
+        name: currentName.trim(),
       })
     }
   }
@@ -651,8 +700,8 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleAddColumn}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition flex items-center gap-1.5 shadow-xs"
+            onClick={handleOpenAddColumn}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Column</span>
@@ -768,6 +817,62 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
             {activeCard ? <CardTile card={activeCard} isOverlay /> : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Add Column Button & Inline Card on the Kanban Board */}
+        {isAddingColumn ? (
+          <div className="w-72 shrink-0 bg-neutral-100/70 dark:bg-neutral-900/50 rounded-2xl p-3 flex flex-col gap-2.5 border border-primary/40 shadow-xs">
+            <input
+              ref={newColumnInputRef}
+              type="text"
+              autoFocus
+              placeholder="Column name…"
+              value={newColumnName}
+              onChange={(e) => setNewColumnName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleCreateColumn()
+                }
+                if (e.key === 'Escape') {
+                  setIsAddingColumn(false)
+                  setNewColumnName('')
+                }
+              }}
+              className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:border-primary text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCreateColumn}
+                disabled={!newColumnName.trim() || createColumnMutation.isPending}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{createColumnMutation.isPending ? 'Adding…' : 'Add Column'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingColumn(false)
+                  setNewColumnName('')
+                }}
+                className="p-1.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition cursor-pointer"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleOpenAddColumn}
+            className="w-72 shrink-0 h-12 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700/60 hover:border-primary/60 dark:hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/10 text-xs font-semibold text-neutral-500 hover:text-primary transition flex items-center justify-center gap-2 cursor-pointer select-none"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Column</span>
+          </button>
+        )}
       </div>
 
       {/* Selected Card Side Panel */}

@@ -85,6 +85,7 @@ export interface ClaimLockArgs {
     notepadId: string;
     userId: string;
     clientId: string;
+    takeover?: boolean;
 }
 export declare function claimLock(db: DB, args: ClaimLockArgs): Promise<{
     expiresAt: number;
