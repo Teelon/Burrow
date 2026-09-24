@@ -1496,7 +1496,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1512,7 +1512,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1529,7 +1529,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1545,7 +1545,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1562,7 +1562,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1624,6 +1624,176 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
             };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/"> | import("hono/types").MergeSchemaPath<{
+    "/api/projects/:pid/tags": {
+        $get: {
+            input: {
+                param: {
+                    pid: string;
+                };
+            };
+            output: {
+                id: string;
+                projectId: string;
+                name: string;
+                color: string | null;
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/projects/:pid/tags": {
+        $post: {
+            input: {
+                json: {
+                    name: string;
+                    color?: string | undefined;
+                };
+            } & {
+                param: {
+                    pid: string;
+                };
+            };
+            output: import("zod").ZodSafeParseError<{
+                name: string;
+                color?: string | undefined;
+            }>;
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    name: string;
+                    color?: string | undefined;
+                };
+            } & {
+                param: {
+                    pid: string;
+                };
+            };
+            output: {
+                id: string;
+                projectId: string;
+                name: string;
+                color: string | null;
+            };
+            outputFormat: "json";
+            status: 200;
+        } | {
+            input: {
+                json: {
+                    name: string;
+                    color?: string | undefined;
+                };
+            } & {
+                param: {
+                    pid: string;
+                };
+            };
+            output: {
+                id: string;
+                projectId: string;
+                name: string;
+                color: string | null;
+            };
+            outputFormat: "json";
+            status: 201;
+        };
+    };
+} & {
+    "/api/tags/:id": {
+        $patch: {
+            input: {
+                json: {
+                    name?: string | undefined;
+                    color?: string | undefined;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: import("zod").ZodSafeParseError<{
+                name?: string | undefined;
+                color?: string | undefined;
+            }>;
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    name?: string | undefined;
+                    color?: string | undefined;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                id: string;
+                projectId: string;
+                name: string;
+                color: string | null;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/tags/:id": {
+        $delete: {
+            input: {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                ok: true;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/"> | import("hono/types").MergeSchemaPath<{
+    "/api/search": {
+        $get: {
+            input: {
+                query: {
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                    scope?: "project" | "all" | undefined;
+                };
+            };
+            output: import("zod").ZodSafeParseError<{
+                q: string;
+                scope: "project" | "all";
+                projectId?: string | undefined;
+            }>;
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                query: {
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                    scope?: "project" | "all" | undefined;
+                };
+            };
+            output: {
+                id: string;
+                title: string;
+                icon?: string | null | undefined;
+                kind: "notepad" | "card";
+                projectId: string;
+                projectName: string;
+                snippet: string;
+            }[];
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
         };

@@ -260,3 +260,68 @@ export declare function useNotifications(unreadOnly?: boolean): import("@tanstac
 export declare function useMarkNotificationsRead(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
 }, Error, string[] | undefined, unknown>;
+export interface TrashedNotepad {
+    id: string;
+    kind: 'notepad' | 'card';
+    title: string;
+    icon?: string | null;
+    deletedAt: number;
+}
+export interface TrashedBoard {
+    id: string;
+    name: string;
+    icon?: string | null;
+    deletedAt: number;
+}
+export declare function useTrash(projectId?: string): import("@tanstack/react-query").UseQueryResult<{
+    notepads: TrashedNotepad[];
+    boards: TrashedBoard[];
+}, Error>;
+export declare function useRestoreNotepad(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+    notepadId: string;
+    projectId: string;
+}, unknown>;
+export declare function usePermanentDeleteNotepad(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+    notepadId: string;
+    projectId: string;
+}, unknown>;
+export declare function useRestoreBoard(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+    boardId: string;
+    projectId: string;
+}, unknown>;
+export declare function usePermanentDeleteBoard(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+    boardId: string;
+    projectId: string;
+}, unknown>;
+export declare function useRecentNotepads(projectId?: string): import("@tanstack/react-query").UseQueryResult<{
+    id: string;
+    title: string;
+    icon?: string | null;
+    updatedAt: number;
+}[], Error>;
+export interface TagItem {
+    id: string;
+    projectId: string;
+    name: string;
+    color?: string | null;
+}
+export declare function useProjectTags(projectId?: string): import("@tanstack/react-query").UseQueryResult<TagItem[], Error>;
+export declare function useCreateTag(): import("@tanstack/react-query").UseMutationResult<TagItem, Error, {
+    projectId: string;
+    name: string;
+    color?: string | null;
+}, unknown>;
+export declare function useDeleteTag(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+    tagId: string;
+    projectId: string;
+}, unknown>;
+export interface SearchItem {
+    id: string;
+    title: string;
+    icon?: string | null;
+    kind: 'notepad' | 'card';
+    projectId: string;
+    projectName: string;
+    snippet: string;
+}
+export declare function useSearch(query: string, projectId?: string, scope?: 'project' | 'all'): import("@tanstack/react-query").UseQueryResult<SearchItem[], Error>;

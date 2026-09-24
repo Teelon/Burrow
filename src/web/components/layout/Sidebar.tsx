@@ -5,13 +5,14 @@ import {
   Plus,
   Search,
   Star,
+  Tag,
   Trash2,
   Users,
   X,
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import { useBoards, useCreateBoard, useMe } from '../../lib/queries'
+import { useBoards, useCreateBoard, useMe, useProjectTags } from '../../lib/queries'
 import { NotepadTree } from '../notepads/NotepadTree'
 import { NotificationsBell } from './NotificationsBell'
 
@@ -29,6 +30,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const currentProjectId = params.projectId || me?.lastProjectId || undefined
   const currentBoardId = params.boardId
   const { data: boards = [] } = useBoards(currentProjectId)
+  const { data: projectTags = [] } = useProjectTags(currentProjectId)
   const createBoardMutation = useCreateBoard()
 
   return (
@@ -174,6 +176,33 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             )}
           </div>
         </div>
+
+        {/* Project Tags Section */}
+        {projectTags.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+              <Tag className="w-3 h-3 text-purple-400" />
+              <span>Tags</span>
+            </div>
+            <div className="space-y-0.5 mt-1 px-1">
+              {projectTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('burrow:open-palette'))
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 hover:text-neutral-900 dark:hover:text-neutral-200 transition text-left"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: tag.color || '#a855f7' }}
+                  />
+                  <span className="truncate">#{tag.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer: Trash, Members, Settings, Theme */}

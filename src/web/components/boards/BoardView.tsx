@@ -22,13 +22,18 @@ import {
   Plus,
   Trash2,
   Edit2,
+  Filter,
+  Search,
+  X,
 } from 'lucide-react'
 import {
   useBoard,
   useCreateColumn,
   useDeleteBoard,
   useDeleteColumn,
+  useMembers,
   useMoveCard,
+  useProjectTags,
   useUpdateBoard,
   useUpdateColumn,
 } from '../../lib/queries'
@@ -304,6 +309,15 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   const [isEditingBoardName, setIsEditingBoardName] = useState(false)
   const [boardName, setBoardName] = useState('')
 
+  // Board filters
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterPriority, setFilterPriority] = useState<string>('all')
+  const [filterAssignee, setFilterAssignee] = useState<string>('all')
+  const [filterTag, setFilterTag] = useState<string>('all')
+
+  const { data: members = [] } = useMembers()
+  const { data: tags = [] } = useProjectTags(projectId)
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -324,6 +338,34 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   }
 
   const columns: ColumnItem[] = board.columns || []
+
+  const filteredColumns = useMemo(() => {
+    return columns.map((col) => ({
+      ...col,
+      cards: col.cards.filter((card) => {
+        if (filterSearch.trim()) {
+          const q = filterSearch.toLowerCase()
+          if (!card.title.toLowerCase().includes(q)) return false
+        }
+        if (filterPriority !== 'all' && card.priority !== filterPriority) {
+          return false
+        }
+        if (filterAssignee !== 'all') {
+          if (!card.assignees.some((a) => a.userId === filterAssignee)) return false
+        }
+        if (filterTag !== 'all') {
+          if (!card.tags.some((t) => t.id === filterTag)) return false
+        }
+        return true
+      }),
+    }))
+  }, [columns, filterSearch, filterPriority, filterAssignee, filterTag])
+
+  const isFiltered =
+    filterSearch.trim() !== '' ||
+    filterPriority !== 'all' ||
+    filterAssignee !== 'all' ||
+    filterTag !== 'all'
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
@@ -509,6 +551,83 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
         </div>
       </div>
 
+      {/* Filter Bar */}
+      <div className="px-6 py-2 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/30 flex items-center gap-3 flex-wrap text-xs">
+        <div className="flex items-center gap-1.5 text-neutral-400">
+          <Filter className="w-3.5 h-3.5" />
+          <span className="font-semibold uppercase tracking-wider text-[10px]">Filter:</span>
+        </div>
+
+        {/* Text Search */}
+        <div className="relative flex items-center">
+          <Search className="w-3 h-3 text-neutral-400 absolute left-2" />
+          <input
+            type="text"
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Search cards…"
+            className="pl-7 pr-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none focus:border-primary w-32 focus:w-44 transition-all"
+          />
+        </div>
+
+        {/* Priority Filter */}
+        <select
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value)}
+          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
+        >
+          <option value="all">All Priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+
+        {/* Assignee Filter */}
+        <select
+          value={filterAssignee}
+          onChange={(e) => setFilterAssignee(e.target.value)}
+          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
+        >
+          <option value="all">All Assignees</option>
+          {members.map((m) => (
+            <option key={m.userId} value={m.userId}>
+              {m.name || m.email}
+            </option>
+          ))}
+        </select>
+
+        {/* Tag Filter */}
+        <select
+          value={filterTag}
+          onChange={(e) => setFilterTag(e.target.value)}
+          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
+        >
+          <option value="all">All Tags</option>
+          {tags.map((t) => (
+            <option key={t.id} value={t.id}>
+              #{t.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Reset Filter Button */}
+        {isFiltered && (
+          <button
+            onClick={() => {
+              setFilterSearch('')
+              setFilterPriority('all')
+              setFilterAssignee('all')
+              setFilterTag('all')
+            }}
+            className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 font-medium px-2 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+          >
+            <X className="w-3 h-3" />
+            <span>Reset filters</span>
+          </button>
+        )}
+      </div>
+
       {/* Columns Container (Horizontal Scroll) */}
       <div className="flex-1 overflow-x-auto p-6 flex items-start gap-4">
         <DndContext
@@ -517,7 +636,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {columns.map((column) => (
+          {filteredColumns.map((column) => (
             <ColumnComponent
               key={column.id}
               column={column}

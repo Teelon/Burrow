@@ -1,0 +1,50 @@
+import { z } from 'zod';
+import type { Env } from '../env';
+export interface SearchResult {
+    id: string;
+    title: string;
+    icon?: string | null;
+    kind: 'notepad' | 'card';
+    projectId: string;
+    projectName: string;
+    snippet: string;
+}
+export declare const searchRoutes: import("hono/hono-base").HonoBase<Env, {
+    "/api/search": {
+        $get: {
+            input: {
+                query: {
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                    scope?: "project" | "all" | undefined;
+                };
+            };
+            output: z.ZodSafeParseError<{
+                q: string;
+                scope: "project" | "all";
+                projectId?: string | undefined;
+            }>;
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                query: {
+                    q?: string | undefined;
+                    projectId?: string | undefined;
+                    scope?: "project" | "all" | undefined;
+                };
+            };
+            output: {
+                id: string;
+                title: string;
+                icon?: string | null | undefined;
+                kind: "notepad" | "card";
+                projectId: string;
+                projectName: string;
+                snippet: string;
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/", "/api/search">;

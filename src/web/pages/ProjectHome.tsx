@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { FileText, Kanban, Plus } from 'lucide-react'
-import { useBoards, useCreateBoard, useProjects } from '../lib/queries'
+import { useBoards, useCreateBoard, useProjects, useRecentNotepads } from '../lib/queries'
 
 export function ProjectHome() {
   const navigate = useNavigate()
@@ -9,6 +9,7 @@ export function ProjectHome() {
   const project = projects.find((p) => p.id === projectId) || projects[0]
   const currentProjectId = project?.id
   const { data: boards = [] } = useBoards(currentProjectId)
+  const { data: recentNotepads = [] } = useRecentNotepads(currentProjectId)
   const createBoardMutation = useCreateBoard()
 
   const handleCreateBoard = async () => {
@@ -53,10 +54,27 @@ export function ProjectHome() {
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
             Rich-text notes with nested tree organisation, slash commands, and covers.
           </p>
-          <div className="pt-2">
-            <span className="text-xs text-neutral-400 italic">
-              Create notepads from the sidebar (+)
-            </span>
+          <div className="pt-2 space-y-1">
+            {recentNotepads.length === 0 ? (
+              <span className="text-xs text-neutral-400 italic">
+                No notepads yet. Click + in sidebar to create one.
+              </span>
+            ) : (
+              recentNotepads.slice(0, 5).map((np) => (
+                <Link
+                  key={np.id}
+                  to="/p/$projectId/notepads/$notepadId"
+                  params={{
+                    projectId: currentProjectId!,
+                    notepadId: np.id,
+                  }}
+                  className="flex items-center gap-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-purple-600 dark:hover:text-purple-400 transition"
+                >
+                  <span>{np.icon || '📄'}</span>
+                  <span className="truncate">{np.title || 'Untitled'}</span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
 

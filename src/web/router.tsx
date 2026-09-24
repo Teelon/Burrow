@@ -69,14 +69,6 @@ function BoardWrapper() {
   return <BoardView boardId={boardId} projectId={projectId} />
 }
 
-function TrashPlaceholder() {
-  return (
-    <div className="p-8 max-w-4xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold">Trash</h2>
-      <p className="text-sm text-neutral-500">Deleted notepads and boards will appear here.</p>
-    </div>
-  )
-}
 
 function SettingsPlaceholder() {
   const { data: me } = useMe()
@@ -134,10 +126,12 @@ const boardRoute = createRoute({
   component: BoardWrapper,
 })
 
+import { TrashView } from './pages/TrashView'
+
 const trashRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/p/$projectId/trash',
-  component: TrashPlaceholder,
+  component: TrashView,
 })
 
 const settingsRoute = createRoute({

@@ -567,3 +567,207 @@ export function useMarkNotificationsRead() {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Trash & Recent
+// ---------------------------------------------------------------------------
+
+export interface TrashedNotepad {
+  id: string
+  kind: 'notepad' | 'card'
+  title: string
+  icon?: string | null
+  deletedAt: number
+}
+
+export interface TrashedBoard {
+  id: string
+  name: string
+  icon?: string | null
+  deletedAt: number
+}
+
+export function useTrash(projectId?: string) {
+  return useQuery({
+    queryKey: ['trash', projectId],
+    queryFn: async () => {
+      if (!projectId) return { notepads: [], boards: [] }
+      const res = await fetch(`/api/projects/${projectId}/trash`)
+      if (!res.ok) throw new Error('Failed to load trash')
+      return (await res.json()) as { notepads: TrashedNotepad[]; boards: TrashedBoard[] }
+    },
+    enabled: !!projectId,
+  })
+}
+
+export function useRestoreNotepad() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ notepadId, projectId: _projectId }: { notepadId: string; projectId: string }) => {
+      const res = await fetch(`/api/notepads/${notepadId}/restore`, { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to restore notepad')
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['notepads', vars.projectId] })
+    },
+  })
+}
+
+export function usePermanentDeleteNotepad() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ notepadId, projectId: _projectId }: { notepadId: string; projectId: string }) => {
+      const res = await fetch(`/api/notepads/${notepadId}/permanent`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to permanently delete notepad')
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+    },
+  })
+}
+
+export function useRestoreBoard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ boardId, projectId: _projectId }: { boardId: string; projectId: string }) => {
+      const res = await fetch(`/api/boards/${boardId}/restore`, { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to restore board')
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] })
+    },
+  })
+}
+
+export function usePermanentDeleteBoard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ boardId, projectId: _projectId }: { boardId: string; projectId: string }) => {
+      const res = await fetch(`/api/boards/${boardId}/permanent`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to permanently delete board')
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+    },
+  })
+}
+
+export function useRecentNotepads(projectId?: string) {
+  return useQuery({
+    queryKey: ['recent-notepads', projectId],
+    queryFn: async () => {
+      if (!projectId) return []
+      const res = await fetch(`/api/projects/${projectId}/recent`)
+      if (!res.ok) throw new Error('Failed to load recent notepads')
+      return (await res.json()) as Array<{
+        id: string
+        title: string
+        icon?: string | null
+        updatedAt: number
+      }>
+    },
+    enabled: !!projectId,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+
+export interface TagItem {
+  id: string
+  projectId: string
+  name: string
+  color?: string | null
+}
+
+export function useProjectTags(projectId?: string) {
+  return useQuery({
+    queryKey: ['tags', projectId],
+    queryFn: async () => {
+      if (!projectId) return []
+      const res = await fetch(`/api/projects/${projectId}/tags`)
+      if (!res.ok) throw new Error('Failed to load tags')
+      return (await res.json()) as TagItem[]
+    },
+    enabled: !!projectId,
+  })
+}
+
+export function useCreateTag() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      name,
+      color,
+    }: {
+      projectId: string
+      name: string
+      color?: string | null
+    }) => {
+      const res = await fetch(`/api/projects/${projectId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color }),
+      })
+      if (!res.ok) throw new Error('Failed to create tag')
+      return (await res.json()) as TagItem
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] })
+    },
+  })
+}
+
+export function useDeleteTag() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ tagId, projectId: _projectId }: { tagId: string; projectId: string }) => {
+      const res = await fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete tag')
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export interface SearchItem {
+  id: string
+  title: string
+  icon?: string | null
+  kind: 'notepad' | 'card'
+  projectId: string
+  projectName: string
+  snippet: string
+}
+
+export function useSearch(query: string, projectId?: string, scope: 'project' | 'all' = 'project') {
+  return useQuery({
+    queryKey: ['search', query, projectId, scope],
+    queryFn: async () => {
+      const clean = query.trim()
+      if (!clean) return []
+      const params = new URLSearchParams({
+        q: clean,
+        scope,
+        ...(projectId ? { projectId } : {}),
+      })
+      const res = await fetch(`/api/search?${params.toString()}`)
+      if (!res.ok) throw new Error('Failed to execute search')
+      return (await res.json()) as SearchItem[]
+    },
+    enabled: query.trim().length > 0,
+  })
+}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from '@tanstack/react-router'
 import { Bell, Menu } from 'lucide-react'
 import { Sidebar } from './Sidebar'
+import { CommandPalette } from '../CommandPalette'
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -64,6 +65,9 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Command Palette */}
+      <CommandPalette />
     </div>
   )
 }
