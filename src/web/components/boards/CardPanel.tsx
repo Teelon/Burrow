@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { toast } from 'sonner'
 import {
   Calendar,
   Flag,
@@ -16,8 +17,11 @@ import {
   useDeleteCard,
   useMembers,
   useMoveCard,
+  useRestoreCard,
   useUpdateCard,
 } from '../../lib/queries'
+import { SubtasksSection } from './SubtasksSection'
+import { CommentsFeed } from './CommentsFeed'
 
 interface CardPanelProps {
   cardId: string
@@ -45,6 +49,7 @@ export function CardPanel({
   const updateCardMutation = useUpdateCard()
   const moveCardMutation = useMoveCard()
   const deleteCardMutation = useDeleteCard()
+  const restoreCardMutation = useRestoreCard()
 
   const [title, setTitle] = useState('')
 
@@ -113,9 +118,21 @@ export function CardPanel({
   }
 
   const handleDelete = () => {
-    if (window.confirm('Delete this card? You can restore it from Trash.')) {
-      deleteCardMutation.mutate({ cardId, boardId }, { onSuccess: onClose })
-    }
+    deleteCardMutation.mutate(
+      { cardId, boardId },
+      {
+        onSuccess: () => {
+          onClose()
+          toast('Card moved to trash', {
+            duration: 6000,
+            action: {
+              label: 'Undo',
+              onClick: () => restoreCardMutation.mutate({ cardId }),
+            },
+          })
+        },
+      },
+    )
   }
 
   const isoDueDate = card.dueDate ? new Date(card.dueDate).toISOString().slice(0, 10) : ''
@@ -268,6 +285,9 @@ export function CardPanel({
           )}
         </div>
 
+        {/* Subtasks / Checklist */}
+        <SubtasksSection cardId={cardId} boardId={boardId} subtasks={card.subtasks || []} />
+
         {/* Card Body (BlockNote Notepad Editor) */}
         <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 pt-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
@@ -281,6 +301,9 @@ export function CardPanel({
             <LazyNotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />
           </Suspense>
         </div>
+
+        {/* Discussion thread */}
+        <CommentsFeed cardId={cardId} />
       </div>
     </div>
   )

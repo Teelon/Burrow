@@ -12,6 +12,7 @@ import { Login } from './pages/Login'
 import { InviteAccept } from './pages/InviteAccept'
 import { ProjectHome } from './pages/ProjectHome'
 import { MembersSettings } from './pages/MembersSettings'
+import { MyTasksView } from './pages/MyTasksView'
 import { useMe, useProjects } from './lib/queries'
 
 const rootRoute = createRootRoute({
@@ -148,6 +149,12 @@ const trashRoute = createRoute({
   component: TrashView,
 })
 
+const myTasksRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/my-tasks',
+  component: MyTasksView,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
@@ -168,6 +175,7 @@ const routeTree = rootRoute.addChildren([
     projectHomeRoute,
     notepadRoute,
     boardRoute,
+    myTasksRoute,
     trashRoute,
     settingsRoute,
     membersRoute,

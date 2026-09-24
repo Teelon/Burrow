@@ -28,6 +28,7 @@ export declare function getBoard(db: DB, workspaceId: string, boardId: string): 
         name: string;
         color: string | null;
         position: string;
+        wipLimit: number | null;
     }[];
     id: string;
     workspaceId: string;
@@ -53,6 +54,7 @@ export declare function createColumn(db: DB, workspaceId: string, boardId: strin
 export declare function updateColumn(db: DB, workspaceId: string, columnId: string, updates: {
     name?: string;
     color?: string | null;
+    wipLimit?: number | null;
 }): Promise<void>;
 export declare function moveColumn(db: DB, workspaceId: string, columnId: string, afterId?: string | null): Promise<{
     position: string;

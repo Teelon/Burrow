@@ -337,15 +337,17 @@ export function useUpdateColumn() {
       columnId,
       name,
       color,
+      wipLimit,
     }: {
       boardId: string
       columnId: string
       name?: string
       color?: string | null
+      wipLimit?: number | null
     }) => {
       const res = await api.api.columns[':id'].$patch({
         param: { id: columnId },
-        json: { name, color },
+        json: { name, color, wipLimit },
       })
       if (!res.ok) {
         const err = (await res.json()) as { error?: { message?: string } }
@@ -647,6 +649,244 @@ export function useDeleteCard() {
   })
 }
 
+export function useRestoreCard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ cardId }: { cardId: string }) => {
+      const res = await api.api.cards[':id'].restore.$post({
+        param: { id: cardId },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to restore card')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// My Tasks (cross-project assignee inbox)
+// ---------------------------------------------------------------------------
+
+export interface MyTaskItem {
+  id: string
+  notepadId: string
+  boardId: string
+  columnId: string
+  projectId: string
+  title: string
+  dueDate: number | null
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null
+  isCompleted: boolean
+  createdAt: number
+  boardName: string
+  columnName: string
+  projectName: string
+  projectIcon: string | null
+  projectColor: string | null
+  tags: Array<{ id: string; name: string; color?: string | null }>
+}
+
+export function useMyTasks(filters?: {
+  status?: 'all' | 'open' | 'completed'
+  projectId?: string
+}) {
+  const status = filters?.status ?? 'all'
+  const projectId = filters?.projectId
+  return useQuery({
+    queryKey: ['my-tasks', status, projectId],
+    queryFn: async () => {
+      const res = await api.api['my-tasks'].$get({
+        query: { status, ...(projectId ? { projectId } : {}) },
+      })
+      if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`)
+      return res.json() as Promise<MyTaskItem[]>
+    },
+    staleTime: 30_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Subtasks (checklists)
+// ---------------------------------------------------------------------------
+
+export interface SubtaskItem {
+  id: string
+  cardId: string
+  title: string
+  completed: boolean
+  position: string
+  createdAt: number
+}
+
+export function useCreateSubtask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      cardId,
+      boardId: _boardId,
+      title,
+    }: {
+      cardId: string
+      boardId?: string
+      title: string
+    }) => {
+      const res = await api.api.cards[':id'].subtasks.$post({
+        param: { id: cardId },
+        json: { title },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to add subtask')
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+    },
+  })
+}
+
+export function useUpdateSubtask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      cardId,
+      boardId: _boardId,
+      subtaskId,
+      title,
+      completed,
+      afterId,
+    }: {
+      cardId: string
+      boardId?: string
+      subtaskId: string
+      title?: string
+      completed?: boolean
+      afterId?: string | null
+    }) => {
+      const res = await api.api.cards[':id'].subtasks[':subtaskId'].$patch({
+        param: { id: cardId, subtaskId },
+        json: { title, completed, afterId },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to update subtask')
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    },
+  })
+}
+
+export function useDeleteSubtask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      cardId,
+      boardId: _boardId,
+      subtaskId,
+    }: {
+      cardId: string
+      boardId?: string
+      subtaskId: string
+    }) => {
+      const res = await api.api.cards[':id'].subtasks[':subtaskId'].$delete({
+        param: { id: cardId, subtaskId },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to delete subtask')
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Card comments (discussion thread)
+// ---------------------------------------------------------------------------
+
+export interface CommentItem {
+  id: string
+  cardId: string
+  userId: string
+  content: string
+  createdAt: number
+  updatedAt: number
+  name: string
+  image: string | null
+}
+
+export function useComments(cardId: string | undefined) {
+  return useQuery({
+    queryKey: ['comments', cardId],
+    queryFn: async () => {
+      if (!cardId) return []
+      const res = await api.api.cards[':id'].comments.$get({
+        param: { id: cardId },
+      })
+      if (!res.ok) throw new Error(`Failed to load comments: ${res.status}`)
+      return res.json() as Promise<CommentItem[]>
+    },
+    enabled: !!cardId,
+  })
+}
+
+export function useCreateComment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ cardId, content }: { cardId: string; content: string }) => {
+      const res = await api.api.cards[':id'].comments.$post({
+        param: { id: cardId },
+        json: { content },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to post comment')
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export function useDeleteComment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ cardId, commentId }: { cardId: string; commentId: string }) => {
+      const res = await api.api.cards[':id'].comments[':commentId'].$delete({
+        param: { id: cardId, commentId },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to delete comment')
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] })
+    },
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
@@ -786,6 +1026,79 @@ export function useRecentNotepads(projectId?: string) {
       }>
     },
     enabled: !!projectId,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Notepad tree (drag-to-rearrange)
+// ---------------------------------------------------------------------------
+
+export interface NotepadNode {
+  id: string
+  parentId: string | null
+  title: string
+  icon?: string | null
+  position: string
+  isFavorite: boolean
+}
+
+export function useMoveNotepad(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      notepadId,
+      parentId,
+      afterId,
+    }: {
+      notepadId: string
+      parentId: string | null
+      afterId: string | null
+    }) => {
+      const res = await api.api.notepads[':id'].move.$post({
+        param: { id: notepadId },
+        json: { parentId, afterId },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: { message?: string } }
+        throw new Error(err.error?.message || 'Failed to move notepad')
+      }
+      return res.json()
+    },
+    onMutate: async ({ notepadId, parentId, afterId }) => {
+      await queryClient.cancelQueries({ queryKey: ['notepads', projectId] })
+      const prev = queryClient.getQueryData<NotepadNode[]>(['notepads', projectId])
+      if (prev) {
+        const moved = prev.find((n) => n.id === notepadId)
+        if (moved) {
+          // The flat list is position-ordered per sibling group; splicing the
+          // moved entry next to its new siblings keeps every group's relative
+          // order correct until the authoritative refetch lands.
+          const rest = prev.filter((n) => n.id !== notepadId)
+          const updated: NotepadNode = { ...moved, parentId }
+          let insertAt: number
+          if (afterId) {
+            const idx = rest.findIndex((n) => n.id === afterId)
+            insertAt = idx === -1 ? rest.length : idx + 1
+          } else {
+            const idx = rest.findIndex((n) =>
+              parentId ? n.parentId === parentId : n.parentId === null,
+            )
+            insertAt = idx === -1 ? rest.length : idx
+          }
+          rest.splice(insertAt, 0, updated)
+          queryClient.setQueryData<NotepadNode[]>(['notepads', projectId], rest)
+        }
+      }
+      return { prev }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(['notepads', projectId], context.prev)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notepads', projectId] })
+    },
   })
 }
 

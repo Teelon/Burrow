@@ -7,13 +7,14 @@ import {
   FileText,
   Kanban,
   Layout,
+  LayoutTemplate,
   Tag,
   User,
 } from 'lucide-react'
 import type { SlashContext } from '../../shared/slash'
 
 export interface SuggestionDialogState {
-  type: 'notepad' | 'task' | null
+  type: 'notepad' | 'task' | 'template' | null
   blockToReplace?: any
 }
 
@@ -34,6 +35,18 @@ export function getCustomSlashItems(
     icon: <FileText className="w-4 h-4 text-purple-500" />,
     onItemClick: () => {
       onOpenDialog({ type: 'notepad' })
+    },
+  })
+
+  // /template
+  items.push({
+    title: 'Template',
+    subtext: 'Start from a product spec, meeting notes, sprint plan…',
+    aliases: ['starter', 'starter template', 'preset'],
+    group: 'Burrow References',
+    icon: <LayoutTemplate className="w-4 h-4 text-primary" />,
+    onItemClick: () => {
+      onOpenDialog({ type: 'template' })
     },
   })
 

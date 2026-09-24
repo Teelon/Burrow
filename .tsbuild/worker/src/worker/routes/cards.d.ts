@@ -1,5 +1,55 @@
 import type { Env } from '../env';
 export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
+    "/api/my-tasks": {
+        $get: {
+            input: {
+                query: {
+                    status?: "completed" | "all" | "open" | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                query: {
+                    status?: "completed" | "all" | "open" | undefined;
+                    projectId?: string | undefined;
+                };
+            };
+            output: {
+                id: string;
+                notepadId: string;
+                boardId: string;
+                columnId: string;
+                projectId: string;
+                title: string;
+                dueDate: number | null;
+                priority: import("../services/cards").CardPriority | null;
+                isCompleted: boolean;
+                createdAt: number;
+                boardName: string;
+                columnName: string;
+                projectName: string;
+                projectIcon: string | null;
+                projectColor: string | null;
+                tags: {
+                    id: string;
+                    name: string;
+                    color: string | null;
+                }[];
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
     "/api/cards/summary": {
         $get: {
             input: {};
@@ -102,6 +152,14 @@ export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
                     id: string;
                     name: string;
                     color: string | null;
+                }[];
+                subtasks: {
+                    id: string;
+                    cardId: string;
+                    title: string;
+                    completed: boolean;
+                    position: string;
+                    createdAt: number;
                 }[];
                 lock: {
                     userId: string;
@@ -261,4 +319,195 @@ export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
             status: import("hono/utils/http-status").ContentfulStatusCode;
         };
     };
-}, "/", "/api/cards/:id/permanent">;
+} & {
+    "/api/cards/:id/subtasks": {
+        $post: {
+            input: {
+                json: {
+                    title: string;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    title: string;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                id: string;
+                cardId: string;
+                title: string;
+                completed: boolean;
+                position: string;
+                createdAt: number;
+            };
+            outputFormat: "json";
+            status: 201;
+        };
+    };
+} & {
+    "/api/cards/:id/subtasks/:subtaskId": {
+        $patch: {
+            input: {
+                json: {
+                    title?: string | undefined;
+                    completed?: boolean | undefined;
+                    afterId?: string | null | undefined;
+                };
+            } & {
+                param: {
+                    id: string;
+                } & {
+                    subtaskId: string;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    title?: string | undefined;
+                    completed?: boolean | undefined;
+                    afterId?: string | null | undefined;
+                };
+            } & {
+                param: {
+                    id: string;
+                } & {
+                    subtaskId: string;
+                };
+            };
+            output: {
+                ok: boolean;
+                subtaskId: string;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/cards/:id/subtasks/:subtaskId": {
+        $delete: {
+            input: {
+                param: {
+                    id: string;
+                } & {
+                    subtaskId: string;
+                };
+            };
+            output: {
+                ok: boolean;
+                subtaskId: string;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/cards/:id/comments": {
+        $get: {
+            input: {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                id: string;
+                cardId: string;
+                userId: string;
+                content: string;
+                createdAt: number;
+                updatedAt: number;
+                name: string;
+                image: string | null;
+            }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/cards/:id/comments": {
+        $post: {
+            input: {
+                json: {
+                    content: string;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                error: {
+                    code: string;
+                    message: string;
+                };
+            };
+            outputFormat: "json";
+            status: 400;
+        } | {
+            input: {
+                json: {
+                    content: string;
+                };
+            } & {
+                param: {
+                    id: string;
+                };
+            };
+            output: {
+                id: string;
+                cardId: string;
+                userId: string;
+                content: string;
+                createdAt: number;
+                updatedAt: number;
+                name: string;
+                image: string | null;
+                mentionedUserIds: string[];
+            };
+            outputFormat: "json";
+            status: 201;
+        };
+    };
+} & {
+    "/api/cards/:id/comments/:commentId": {
+        $delete: {
+            input: {
+                param: {
+                    id: string;
+                } & {
+                    commentId: string;
+                };
+            };
+            output: {
+                ok: boolean;
+                commentId: string;
+            };
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+}, "/", "/api/cards/:id/comments/:commentId">;

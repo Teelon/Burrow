@@ -68,6 +68,14 @@ export declare function getCard(db: DB, workspaceId: string, cardId: string): Pr
         name: string;
         color: string | null;
     }[];
+    subtasks: {
+        id: string;
+        cardId: string;
+        title: string;
+        completed: boolean;
+        position: string;
+        createdAt: number;
+    }[];
     lock: {
         userId: string;
         clientId: string;
@@ -88,6 +96,63 @@ export declare function getCard(db: DB, workspaceId: string, cardId: string): Pr
     projectId: string;
     workspaceId: string;
 }>;
+export declare function listSubtasks(db: DB, cardId: string): Promise<{
+    id: string;
+    cardId: string;
+    title: string;
+    completed: boolean;
+    position: string;
+    createdAt: number;
+}[]>;
+export declare function createSubtask(db: DB, workspaceId: string, cardId: string, title: string): Promise<{
+    id: string;
+    cardId: string;
+    title: string;
+    completed: boolean;
+    position: string;
+    createdAt: number;
+}>;
+export declare function updateSubtask(db: DB, workspaceId: string, cardId: string, subtaskId: string, updates: {
+    title?: string;
+    completed?: boolean;
+    afterId?: string | null;
+}): Promise<{
+    ok: boolean;
+    subtaskId: string;
+}>;
+export declare function deleteSubtask(db: DB, workspaceId: string, cardId: string, subtaskId: string): Promise<{
+    ok: boolean;
+    subtaskId: string;
+}>;
+export interface MyTasksFilters {
+    status?: 'all' | 'open' | 'completed';
+    projectId?: string;
+}
+export interface MyTaskItem {
+    id: string;
+    notepadId: string;
+    boardId: string;
+    columnId: string;
+    projectId: string;
+    title: string;
+    dueDate: number | null;
+    priority: CardPriority | null;
+    isCompleted: boolean;
+    createdAt: number;
+    boardName: string;
+    columnName: string;
+    projectName: string;
+    projectIcon: string | null;
+    projectColor: string | null;
+    tags: Array<{
+        id: string;
+        name: string;
+        color: string | null;
+    }>;
+}
+/** A column named "Done"/"Completed"/etc. marks its cards as finished. */
+export declare function isCompletedColumn(columnName: string): boolean;
+export declare function getMyTasks(db: DB, workspaceId: string, userId: string, filters: MyTasksFilters): Promise<MyTaskItem[]>;
 export declare function moveCard(db: DB, workspaceId: string, cardId: string, columnId: string, afterId?: string | null): Promise<{
     columnId: string;
     position: string;

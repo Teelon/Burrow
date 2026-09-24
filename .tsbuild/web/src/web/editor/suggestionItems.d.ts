@@ -2,7 +2,7 @@ import type { DefaultReactSuggestionItem } from '@blocknote/react';
 import type { BlockNoteEditor } from '@blocknote/core';
 import type { SlashContext } from '../../shared/slash';
 export interface SuggestionDialogState {
-    type: 'notepad' | 'task' | null;
+    type: 'notepad' | 'task' | 'template' | null;
     blockToReplace?: any;
 }
 export declare function getCustomSlashItems(editor: BlockNoteEditor<any, any, any>, context: SlashContext, projectId: string, onOpenDialog: (state: SuggestionDialogState) => void): DefaultReactSuggestionItem[];

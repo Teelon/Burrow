@@ -6,7 +6,7 @@ import * as t from '../db/schema'
 import { extractPlainText } from '../../shared/extract'
 import { HttpError } from '../lib/errors'
 import { positionAfterLast, positionBetween } from '../lib/ordering'
-import { chunkByParamBudget } from '../lib/chunk'
+import { chunkByParamBudget, chunkInList } from '../lib/chunk'
 import { runBatch } from '../lib/batch'
 import { ftsInsertNowStmt } from '../lib/search'
 
@@ -336,8 +336,258 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
     columnName: column?.name ?? 'Column',
     assignees,
     tags,
+    subtasks: await listSubtasks(db, cardId),
     lock,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Subtasks (checklists)
+// ---------------------------------------------------------------------------
+
+/** Resolve a card scoped to the caller's workspace (soft-delete aware). */
+async function requireCardForWorkspace(db: DB, workspaceId: string, cardId: string) {
+  const [card] = await db
+    .select({ id: t.cards.id, notepadId: t.cards.notepadId })
+    .from(t.cards)
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .where(
+      and(
+        eq(t.cards.id, cardId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+      ),
+    )
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+  return card
+}
+
+export async function listSubtasks(db: DB, cardId: string) {
+  return db
+    .select()
+    .from(t.cardSubtasks)
+    .where(eq(t.cardSubtasks.cardId, cardId))
+    .orderBy(asc(t.cardSubtasks.position))
+}
+
+export async function createSubtask(
+  db: DB,
+  workspaceId: string,
+  cardId: string,
+  title: string,
+) {
+  await requireCardForWorkspace(db, workspaceId, cardId)
+
+  const [last] = await db
+    .select({ position: t.cardSubtasks.position })
+    .from(t.cardSubtasks)
+    .where(eq(t.cardSubtasks.cardId, cardId))
+    .orderBy(desc(t.cardSubtasks.position))
+    .limit(1)
+
+  const row = {
+    id: nanoid(),
+    cardId,
+    title: title.trim() || 'Untitled',
+    completed: false,
+    position: positionAfterLast(last?.position ?? null),
+    createdAt: Date.now(),
+  }
+  await db.insert(t.cardSubtasks).values(row)
+  return row
+}
+
+export async function updateSubtask(
+  db: DB,
+  workspaceId: string,
+  cardId: string,
+  subtaskId: string,
+  updates: { title?: string; completed?: boolean; afterId?: string | null },
+) {
+  await requireCardForWorkspace(db, workspaceId, cardId)
+
+  const [subtask] = await db
+    .select()
+    .from(t.cardSubtasks)
+    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)))
+  if (!subtask) throw new HttpError(404, 'not_found', 'Subtask not found')
+
+  const patch: Partial<typeof t.cardSubtasks.$inferInsert> = {}
+  if (updates.title !== undefined) patch.title = updates.title.trim() || 'Untitled'
+  if (updates.completed !== undefined) patch.completed = updates.completed
+
+  // Optional reorder among siblings (fractional index owned by the server).
+  if (updates.afterId !== undefined) {
+    const siblings = await db
+      .select({ id: t.cardSubtasks.id, position: t.cardSubtasks.position })
+      .from(t.cardSubtasks)
+      .where(eq(t.cardSubtasks.cardId, cardId))
+      .orderBy(asc(t.cardSubtasks.position))
+    const others = siblings.filter((s) => s.id !== subtaskId)
+
+    let newPosition: string
+    if (!updates.afterId) {
+      newPosition = positionBetween(null, others[0]?.position ?? null)
+    } else {
+      const idx = others.findIndex((s) => s.id === updates.afterId)
+      if (idx === -1) {
+        throw new HttpError(400, 'invalid_after_id', 'afterId not found in subtask list')
+      }
+      newPosition = positionBetween(others[idx]!.position, others[idx + 1]?.position ?? null)
+    }
+    patch.position = newPosition
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await db.update(t.cardSubtasks).set(patch).where(eq(t.cardSubtasks.id, subtaskId))
+  }
+  return { ok: true, subtaskId }
+}
+
+export async function deleteSubtask(
+  db: DB,
+  workspaceId: string,
+  cardId: string,
+  subtaskId: string,
+) {
+  await requireCardForWorkspace(db, workspaceId, cardId)
+  const [row] = await db
+    .select({ id: t.cardSubtasks.id })
+    .from(t.cardSubtasks)
+    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)))
+  if (!row) throw new HttpError(404, 'not_found', 'Subtask not found')
+
+  await db.delete(t.cardSubtasks).where(eq(t.cardSubtasks.id, subtaskId))
+  return { ok: true, subtaskId }
+}
+
+// ---------------------------------------------------------------------------
+// My Tasks (cross-project assignee inbox)
+// ---------------------------------------------------------------------------
+
+export interface MyTasksFilters {
+  status?: 'all' | 'open' | 'completed'
+  projectId?: string
+}
+
+export interface MyTaskItem {
+  id: string
+  notepadId: string
+  boardId: string
+  columnId: string
+  projectId: string
+  title: string
+  dueDate: number | null
+  priority: CardPriority | null
+  isCompleted: boolean
+  createdAt: number
+  boardName: string
+  columnName: string
+  projectName: string
+  projectIcon: string | null
+  projectColor: string | null
+  tags: Array<{ id: string; name: string; color: string | null }>
+}
+
+/** A column named "Done"/"Completed"/etc. marks its cards as finished. */
+export function isCompletedColumn(columnName: string): boolean {
+  return /done|completed|closed|shipped/i.test(columnName)
+}
+
+export async function getMyTasks(
+  db: DB,
+  workspaceId: string,
+  userId: string,
+  filters: MyTasksFilters,
+): Promise<MyTaskItem[]> {
+  const rows = await db
+    .select({
+      id: t.cards.id,
+      notepadId: t.cards.notepadId,
+      boardId: t.cards.boardId,
+      columnId: t.cards.columnId,
+      projectId: t.projects.id,
+      title: t.notepads.title,
+      dueDate: t.cards.dueDate,
+      priority: t.cards.priority,
+      createdAt: t.cards.createdAt,
+      boardName: t.boards.name,
+      columnName: t.boardColumns.name,
+      projectName: t.projects.name,
+      projectIcon: t.projects.icon,
+      projectColor: t.projects.color,
+    })
+    .from(t.cards)
+    .innerJoin(t.cardAssignees, eq(t.cardAssignees.cardId, t.cards.id))
+    .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+    .innerJoin(t.boards, eq(t.boards.id, t.cards.boardId))
+    .innerJoin(t.boardColumns, eq(t.boardColumns.id, t.cards.columnId))
+    .innerJoin(t.projects, eq(t.projects.id, t.boards.projectId))
+    .where(
+      and(
+        eq(t.cardAssignees.userId, userId),
+        eq(t.notepads.workspaceId, workspaceId),
+        isNull(t.notepads.deletedAt),
+        isNull(t.boards.deletedAt),
+        isNull(t.projects.archivedAt),
+        filters.projectId ? eq(t.boards.projectId, filters.projectId) : undefined,
+      ),
+    )
+    .orderBy(desc(t.cards.dueDate), asc(t.cards.position))
+
+  const status = filters.status ?? 'all'
+  const filtered =
+    status === 'all'
+      ? rows
+      : rows.filter((r) => {
+          const completed = isCompletedColumn(r.columnName)
+          return status === 'completed' ? completed : !completed
+        })
+
+  if (filtered.length === 0) return []
+
+  // Tags for the matched card notepads
+  const notepadIds = filtered.map((r) => r.notepadId)
+  const tagRows: Array<{ notepadId: string; tagId: string; name: string; color: string | null }> = []
+  for (const chunk of chunkInList(notepadIds, 0)) {
+    const more = await db
+      .select({
+        notepadId: t.notepadTags.notepadId,
+        tagId: t.tags.id,
+        name: t.tags.name,
+        color: t.tags.color,
+      })
+      .from(t.notepadTags)
+      .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
+      .where(inArray(t.notepadTags.notepadId, chunk))
+    tagRows.push(...more)
+  }
+
+  const tagsByNotepad = new Map<string, MyTaskItem['tags']>()
+  for (const tag of tagRows) {
+    const list = tagsByNotepad.get(tag.notepadId) || []
+    list.push({ id: tag.tagId, name: tag.name, color: tag.color })
+    tagsByNotepad.set(tag.notepadId, list)
+  }
+
+  return filtered.map((r) => ({
+    id: r.id,
+    notepadId: r.notepadId,
+    boardId: r.boardId,
+    columnId: r.columnId,
+    projectId: r.projectId,
+    title: r.title,
+    dueDate: r.dueDate,
+    priority: r.priority,
+    isCompleted: isCompletedColumn(r.columnName),
+    createdAt: r.createdAt,
+    boardName: r.boardName,
+    columnName: r.columnName,
+    projectName: r.projectName,
+    projectIcon: r.projectIcon,
+    projectColor: r.projectColor,
+    tags: tagsByNotepad.get(r.notepadId) || [],
+  }))
 }
 
 export async function moveCard(

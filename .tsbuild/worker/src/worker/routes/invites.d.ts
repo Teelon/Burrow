@@ -5,7 +5,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
@@ -20,13 +20,13 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "viewer" | "editor";
+                    role: "editor" | "viewer";
                 };
             };
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 token: string;
                 expiresAt: number;
                 url: string;
@@ -42,7 +42,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             output: {
                 id: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 expiresAt: number;
                 createdAt: number;
             }[];
@@ -62,7 +62,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
                 valid: true;
                 token: string;
                 email: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
                 workspaceName: string;
                 expiresAt: number;
             };
@@ -111,7 +111,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 workspaceId: string;
-                role: "viewer" | "editor";
+                role: "editor" | "viewer";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;

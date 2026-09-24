@@ -199,6 +199,8 @@ export const boardColumns = sqliteTable(
     name: text('name').notNull(),
     color: text('color'),
     position: text('position').notNull(),
+    /** Kanban WIP constraint; null = unlimited. */
+    wipLimit: integer('wip_limit'),
   },
   (t) => [index('columns_board').on(t.boardId, t.position)],
 )
@@ -234,6 +236,42 @@ export const cardAssignees = sqliteTable(
     userId: text('user_id').notNull(),
   },
   (t) => [primaryKey({ columns: [t.cardId, t.userId] })],
+)
+
+export const cardSubtasks = sqliteTable(
+  'card_subtasks',
+  {
+    id: text('id').primaryKey(),
+    cardId: text('card_id')
+      .notNull()
+      .references(() => cards.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+    position: text('position').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('subtasks_card').on(t.cardId, t.position)],
+)
+
+// ---------------------------------------------------------------------------
+// Card comments (discussion thread)
+// ---------------------------------------------------------------------------
+
+export const cardComments = sqliteTable(
+  'card_comments',
+  {
+    id: text('id').primaryKey(),
+    cardId: text('card_id')
+      .notNull()
+      .references(() => cards.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [index('comments_card').on(t.cardId, t.createdAt)],
 )
 
 // ---------------------------------------------------------------------------

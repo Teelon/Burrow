@@ -78,6 +78,7 @@ export declare const boardsRoutes: import("hono/hono-base").HonoBase<Env, {
                     name: string;
                     color: string | null;
                     position: string;
+                    wipLimit: number | null;
                 }[];
                 id: string;
                 workspaceId: string;

@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import {
   FileText,
+  Inbox,
   Kanban,
   Plus,
   Search,
@@ -12,12 +13,20 @@ import {
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import { useBoards, useCreateBoard, useMe, useProjectTags } from '../../lib/queries'
+import { useBoards, useCreateBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries'
 import { NotepadTree } from '../notepads/NotepadTree'
 import { NotificationsBell } from './NotificationsBell'
 
 interface SidebarProps {
   onCloseMobile?: () => void
+}
+
+/** Overdue + due-today count among open assigned tasks (for the sidebar badge). */
+function useMyTasksBadgeCount(): number {
+  const { data } = useMyTasks({ status: 'open' })
+  if (!data) return 0
+  const todayEnd = new Date().setHours(24, 0, 0, 0)
+  return data.filter((t) => t.dueDate !== null && t.dueDate < todayEnd).length
 }
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
@@ -32,6 +41,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const { data: boards = [] } = useBoards(currentProjectId)
   const { data: projectTags = [] } = useProjectTags(currentProjectId)
   const createBoardMutation = useCreateBoard()
+  const badgeCount = useMyTasksBadgeCount()
 
   return (
     <aside className="w-64 h-screen flex flex-col bg-neutral-50/70 dark:bg-neutral-950/70 border-r border-neutral-200 dark:border-neutral-800 select-none">
@@ -87,6 +97,26 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <span>Project Overview</span>
           </Link>
         )}
+
+        {/* My Tasks: global assignee inbox, pinned above project sections */}
+        <Link
+          to="/my-tasks"
+          activeProps={{
+            className:
+              'bg-neutral-200/80 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold',
+          }}
+          className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition"
+        >
+          <span className="flex items-center gap-2">
+            <Inbox className="w-4 h-4 text-primary" />
+            <span>My Tasks</span>
+          </span>
+          {badgeCount > 0 && (
+            <span className="min-w-[18px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/30 text-[10px] font-bold text-center">
+              {badgeCount}
+            </span>
+          )}
+        </Link>
       </div>
 
       {/* Main Navigation Sections */}

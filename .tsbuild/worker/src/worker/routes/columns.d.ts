@@ -46,6 +46,7 @@ export declare const columnsRoutes: import("hono/hono-base").HonoBase<Env, {
                 json: {
                     name?: string | undefined;
                     color?: string | null | undefined;
+                    wipLimit?: number | null | undefined;
                 };
             } & {
                 param: {
@@ -65,6 +66,7 @@ export declare const columnsRoutes: import("hono/hono-base").HonoBase<Env, {
                 json: {
                     name?: string | undefined;
                     color?: string | null | undefined;
+                    wipLimit?: number | null | undefined;
                 };
             } & {
                 param: {

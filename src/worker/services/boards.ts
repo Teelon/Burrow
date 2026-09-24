@@ -170,6 +170,24 @@ export async function getBoard(db: DB, workspaceId: string, boardId: string) {
         .where(inArray(t.notepadTags.notepadId, notepadIds))
     : []
 
+  // Subtask progress per card (for tile progress pills)
+  const subtaskCounts = cardIds.length > 0
+    ? await db
+        .select({
+          cardId: t.cardSubtasks.cardId,
+          total: sql<number>`count(*)`,
+          completed: sql<number>`coalesce(sum(case when ${t.cardSubtasks.completed} then 1 else 0 end), 0)`,
+        })
+        .from(t.cardSubtasks)
+        .where(inArray(t.cardSubtasks.cardId, cardIds))
+        .groupBy(t.cardSubtasks.cardId)
+    : []
+
+  const subtasksByCard = new Map<string, { total: number; completed: number }>()
+  for (const row of subtaskCounts) {
+    subtasksByCard.set(row.cardId, { total: row.total, completed: row.completed })
+  }
+
   const tagsByNotepad = new Map<string, typeof tags>()
   for (const tag of tags) {
     const list = tagsByNotepad.get(tag.notepadId) || []
@@ -182,11 +200,14 @@ export async function getBoard(db: DB, workspaceId: string, boardId: string) {
   for (const card of cardsWithNotepads) {
     const cardAssignees = assigneesByCard.get(card.id) || []
     const cardTags = tagsByNotepad.get(card.notepadId) || []
+    const subtaskProgress = subtasksByCard.get(card.id) || { total: 0, completed: 0 }
     const list = cardsByColumn.get(card.columnId) || []
     list.push({
       ...card,
       assignees: cardAssignees,
       tags: cardTags,
+      totalSubtasks: subtaskProgress.total,
+      completedSubtasks: subtaskProgress.completed,
     })
     cardsByColumn.set(card.columnId, list)
   }
@@ -436,7 +457,7 @@ export async function updateColumn(
   db: DB,
   workspaceId: string,
   columnId: string,
-  updates: { name?: string; color?: string | null },
+  updates: { name?: string; color?: string | null; wipLimit?: number | null },
 ) {
   const [col] = await db
     .select({ id: t.boardColumns.id })
@@ -456,6 +477,7 @@ export async function updateColumn(
     .set({
       name: updates.name ? updates.name.trim() : undefined,
       color: updates.color !== undefined ? updates.color : undefined,
+      wipLimit: updates.wipLimit !== undefined ? updates.wipLimit : undefined,
     })
     .where(eq(t.boardColumns.id, columnId))
 }

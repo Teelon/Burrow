@@ -8,14 +8,23 @@ import { requireRole, requireSession } from '../middleware/session'
 import { zValidator } from '../middleware/validator'
 import {
   createCard,
+  createSubtask,
   deleteCard,
+  deleteSubtask,
   getCard,
   getCardsSummary,
+  getMyTasks,
   moveCard,
   permanentDeleteCard,
   restoreCard,
   updateCard,
+  updateSubtask,
 } from '../services/cards'
+import {
+  createComment,
+  deleteComment,
+  listComments,
+} from '../services/comments'
 import { HttpError } from '../lib/errors'
 
 const quickAddCardSchema = z.object({
@@ -45,7 +54,38 @@ const moveCardSchema = z.object({
   afterId: z.string().optional().nullable(),
 })
 
+const createSubtaskSchema = z.object({
+  title: z.string().min(1),
+})
+
+const updateSubtaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  completed: z.boolean().optional(),
+  afterId: z.string().optional().nullable(),
+})
+
+const createCommentSchema = z.object({
+  content: z.string().min(1).max(10_000),
+})
+
+const myTasksQuerySchema = z.object({
+  status: z.enum(['all', 'open', 'completed']).optional(),
+  projectId: z.string().optional(),
+})
+
 export const cardsRoutes = new Hono<Env>()
+  .get('/api/my-tasks', requireSession, zValidator('query', myTasksQuerySchema), async (c) => {
+    const db = createDb(c.env.DB)
+    const workspaceId = c.get('workspaceId')
+    const userId = c.get('userId')
+    const { status, projectId } = c.req.valid('query')
+
+    const tasks = await getMyTasks(db, workspaceId, userId, {
+      status: status ?? 'all',
+      projectId: projectId || undefined,
+    })
+    return c.json(tasks)
+  })
   .get('/api/cards/summary', requireSession, async (c) => {
     const db = createDb(c.env.DB)
     const workspaceId = c.get('workspaceId')
@@ -171,3 +211,91 @@ export const cardsRoutes = new Hono<Env>()
     await permanentDeleteCard(db, workspaceId, cardId)
     return c.json({ ok: true, permanentlyDeletedId: cardId })
   })
+  // --- Subtasks (checklists) ---
+  .post(
+    '/api/cards/:id/subtasks',
+    requireSession,
+    requireRole('editor'),
+    zValidator('json', createSubtaskSchema),
+    async (c) => {
+      const db = createDb(c.env.DB)
+      const workspaceId = c.get('workspaceId')
+      const cardId = c.req.param('id')
+      const { title } = c.req.valid('json')
+
+      const result = await createSubtask(db, workspaceId, cardId, title)
+      return c.json(result, 201)
+    },
+  )
+  .patch(
+    '/api/cards/:id/subtasks/:subtaskId',
+    requireSession,
+    requireRole('editor'),
+    zValidator('json', updateSubtaskSchema),
+    async (c) => {
+      const db = createDb(c.env.DB)
+      const workspaceId = c.get('workspaceId')
+      const cardId = c.req.param('id')
+      const subtaskId = c.req.param('subtaskId')
+      const body = c.req.valid('json')
+
+      const result = await updateSubtask(db, workspaceId, cardId, subtaskId, body)
+      return c.json(result)
+    },
+  )
+  .delete(
+    '/api/cards/:id/subtasks/:subtaskId',
+    requireSession,
+    requireRole('editor'),
+    async (c) => {
+      const db = createDb(c.env.DB)
+      const workspaceId = c.get('workspaceId')
+      const cardId = c.req.param('id')
+      const subtaskId = c.req.param('subtaskId')
+
+      const result = await deleteSubtask(db, workspaceId, cardId, subtaskId)
+      return c.json(result)
+    },
+  )
+  // --- Comments (discussion thread) ---
+  .get('/api/cards/:id/comments', requireSession, async (c) => {
+    const db = createDb(c.env.DB)
+    const workspaceId = c.get('workspaceId')
+    const cardId = c.req.param('id')
+
+    const comments = await listComments(db, workspaceId, cardId)
+    return c.json(comments)
+  })
+  .post(
+    '/api/cards/:id/comments',
+    requireSession,
+    requireRole('editor'),
+    zValidator('json', createCommentSchema),
+    async (c) => {
+      const db = createDb(c.env.DB)
+      const workspaceId = c.get('workspaceId')
+      const actorId = c.get('userId')
+      const cardId = c.req.param('id')
+      const { content } = c.req.valid('json')
+
+      const result = await createComment(db, workspaceId, cardId, actorId, content)
+      return c.json(result, 201)
+    },
+  )
+  .delete(
+    '/api/cards/:id/comments/:commentId',
+    requireSession,
+    requireRole('editor'),
+    async (c) => {
+      const db = createDb(c.env.DB)
+      const workspaceId = c.get('workspaceId')
+      const cardId = c.req.param('id')
+      const commentId = c.req.param('commentId')
+
+      const result = await deleteComment(db, workspaceId, cardId, commentId, {
+        userId: c.get('userId'),
+        isOwner: c.get('role') === 'owner',
+      })
+      return c.json(result)
+    },
+  )

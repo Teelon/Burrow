@@ -19,6 +19,7 @@ const createColumnSchema = z.object({
 const updateColumnSchema = z.object({
   name: z.string().min(1).optional(),
   color: z.string().optional().nullable(),
+  wipLimit: z.number().int().min(0).max(999).optional().nullable(),
 })
 
 const moveColumnSchema = z.object({

@@ -1,11 +1,28 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from '@tanstack/react-router'
 import { Bell, Menu } from 'lucide-react'
+import { Toaster } from 'sonner'
 import { Sidebar } from './Sidebar'
 import { CommandPalette } from '../CommandPalette'
+import { ShortcutHelp } from './ShortcutHelp'
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // "?" opens the shortcuts help (unless typing in a field or using a modifier).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable))
+        return
+      e.preventDefault()
+      setShortcutsOpen((v) => !v)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
@@ -68,6 +85,12 @@ export function AppShell() {
 
       {/* Global Command Palette */}
       <CommandPalette />
+
+      {/* Keyboard shortcuts help ("?") */}
+      {shortcutsOpen && <ShortcutHelp onClose={() => setShortcutsOpen(false)} />}
+
+      {/* Toasts (sonner) */}
+      <Toaster position="bottom-right" richColors />
     </div>
   )
 }

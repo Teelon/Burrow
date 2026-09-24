@@ -45,3 +45,34 @@ body {
     Roboto,
     sans-serif;
 }
+
+/* Print / PDF export (Epic 3.3): keep only the document content. */
+@media print {
+  aside,
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main,
+  #root,
+  #root > div {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+}

@@ -13,8 +13,12 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Download,
   FileText,
+  LayoutTemplate,
   Lock,
+  MoreHorizontal,
+  Printer,
   Star,
   X,
 } from 'lucide-react'
@@ -26,6 +30,8 @@ import {
   type SuggestionDialogState,
 } from './suggestionItems'
 import { NotepadPickerModal, TaskPickerModal } from './ReferenceDialogs'
+import { TemplatePickerModal } from './TemplatePicker'
+import { DocumentOutline } from './DocumentOutline'
 
 function getTabClientId(): string {
   if (typeof window === 'undefined') return nanoid()
@@ -81,6 +87,16 @@ interface NotepadEditorInnerProps {
   onReload: () => void
 }
 
+function isBlankDocument(doc: any[]): boolean {
+  if (doc.length === 0) return true
+  if (doc.length > 1) return false
+  const only = doc[0]
+  if (only?.type !== 'paragraph') return false
+  const hasContent = Array.isArray(only.content) && only.content.length > 0
+  const hasChildren = Array.isArray(only.children) && only.children.length > 0
+  return !hasContent && !hasChildren
+}
+
 function NotepadEditorInner({
   initialData,
   hideTitle = false,
@@ -94,6 +110,8 @@ function NotepadEditorInner({
   const [conflictBanner, setConflictBanner] = useState(false)
   const [showBacklinks, setShowBacklinks] = useState(true)
   const [dialogState, setDialogState] = useState<SuggestionDialogState>({ type: null })
+  const [isBlank, setIsBlank] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   const clientIdRef = useRef(getTabClientId())
   const hasLockRef = useRef<boolean>(
@@ -154,6 +172,32 @@ function NotepadEditorInner({
   const lastSavedContentRef = useRef<string>(
     initialContent ? initialData.content : JSON.stringify(editor.document),
   )
+
+  // Track blankness for the "Start with a template" banner.
+  useEffect(() => {
+    setIsBlank(isBlankDocument(editor.document))
+    const unbind = editor.onChange(() => {
+      setIsBlank(isBlankDocument(editor.document))
+    })
+    return unbind
+  }, [editor])
+
+  const exportMarkdown = () => {
+    try {
+      const md = editor.blocksToMarkdownLossy(editor.document)
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(data.title || 'Untitled').replace(/[\\/:*?"<>|]/g, '-')}.md`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Markdown export failed', err)
+    }
+  }
 
   // Polling when locked by another client/user (every 10 seconds)
   useEffect(() => {
@@ -561,8 +605,8 @@ function NotepadEditorInner({
         </div>
       )}
 
-      {/* Header controls: icon, favorite, save status */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Header controls: icon, favorite, export/outline menu, save status */}
+      <div className="flex items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-2">
           {!hideFavorite && (
             <button
@@ -598,6 +642,56 @@ function NotepadEditorInner({
             )}
           </span>
         </div>
+
+        <div className="flex items-center gap-1.5 relative">
+          {/* Document outline (floating TOC) */}
+          <DocumentOutline editor={editor} containerRef={containerRef} />
+
+          {/* Export / print menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu((v) => !v)}
+              title="Document actions"
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-1 z-30 text-xs">
+                <button
+                  onClick={() => {
+                    setShowExportMenu(false)
+                    setDialogState({ type: 'template' })
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  <LayoutTemplate className="w-3.5 h-3.5" />
+                  <span>Apply a template…</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExportMenu(false)
+                    exportMarkdown()
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export to Markdown</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExportMenu(false)
+                    window.print()
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / Export as PDF</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Notepad Title Input */}
@@ -611,6 +705,30 @@ function NotepadEditorInner({
             disabled={!isEditable}
             className="w-full text-3xl font-bold tracking-tight bg-transparent border-none focus:outline-none placeholder-neutral-300 dark:placeholder-neutral-700"
           />
+        </div>
+      )}
+
+      {/* Blank document: starter template prompt */}
+      {isBlank && isEditable && (
+        <div className="no-print flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 text-xs">
+          <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+            <LayoutTemplate className="w-4 h-4 text-primary shrink-0" />
+            <span>This page is empty — start from a template?</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDialogState({ type: 'template' })}
+              className="px-2.5 py-1 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition"
+            >
+              Browse templates
+            </button>
+            <button
+              onClick={() => setIsBlank(false)}
+              className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition"
+            >
+              Write from scratch
+            </button>
+          </div>
         </div>
       )}
 
@@ -687,6 +805,11 @@ function NotepadEditorInner({
           </BlockNoteView>
         )}
       </div>
+
+      {/* Template dialog: /template slash command, header menu, blank-doc banner */}
+      {dialogState.type === 'template' && (
+        <TemplatePickerModal editor={editor} onClose={() => setDialogState({ type: null })} />
+      )}
 
       {/* Reference Dialogs: /notepad and /task */}
       {dialogState.type === 'notepad' && data.projectId && (
