@@ -11,6 +11,7 @@ import {
 import { ProjectSwitcher } from './ProjectSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { useMe } from '../../lib/queries'
+import { NotepadTree } from '../notepads/NotepadTree'
 
 interface SidebarProps {
   onCloseMobile?: () => void
@@ -98,10 +99,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             </div>
           </div>
           <div id="sidebar-notepad-tree" className="space-y-0.5 mt-1">
-            {/* Populated in Phase 3 */}
-            <div className="px-2 py-1 text-xs text-neutral-400">
-              Notepads tree loads here
-            </div>
+            {currentProjectId && <NotepadTree projectId={currentProjectId} />}
           </div>
         </div>
 

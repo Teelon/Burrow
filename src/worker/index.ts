@@ -7,6 +7,8 @@ import { authRoutes } from './routes/auth'
 import { membersRoutes } from './routes/members'
 import { invitesRoutes } from './routes/invites'
 import { projectsRoutes } from './routes/projects'
+import { notepadsRoutes } from './routes/notepads'
+import { filesRoutes } from './routes/files'
 
 /**
  * NOTE (Hono RPC): route registration returns a NEW type; a plain
@@ -22,6 +24,8 @@ export const app = new Hono<Env>()
   .route('', membersRoutes)
   .route('', invitesRoutes)
   .route('', projectsRoutes)
+  .route('', notepadsRoutes)
+  .route('', filesRoutes)
   .onError((err, c) => {
     if (isHttpError(err)) {
       return c.json(

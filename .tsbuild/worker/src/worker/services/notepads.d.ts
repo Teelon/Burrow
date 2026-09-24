@@ -19,12 +19,38 @@ export interface CreatedNotepad {
     version: number;
 }
 export declare function createNotepad(db: DB, args: CreateNotepadArgs): Promise<CreatedNotepad>;
+export interface MoveNotepadArgs {
+    workspaceId: string;
+    notepadId: string;
+    parentId?: string | null;
+    afterId?: string | null;
+}
+export declare function moveNotepad(db: DB, args: MoveNotepadArgs): Promise<{
+    parentId: string | null;
+    position: string;
+}>;
+export interface SoftDeleteNotepadArgs {
+    workspaceId: string;
+    notepadId: string;
+}
+export declare function softDeleteNotepad(db: DB, args: SoftDeleteNotepadArgs): Promise<void>;
+export interface RestoreNotepadArgs {
+    workspaceId: string;
+    notepadId: string;
+}
+export declare function restoreNotepad(db: DB, args: RestoreNotepadArgs): Promise<void>;
+export interface PermanentDeleteNotepadArgs {
+    workspaceId: string;
+    notepadId: string;
+    filesBucket?: R2Bucket | null;
+}
+export declare function permanentDeleteNotepad(db: DB, args: PermanentDeleteNotepadArgs): Promise<void>;
 export interface SaveContentArgs {
     notepadId: string;
     content: string;
     baseVersion: number;
-    /** Acting user — mentioned users other than this one get notifications. */
     actorId: string;
+    clientId?: string;
 }
 export interface SaveContentResult {
     version: number;
@@ -39,21 +65,7 @@ interface PreparedSave {
     validLinks: StoredLink[];
     previousLinks: StoredLink[];
 }
-/**
- * Read everything the save batch needs: the notepad row, its existing links,
- * and the extracted link targets filtered to this workspace (I8).
- */
 export declare function prepareSave(db: DB, args: SaveContentArgs): Promise<PreparedSave>;
-/**
- * Version-gated, atomic content save. The batch:
- *   1. UPDATE the notepad only when version = baseVersion
- *   2. rebuild the FTS row
- *   3. insert mention notifications for newly added user mentions
- *   4. diff notepad_links (delete removed, insert added)
- * Statements 2-4 only take effect while the row holds the exact content this
- * save just wrote (see liveContentCond), so a stale save changes NOTHING
- * anywhere — including FTS, links and notifications.
- */
 export declare function saveContent(db: DB, args: SaveContentArgs): Promise<SaveContentResult>;
 export interface SaveStatementArgs {
     row: {
@@ -68,6 +80,15 @@ export interface SaveStatementArgs {
     previousLinks: StoredLink[];
     now: number;
 }
-/** Exported for the Phase 0 atomicity spike, which drives the batch directly. */
 export declare function buildSaveContentStatements(db: DB, args: SaveStatementArgs): BatchItem<'sqlite'>[];
+export interface ClaimLockArgs {
+    notepadId: string;
+    userId: string;
+    clientId: string;
+}
+export declare function claimLock(db: DB, args: ClaimLockArgs): Promise<{
+    expiresAt: number;
+}>;
+export declare function releaseLock(db: DB, args: ClaimLockArgs): Promise<void>;
+export declare function setNotepadTags(db: DB, notepadId: string, tagIds: string[], workspaceId: string): Promise<void>;
 export {};

@@ -48,14 +48,12 @@ function IndexRedirect() {
   )
 }
 
-function NotepadPlaceholder() {
+import { NotepadEditor } from './editor/NotepadEditor'
+
+function NotepadView() {
   const { notepadId } = useParams({ strict: false }) as { notepadId?: string }
-  return (
-    <div className="p-8 max-w-4xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold">Notepad</h2>
-      <p className="text-sm text-neutral-500">Notepad ID: {notepadId}</p>
-    </div>
-  )
+  if (!notepadId) return <div>Select a notepad</div>
+  return <NotepadEditor notepadId={notepadId} />
 }
 
 function BoardPlaceholder() {
@@ -124,7 +122,7 @@ const projectHomeRoute = createRoute({
 const notepadRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/p/$projectId/notepads/$notepadId',
-  component: NotepadPlaceholder,
+  component: NotepadView,
 })
 
 const boardRoute = createRoute({
