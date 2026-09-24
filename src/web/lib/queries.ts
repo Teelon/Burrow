@@ -409,7 +409,40 @@ export function useMoveColumn() {
       }
       return res.json()
     },
-    onSuccess: (_, vars) => {
+    onMutate: async ({ boardId, columnId, afterId }) => {
+      await queryClient.cancelQueries({ queryKey: ['board', boardId] })
+      const prevBoard = queryClient.getQueryData<any>(['board', boardId])
+      if (prevBoard?.columns) {
+        const nextColumns = [...prevBoard.columns]
+        const fromIndex = nextColumns.findIndex(
+          (col: any) => col.id === columnId,
+        )
+        if (fromIndex !== -1) {
+          const [moved] = nextColumns.splice(fromIndex, 1)
+          let insertAt: number
+          if (!afterId) {
+            insertAt = 0
+          } else {
+            const targetIndex = nextColumns.findIndex(
+              (col: any) => col.id === afterId,
+            )
+            insertAt = targetIndex === -1 ? nextColumns.length : targetIndex + 1
+          }
+          nextColumns.splice(insertAt, 0, moved)
+          queryClient.setQueryData(['board', boardId], {
+            ...prevBoard,
+            columns: nextColumns,
+          })
+        }
+      }
+      return { prevBoard }
+    },
+    onError: (_err, vars, context) => {
+      if (context?.prevBoard) {
+        queryClient.setQueryData(['board', vars.boardId], context.prevBoard)
+      }
+    },
+    onSettled: (_, __, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
     },
   })

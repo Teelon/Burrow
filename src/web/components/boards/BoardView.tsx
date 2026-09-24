@@ -6,7 +6,6 @@ import {
   pointerWithin,
   KeyboardSensor,
   PointerSensor,
-  useDroppable,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -17,10 +16,12 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
+  horizontalListSortingStrategy,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import {
   Calendar,
+  GripVertical,
   MoreHorizontal,
   Plus,
   Trash2,
@@ -36,6 +37,7 @@ import {
   useDeleteColumn,
   useMembers,
   useMoveCard,
+  useMoveColumn,
   useProjectTags,
   useUpdateBoard,
   useUpdateColumn,
@@ -211,18 +213,35 @@ function ColumnComponent({
 
   const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards])
 
-  const { setNodeRef, isOver } = useDroppable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isOver,
+    isDragging,
+  } = useSortable({
     id: column.id,
-    data: {
-      type: 'column',
-      column,
-    },
+    data: { type: 'column', column },
   })
+
+  const style = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
 
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={`w-72 shrink-0 bg-neutral-100/60 dark:bg-neutral-900/40 rounded-2xl p-3 flex flex-col max-h-full border transition-all duration-150 ${
+        isDragging ? 'z-10 shadow-xl relative' : ''
+      } ${
         isOver
           ? 'border-primary/60 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/20'
           : 'border-neutral-200/50 dark:border-neutral-800/50'
@@ -276,39 +295,53 @@ function ColumnComponent({
           </span>
         </div>
 
-        <div className="relative">
+        <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700"
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label="Drag to reorder column"
+            title="Drag to reorder"
+            className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 cursor-grab active:cursor-grabbing touch-none"
           >
-            <MoreHorizontal className="w-4 h-4" />
+            <GripVertical className="w-4 h-4" />
           </button>
 
-          {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-1 z-20 text-xs">
-              <button
-                onClick={() => {
-                  setShowMenu(false)
-                  setColumnName(column.name)
-                  setIsEditingName(true)
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Rename</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowMenu(false)
-                  onDeleteColumn(column.id, column.cards.length)
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete</span>
-              </button>
-            </div>
-          )}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-1 z-20 text-xs">
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
+                    setColumnName(column.name)
+                    setIsEditingName(true)
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Rename</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
+                    onDeleteColumn(column.id, column.cards.length)
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -363,6 +396,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   const navigate = useNavigate()
   const { data: board, isLoading } = useBoard(boardId)
   const moveCardMutation = useMoveCard()
+  const moveColumnMutation = useMoveColumn()
   const createColumnMutation = useCreateColumn()
   const updateColumnMutation = useUpdateColumn()
   const deleteColumnMutation = useDeleteColumn()
@@ -421,6 +455,11 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     }))
   }, [columns, filterSearch, filterPriority, filterAssignee, filterTag])
 
+  const columnIds = useMemo(
+    () => filteredColumns.map((c) => c.id),
+    [filteredColumns],
+  )
+
   if (isLoading || !board) {
     return (
       <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
@@ -436,6 +475,17 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     filterTag !== 'all'
 
   const collisionDetectionStrategy: CollisionDetection = (args) => {
+    // When reordering columns, only consider columns as drop targets
+    // (ignore cards nested inside them)
+    if (args.active.data.current?.type === 'column') {
+      const columnContainers = args.droppableContainers.filter(
+        (c) => c.data.current?.type === 'column',
+      )
+      const columnArgs = { ...args, droppableContainers: columnContainers }
+      const columnPointer = pointerWithin(columnArgs)
+      return columnPointer.length > 0 ? columnPointer : closestCorners(columnArgs)
+    }
+
     // 1. First, check if pointer is within any droppable
     const pointerCollisions = pointerWithin(args)
     if (pointerCollisions.length > 0) {
@@ -489,6 +539,35 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     const activeId = active.id as string
     const overId = over.id as string
 
+    // --- Column reorder: the column itself was dragged ---
+    if (active.data.current?.type === 'column') {
+      let overColId: string
+      if (columns.some((c) => c.id === overId)) {
+        overColId = overId
+      } else if (over.data.current?.type === 'card') {
+        // Collided with a card; reorder relative to its column
+        overColId = over.data.current.columnId as string
+      } else {
+        return
+      }
+      if (overColId === activeId) return
+
+      const activeIndex = columns.findIndex((c) => c.id === activeId)
+      const overIndex = columns.findIndex((c) => c.id === overColId)
+      if (activeIndex === -1 || overIndex === -1) return
+
+      // Dragged right -> land after the target column;
+      // dragged left -> land before it (i.e. after its predecessor)
+      const afterId =
+        activeIndex < overIndex
+          ? overColId
+          : (columns[overIndex - 1]?.id ?? null)
+      if (afterId === activeId) return
+
+      moveColumnMutation.mutate({ boardId, columnId: activeId, afterId })
+      return
+    }
+
     // 1. Find active card and its current column
     let sourceCol: ColumnItem | undefined
     for (const col of columns) {
@@ -511,7 +590,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
 
     // 3. Compute target otherCards (cards in destination column excluding activeCard)
     const targetCards = destCol.cards.filter((c) => c.id !== activeId)
-    let afterId: string | null = null
+    let afterId: string | null
 
     if (isOverColumn) {
       // Dropped on the column itself (e.g. empty column or empty bottom area)
@@ -801,17 +880,22 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {filteredColumns.map((column) => (
-            <ColumnComponent
-              key={column.id}
-              column={column}
-              boardId={boardId}
-              projectId={projectId}
-              onCardClick={(id) => setSelectedCardId(id)}
-              onDeleteColumn={handleDeleteColumn}
-              onRenameColumn={handleRenameColumn}
-            />
-          ))}
+          <SortableContext
+            items={columnIds}
+            strategy={horizontalListSortingStrategy}
+          >
+            {filteredColumns.map((column) => (
+              <ColumnComponent
+                key={column.id}
+                column={column}
+                boardId={boardId}
+                projectId={projectId}
+                onCardClick={(id) => setSelectedCardId(id)}
+                onDeleteColumn={handleDeleteColumn}
+                onRenameColumn={handleRenameColumn}
+              />
+            ))}
+          </SortableContext>
 
           <DragOverlay>
             {activeCard ? <CardTile card={activeCard} isOverlay /> : null}

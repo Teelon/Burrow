@@ -171,7 +171,9 @@ export declare function useMoveColumn(): import("@tanstack/react-query").UseMuta
     boardId: string;
     columnId: string;
     afterId?: string | null;
-}, unknown>;
+}, {
+    prevBoard: any;
+}>;
 export declare function useCreateCard(): import("@tanstack/react-query").UseMutationResult<{
     cardId: string;
     notepadId: string;
