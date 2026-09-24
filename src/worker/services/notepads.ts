@@ -73,7 +73,7 @@ export async function createNotepad(db: DB, args: CreateNotepadArgs): Promise<Cr
   const id = nanoid()
   const now = Date.now()
   const title = args.title?.trim() || 'Untitled'
-  await db.batch([
+  await runBatch(db, [
     db.insert(t.notepads).values({
       id,
       workspaceId: args.workspaceId,
