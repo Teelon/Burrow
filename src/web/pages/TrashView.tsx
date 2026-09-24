@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useParams } from '@tanstack/react-router'
-import { FileText, Kanban, RefreshCw, Trash2 } from 'lucide-react'
+import { useState } from 'react';
+import { useParams } from '@tanstack/react-router';
+import { FileText, Kanban, RefreshCw, Trash2 } from 'lucide-react';
 import {
   usePermanentDeleteBoard,
   usePermanentDeleteNotepad,
@@ -8,62 +8,63 @@ import {
   useRestoreBoard,
   useRestoreNotepad,
   useTrash,
-} from '../lib/queries'
-import { Button } from '../components/ui/Button'
-import { SegmentedControl } from '../components/ui/SegmentedControl'
+} from '../lib/queries';
+import { Button } from '../components/ui/Button';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
 
 export function TrashView() {
-  const { projectId } = useParams({ strict: false }) as { projectId?: string }
-  const { data: projects = [] } = useProjects()
-  const project = projects.find((p) => p.id === projectId) || projects[0]
-  const currentProjectId = project?.id
+  const { projectId } = useParams({ strict: false }) as { projectId?: string };
+  const { data: projects = [] } = useProjects();
+  const project = projects.find((p) => p.id === projectId) || projects[0];
+  const currentProjectId = project?.id;
 
-  const { data: trash, isLoading } = useTrash(currentProjectId)
-  const restoreNotepad = useRestoreNotepad()
-  const permanentDeleteNotepad = usePermanentDeleteNotepad()
-  const restoreBoard = useRestoreBoard()
-  const permanentDeleteBoard = usePermanentDeleteBoard()
+  const { data: trash, isLoading } = useTrash(currentProjectId);
+  const restoreNotepad = useRestoreNotepad();
+  const permanentDeleteNotepad = usePermanentDeleteNotepad();
+  const restoreBoard = useRestoreBoard();
+  const permanentDeleteBoard = usePermanentDeleteBoard();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'notepads' | 'boards'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'notepads' | 'boards'>('all');
 
-  const notepads = trash?.notepads || []
-  const boards = trash?.boards || []
+  const notepads = trash?.notepads || [];
+  const boards = trash?.boards || [];
 
   const handleRestoreNotepad = (notepadId: string) => {
-    if (!currentProjectId) return
-    restoreNotepad.mutate({ notepadId, projectId: currentProjectId })
-  }
+    if (!currentProjectId) return;
+    restoreNotepad.mutate({ notepadId, projectId: currentProjectId });
+  };
 
   const handlePermanentDeleteNotepad = (notepadId: string, title: string) => {
-    if (!currentProjectId) return
+    if (!currentProjectId) return;
     if (
       window.confirm(
         `Are you sure you want to permanently delete "${title}"? This cannot be undone.`,
       )
     ) {
-      permanentDeleteNotepad.mutate({ notepadId, projectId: currentProjectId })
+      permanentDeleteNotepad.mutate({ notepadId, projectId: currentProjectId });
     }
-  }
+  };
 
   const handleRestoreBoard = (boardId: string) => {
-    if (!currentProjectId) return
-    restoreBoard.mutate({ boardId, projectId: currentProjectId })
-  }
+    if (!currentProjectId) return;
+    restoreBoard.mutate({ boardId, projectId: currentProjectId });
+  };
 
   const handlePermanentDeleteBoard = (boardId: string, name: string) => {
-    if (!currentProjectId) return
+    if (!currentProjectId) return;
     if (
       window.confirm(
         `Are you sure you want to permanently delete board "${name}" and all its cards? This cannot be undone.`,
       )
     ) {
-      permanentDeleteBoard.mutate({ boardId, projectId: currentProjectId })
+      permanentDeleteBoard.mutate({ boardId, projectId: currentProjectId });
     }
-  }
+  };
 
-  const totalCount = notepads.length + boards.length
+  const totalCount = notepads.length + boards.length;
 
   return (
+    <div className="flex-1 overflow-y-auto">
     <div className="max-w-4xl mx-auto py-8 px-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--hair)] pb-5 flex-wrap gap-3">
@@ -74,7 +75,8 @@ export function TrashView() {
           </h1>
           <p className="text-sm text-[var(--muted)] mt-1">
             Items in trash for project <span className="font-semibold">{project?.name}</span>.
-            Restored notepads are re-attached to their parent, or to the project root if the parent is still in trash.
+            Restored notepads are re-attached to their parent, or to the project root if the parent
+            is still in trash.
           </p>
         </div>
 
@@ -97,11 +99,10 @@ export function TrashView() {
           <div className="w-12 h-12 bg-[var(--surface2)] border border-[var(--line)] flex items-center justify-center mx-auto text-[var(--muted)]">
             <Trash2 className="w-6 h-6" />
           </div>
-          <div className="text-sm font-semibold text-[var(--text)]">
-            Trash is empty
-          </div>
+          <div className="text-sm font-semibold text-[var(--text)]">Trash is empty</div>
           <p className="text-xs text-[var(--muted)] max-w-sm mx-auto">
-            Deleted notepads and boards will appear here. You can restore them or permanently delete them anytime.
+            Deleted notepads and boards will appear here. You can restore them or permanently delete
+            them anytime.
           </p>
         </div>
       ) : (
@@ -196,5 +197,6 @@ export function TrashView() {
         </div>
       )}
     </div>
-  )
+    </div>
+  );
 }

@@ -7,7 +7,7 @@ import {
   index,
   uniqueIndex,
   pgEnum,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 /**
  * Burrow Drizzle schema for PostgreSQL (pg-core).
@@ -19,12 +19,12 @@ import {
 // Enums
 // ---------------------------------------------------------------------------
 
-export const roleEnum = pgEnum('role', ['owner', 'editor', 'viewer'])
-export const inviteRoleEnum = pgEnum('invite_role', ['editor', 'viewer'])
-export const notepadKindEnum = pgEnum('notepad_kind', ['notepad', 'card'])
-export const cardPriorityEnum = pgEnum('card_priority', ['low', 'medium', 'high', 'urgent'])
-export const notificationTypeEnum = pgEnum('notification_type', ['mention', 'assigned'])
-export const linkTargetTypeEnum = pgEnum('link_target_type', ['user', 'notepad', 'card', 'board'])
+export const roleEnum = pgEnum('role', ['owner', 'editor', 'viewer']);
+export const inviteRoleEnum = pgEnum('invite_role', ['editor', 'viewer']);
+export const notepadKindEnum = pgEnum('notepad_kind', ['notepad', 'card']);
+export const cardPriorityEnum = pgEnum('card_priority', ['low', 'medium', 'high', 'urgent']);
+export const notificationTypeEnum = pgEnum('notification_type', ['mention', 'assigned']);
+export const linkTargetTypeEnum = pgEnum('link_target_type', ['user', 'notepad', 'card', 'board']);
 
 // ---------------------------------------------------------------------------
 // Better Auth tables
@@ -38,7 +38,7 @@ export const user = pgTable('user', {
   image: text('image'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
-})
+});
 
 export const session = pgTable(
   'session',
@@ -55,7 +55,7 @@ export const session = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
   },
   (t) => [index('session_user_idx').on(t.userId)],
-)
+);
 
 export const account = pgTable(
   'account',
@@ -77,7 +77,7 @@ export const account = pgTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('account_user_idx').on(t.userId)],
-)
+);
 
 export const verification = pgTable('verification', {
   id: text('id').primaryKey(),
@@ -86,7 +86,7 @@ export const verification = pgTable('verification', {
   expiresAt: integer('expires_at').notNull(),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
-})
+});
 
 // ---------------------------------------------------------------------------
 // Workspace / members / invites
@@ -97,7 +97,7 @@ export const workspaces = pgTable('workspaces', {
   name: text('name').notNull(),
   createdBy: text('created_by').notNull(),
   createdAt: integer('created_at').notNull(),
-})
+});
 
 export const members = pgTable(
   'members',
@@ -110,7 +110,7 @@ export const members = pgTable(
     joinedAt: integer('joined_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.workspaceId, t.userId] })],
-)
+);
 
 export const invites = pgTable(
   'invites',
@@ -128,7 +128,7 @@ export const invites = pgTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('invites_token_hash_uq').on(t.tokenHash)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Projects
@@ -150,7 +150,7 @@ export const projects = pgTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('projects_ws').on(t.workspaceId, t.position)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Notepads (defined first without generated column, then altered)
@@ -187,7 +187,7 @@ export const notepads = pgTable(
     index('notepads_deleted_idx').on(t.projectId, t.deletedAt),
     index('notepads_fts_idx').using('gin', t.searchVector),
   ],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Boards, columns, cards
@@ -209,7 +209,7 @@ export const boards = pgTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('boards_project').on(t.projectId, t.position)],
-)
+);
 
 export const boardColumns = pgTable(
   'board_columns',
@@ -224,7 +224,7 @@ export const boardColumns = pgTable(
     wipLimit: integer('wip_limit'),
   },
   (t) => [index('columns_board').on(t.boardId, t.position)],
-)
+);
 
 export const cards = pgTable(
   'cards',
@@ -246,7 +246,7 @@ export const cards = pgTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('cards_column').on(t.columnId, t.position)],
-)
+);
 
 export const cardAssignees = pgTable(
   'card_assignees',
@@ -257,7 +257,7 @@ export const cardAssignees = pgTable(
     userId: text('user_id').notNull(),
   },
   (t) => [primaryKey({ columns: [t.cardId, t.userId] })],
-)
+);
 
 export const cardSubtasks = pgTable(
   'card_subtasks',
@@ -272,7 +272,7 @@ export const cardSubtasks = pgTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('subtasks_card').on(t.cardId, t.position)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Card comments (discussion thread)
@@ -293,7 +293,7 @@ export const cardComments = pgTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('comments_card').on(t.cardId, t.createdAt)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Tags
@@ -310,7 +310,7 @@ export const tags = pgTable(
     color: text('color'),
   },
   (t) => [uniqueIndex('tags_project_name_uq').on(t.projectId, t.name)],
-)
+);
 
 export const notepadTags = pgTable(
   'notepad_tags',
@@ -323,7 +323,7 @@ export const notepadTags = pgTable(
       .references(() => tags.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.notepadId, t.tagId] })],
-)
+);
 
 // ---------------------------------------------------------------------------
 // References found inside notepad content (backlinks, notification diffing)
@@ -342,7 +342,7 @@ export const notepadLinks = pgTable(
     primaryKey({ columns: [t.sourceId, t.targetType, t.targetId] }),
     index('links_target').on(t.targetType, t.targetId),
   ],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Notifications
@@ -362,7 +362,7 @@ export const notifications = pgTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('notifications_user').on(t.userId, t.readAt, t.createdAt)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Soft edit locks
@@ -375,7 +375,7 @@ export const editLocks = pgTable('edit_locks', {
   userId: text('user_id').notNull(),
   clientId: text('client_id').notNull(),
   expiresAt: integer('expires_at').notNull(),
-})
+});
 
 // ---------------------------------------------------------------------------
 // Schema export for BetterAuth
@@ -402,4 +402,4 @@ export const schema = {
   notepadLinks,
   notifications,
   editLocks,
-}
+};

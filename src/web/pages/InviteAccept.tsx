@@ -1,78 +1,78 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { Copy, Check, KeyRound, AlertCircle, UserPlus, LogIn, ArrowRight } from 'lucide-react'
-import { useMe, useInviteInfo } from '../lib/queries'
-import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
-import { SegmentedControl } from '../components/ui/SegmentedControl'
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { Copy, Check, KeyRound, AlertCircle, UserPlus, LogIn, ArrowRight } from 'lucide-react';
+import { useMe, useInviteInfo } from '../lib/queries';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
 
 export function InviteAccept() {
-  const { token } = useParams({ strict: false }) as { token?: string }
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const { token } = useParams({ strict: false }) as { token?: string };
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const { data: me, isLoading: meLoading } = useMe()
-  const { data: inviteInfo, isLoading: inviteLoading, error: inviteError } = useInviteInfo(token)
+  const { data: me, isLoading: meLoading } = useMe();
+  const { data: inviteInfo, isLoading: inviteLoading, error: inviteError } = useInviteInfo(token);
 
-  const [mode, setMode] = useState<'signup' | 'signin'>('signup')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [copiedToken, setCopiedToken] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Pre-fill email from invite data
   useEffect(() => {
     if (inviteInfo?.email && !email) {
-      setEmail(inviteInfo.email)
+      setEmail(inviteInfo.email);
     }
-  }, [inviteInfo?.email, email])
+  }, [inviteInfo?.email, email]);
 
   const handleCopyToken = () => {
     if (token) {
-      navigator.clipboard.writeText(token)
-      setCopiedToken(true)
-      setTimeout(() => setCopiedToken(false), 2000)
+      navigator.clipboard.writeText(token);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
     }
-  }
+  };
 
   // Accept when already logged in
   const handleAcceptLoggedIn = async () => {
-    if (!token) return
-    setActionError(null)
-    setLoading(true)
+    if (!token) return;
+    setActionError(null);
+    setLoading(true);
 
     try {
       const res = await fetch('/api/invites/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
-      })
+      });
 
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
-          error?: { message?: string }
-        }
-        throw new Error(data.error?.message || 'Failed to accept invite')
+          error?: { message?: string };
+        };
+        throw new Error(data.error?.message || 'Failed to accept invite');
       }
 
-      queryClient.clear()
-      navigate({ to: '/' })
+      queryClient.clear();
+      navigate({ to: '/' });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to accept invite')
+      setActionError(err instanceof Error ? err.message : 'Failed to accept invite');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Sign up and join in one step
   const handleSignUpAndJoin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!token) return
-    setActionError(null)
-    setLoading(true)
+    e.preventDefault();
+    if (!token) return;
+    setActionError(null);
+    setLoading(true);
 
     try {
       const res = await fetch('/api/auth/sign-up/email', {
@@ -84,31 +84,31 @@ export function InviteAccept() {
           password,
           inviteToken: token,
         }),
-      })
+      });
 
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
-          error?: { message?: string }
-          message?: string
-        }
-        throw new Error(data.error?.message || data.message || 'Registration failed')
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(data.error?.message || data.message || 'Registration failed');
       }
 
-      queryClient.clear()
-      navigate({ to: '/' })
+      queryClient.clear();
+      navigate({ to: '/' });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Registration failed')
+      setActionError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Sign in and accept invite
   const handleSignInAndJoin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!token) return
-    setActionError(null)
-    setLoading(true)
+    e.preventDefault();
+    if (!token) return;
+    setActionError(null);
+    setLoading(true);
 
     try {
       // First sign in
@@ -119,14 +119,14 @@ export function InviteAccept() {
           email: email.trim(),
           password,
         }),
-      })
+      });
 
       if (!signInRes.ok) {
         const data = (await signInRes.json().catch(() => ({}))) as {
-          error?: { message?: string }
-          message?: string
-        }
-        throw new Error(data.error?.message || data.message || 'Sign in failed')
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(data.error?.message || data.message || 'Sign in failed');
       }
 
       // Then accept the invite
@@ -134,23 +134,23 @@ export function InviteAccept() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
-      })
+      });
 
       if (!acceptRes.ok) {
         const data = (await acceptRes.json().catch(() => ({}))) as {
-          error?: { message?: string }
-        }
-        throw new Error(data.error?.message || 'Signed in, but failed to accept invite')
+          error?: { message?: string };
+        };
+        throw new Error(data.error?.message || 'Signed in, but failed to accept invite');
       }
 
-      queryClient.clear()
-      navigate({ to: '/' })
+      queryClient.clear();
+      navigate({ to: '/' });
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Sign in failed')
+      setActionError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (meLoading || inviteLoading) {
     return (
@@ -160,7 +160,7 @@ export function InviteAccept() {
           <span>Loading invitation details…</span>
         </div>
       </div>
-    )
+    );
   }
 
   // Invalid or expired invite
@@ -172,9 +172,7 @@ export function InviteAccept() {
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-xl font-bold text-[var(--text)]">
-              Invalid or Expired Invitation
-            </h1>
+            <h1 className="text-xl font-bold text-[var(--text)]">Invalid or Expired Invitation</h1>
             <p className="text-xs text-[var(--muted)] leading-relaxed">
               {inviteError instanceof Error
                 ? inviteError.message
@@ -184,9 +182,7 @@ export function InviteAccept() {
           {token && (
             <div className="p-3 bg-[var(--surface2)] border border-[var(--line)] text-xs">
               <span className="text-[var(--muted)] block mb-1">Provided token:</span>
-              <code className="font-mono text-[var(--text)] break-all select-all">
-                {token}
-              </code>
+              <code className="font-mono text-[var(--text)] break-all select-all">{token}</code>
             </div>
           )}
           <div className="pt-2">
@@ -199,7 +195,7 @@ export function InviteAccept() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // User already authenticated
@@ -216,31 +212,22 @@ export function InviteAccept() {
             </h1>
             <p className="text-xs text-[var(--muted)]">
               You've been invited to join as an{' '}
-              <strong className="capitalize text-[var(--text)]">
-                {inviteInfo.role}
-              </strong>
-              .
+              <strong className="capitalize text-[var(--text)]">{inviteInfo.role}</strong>.
             </p>
           </div>
 
           <div className="p-4 bg-[var(--surface2)] border border-[var(--line)] space-y-2 text-xs">
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Signed in as:</span>
-              <span className="font-semibold text-[var(--text)]">
-                {me.user?.email}
-              </span>
+              <span className="font-semibold text-[var(--text)]">{me.user?.email}</span>
             </div>
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Invited email:</span>
-              <span className="font-medium text-[var(--text)]">
-                {inviteInfo.email}
-              </span>
+              <span className="font-medium text-[var(--text)]">{inviteInfo.email}</span>
             </div>
             <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Assigned role:</span>
-              <span className="capitalize font-medium text-[var(--text)]">
-                {inviteInfo.role}
-              </span>
+              <span className="capitalize font-medium text-[var(--text)]">{inviteInfo.role}</span>
             </div>
           </div>
 
@@ -263,9 +250,9 @@ export function InviteAccept() {
             <button
               type="button"
               onClick={async () => {
-                await fetch('/api/auth/sign-out', { method: 'POST' }).catch(() => {})
-                queryClient.clear()
-                window.location.reload()
+                await fetch('/api/auth/sign-out', { method: 'POST' }).catch(() => {});
+                queryClient.clear();
+                window.location.reload();
               }}
               className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--text)] transition min-h-[44px]"
             >
@@ -274,7 +261,7 @@ export function InviteAccept() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // User is not logged in: Full signup / signin form right on the page!
@@ -290,10 +277,7 @@ export function InviteAccept() {
           </h1>
           <p className="text-xs text-[var(--muted)]">
             You've been invited to join as an{' '}
-            <strong className="capitalize text-[var(--text)]">
-              {inviteInfo.role}
-            </strong>
-            .
+            <strong className="capitalize text-[var(--text)]">{inviteInfo.role}</strong>.
           </p>
         </div>
 
@@ -331,12 +315,28 @@ export function InviteAccept() {
         <SegmentedControl
           value={mode}
           onValueChange={(v) => {
-            setMode(v as 'signup' | 'signin')
-            setActionError(null)
+            setMode(v as 'signup' | 'signin');
+            setActionError(null);
           }}
           options={[
-            { value: 'signup', label: (<span className="inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" />Create Account</span>) },
-            { value: 'signin', label: (<span className="inline-flex items-center gap-1.5"><LogIn className="w-3.5 h-3.5" />Sign In</span>) },
+            {
+              value: 'signup',
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Create Account
+                </span>
+              ),
+            },
+            {
+              value: 'signin',
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <LogIn className="w-3.5 h-3.5" />
+                  Sign In
+                </span>
+              ),
+            },
           ]}
           fullWidth
         />
@@ -350,9 +350,7 @@ export function InviteAccept() {
         {mode === 'signup' ? (
           <form onSubmit={handleSignUpAndJoin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1">
-                Full Name
-              </label>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">Full Name</label>
               <Input
                 type="text"
                 required
@@ -364,9 +362,7 @@ export function InviteAccept() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1">
-                Email
-              </label>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">Email</label>
               <Input
                 type="email"
                 required
@@ -378,9 +374,7 @@ export function InviteAccept() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1">
-                Password
-              </label>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">Password</label>
               <Input
                 type="password"
                 required
@@ -403,9 +397,7 @@ export function InviteAccept() {
         ) : (
           <form onSubmit={handleSignInAndJoin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1">
-                Email
-              </label>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">Email</label>
               <Input
                 type="email"
                 required
@@ -417,9 +409,7 @@ export function InviteAccept() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1">
-                Password
-              </label>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">Password</label>
               <Input
                 type="password"
                 required
@@ -452,5 +442,5 @@ export function InviteAccept() {
         </div>
       </div>
     </div>
-  )
+  );
 }

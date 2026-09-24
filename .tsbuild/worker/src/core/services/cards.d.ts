@@ -1,4 +1,4 @@
-import type { ICardRepository, INotepadRepository, ITagRepository, IBoardRepository, CardPriority, MyTasksFilters, MyTaskItem, CardSummary, CardSubtask } from '../infrastructure/types';
+import type { ICardRepository, INotepadRepository, ITagRepository, IBoardRepository, CardPriority, MyTasksFilters, MyTaskItem, CardSummary, CardSubtask, CardWithDetails } from '../infrastructure/types';
 export interface CreateCardInput {
     workspaceId: string;
     actorId: string;
@@ -58,7 +58,7 @@ export declare class CardService {
     createCard(input: CreateCardInput): Promise<CreatedCard>;
     /** The exact statements createCard runs. Exported for the atomicity spike. */
     executeCardCreation(plan: CardPlan): Promise<void>;
-    getCard(workspaceId: string, cardId: string): Promise<import("..").Card>;
+    getCard(workspaceId: string, cardId: string): Promise<CardWithDetails>;
     moveCard(workspaceId: string, cardId: string, columnId: string, afterId?: string | null): Promise<{
         columnId: string;
         position: string;

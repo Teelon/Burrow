@@ -1,12 +1,5 @@
-import { useMemo, useState } from 'react'
-import {
-  AlarmClock,
-  Calendar,
-  CheckCircle2,
-  Circle,
-  Inbox,
-  ListTodo,
-} from 'lucide-react'
+import { useMemo, useState } from 'react';
+import { AlarmClock, Calendar, CheckCircle2, Circle, Inbox, ListTodo } from 'lucide-react';
 import {
   useBoard,
   useMoveCard,
@@ -14,15 +7,15 @@ import {
   useProjects,
   useUpdateCard,
   type MyTaskItem,
-} from '../lib/queries'
-import { CardPanel } from '../components/boards/CardPanel'
-import { api } from '../lib/api'
-import { Badge } from '../components/ui/Badge'
-import { Select } from '../components/ui/Select'
-import { SegmentedControl } from '../components/ui/SegmentedControl'
-import { StatusDiamond } from '../components/ui/StatusDiamond'
+} from '../lib/queries';
+import { CardPanel } from '../components/boards/CardPanel';
+import { api } from '../lib/api';
+import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
+import { SegmentedControl } from '../components/ui/SegmentedControl';
+import { StatusDiamond } from '../components/ui/StatusDiamond';
 
-type StatusFilter = 'all' | 'open' | 'completed'
+type StatusFilter = 'all' | 'open' | 'completed';
 
 // Basalt Layer-4 priority adapter: angular token classes. Export shape preserved.
 const PRIORITY_BADGES: Record<string, { label: string; class: string }> = {
@@ -30,26 +23,26 @@ const PRIORITY_BADGES: Record<string, { label: string; class: string }> = {
   medium: { label: 'Medium', class: 'border-l-[var(--c3)]' },
   high: { label: 'High', class: 'border-l-[var(--c2)]' },
   urgent: { label: 'Urgent', class: 'border-l-[var(--danger)]' },
-}
+};
 
 const PRIORITY_DIAMONDS: Record<string, string> = {
   low: 'var(--c4)',
   medium: 'var(--c3)',
   high: 'var(--c2)',
   urgent: 'var(--danger)',
-}
+};
 
 function startOfToday(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
 }
 
 function formatDue(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
-  })
+  });
 }
 
 function TaskRow({
@@ -58,14 +51,14 @@ function TaskRow({
   onComplete,
   onSnooze,
 }: {
-  task: MyTaskItem
-  onOpen: () => void
-  onComplete: () => void
-  onSnooze: () => void
+  task: MyTaskItem;
+  onOpen: () => void;
+  onComplete: () => void;
+  onSnooze: () => void;
 }) {
-  const overdue = !task.isCompleted && task.dueDate !== null && task.dueDate < startOfToday()
-  const priority = task.priority ? PRIORITY_BADGES[task.priority] : undefined
-  const diamond = task.priority ? PRIORITY_DIAMONDS[task.priority] : undefined
+  const overdue = !task.isCompleted && task.dueDate !== null && task.dueDate < startOfToday();
+  const priority = task.priority ? PRIORITY_BADGES[task.priority] : undefined;
+  const diamond = task.priority ? PRIORITY_DIAMONDS[task.priority] : undefined;
 
   return (
     <div
@@ -83,20 +76,17 @@ function TaskRow({
             : 'text-[var(--muted)] hover:text-[var(--c4)]'
         }`}
       >
-        {task.isCompleted ? (
-          <CheckCircle2 className="w-5 h-5" />
-        ) : (
-          <Circle className="w-5 h-5" />
-        )}
+        {task.isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
       </button>
 
       {/* Title + meta */}
-      <button onClick={onOpen} className="flex-1 min-w-0 text-left space-y-1 min-h-[44px] sm:min-h-0">
+      <button
+        onClick={onOpen}
+        className="flex-1 min-w-0 text-left space-y-1 min-h-[44px] sm:min-h-0"
+      >
         <div
           className={`text-sm font-medium leading-snug truncate ${
-            task.isCompleted
-              ? 'text-[var(--muted)] line-through'
-              : 'text-[var(--text)]'
+            task.isCompleted ? 'text-[var(--muted)] line-through' : 'text-[var(--text)]'
           }`}
         >
           {task.title || 'Untitled'}
@@ -114,7 +104,10 @@ function TaskRow({
             <span
               key={tag.id}
               className="px-1.5 py-0.5 font-medium border-l-2"
-              style={{ borderLeftColor: tag.color || '#64748b', backgroundColor: 'var(--surface2)' }}
+              style={{
+                borderLeftColor: tag.color || '#64748b',
+                backgroundColor: 'var(--surface2)',
+              }}
             >
               #{tag.name}
             </span>
@@ -153,7 +146,7 @@ function TaskRow({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function SectionHeader({
@@ -162,12 +155,12 @@ function SectionHeader({
   count,
   tone,
 }: {
-  icon: React.ReactNode
-  title: string
-  count: number
-  tone: string
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  tone: string;
 }) {
-  if (count === 0) return null
+  if (count === 0) return null;
   return (
     <div className="flex items-center gap-2 pt-3 pb-1.5">
       <span className={tone}>{icon}</span>
@@ -176,129 +169,123 @@ function SectionHeader({
       </h2>
       <Badge>{count}</Badge>
     </div>
-  )
+  );
 }
 
 export function MyTasksView() {
-  const [status, setStatus] = useState<StatusFilter>('open')
-  const [projectId, setProjectId] = useState<string>('all')
-  const [selected, setSelected] = useState<MyTaskItem | null>(null)
+  const [status, setStatus] = useState<StatusFilter>('open');
+  const [projectId, setProjectId] = useState<string>('all');
+  const [selected, setSelected] = useState<MyTaskItem | null>(null);
 
   const { data: tasks = [], isLoading } = useMyTasks({
     status,
     projectId: projectId === 'all' ? undefined : projectId,
-  })
-  const { data: projects = [] } = useProjects()
-  const moveCardMutation = useMoveCard()
-  const updateCardMutation = useUpdateCard()
+  });
+  const { data: projects = [] } = useProjects();
+  const moveCardMutation = useMoveCard();
+  const updateCardMutation = useUpdateCard();
 
   // Columns for the open CardPanel (needed for the status dropdown).
-  const { data: openBoard } = useBoard(selected?.boardId)
+  const { data: openBoard } = useBoard(selected?.boardId);
   const panelColumns = useMemo(
     () => (openBoard?.columns || []).map((c: any) => ({ id: c.id, name: c.name })),
     [openBoard],
-  )
+  );
 
   const groups = useMemo(() => {
-    const todayStart = startOfToday()
-    const todayEnd = todayStart + 86_400_000
-    const weekEnd = todayStart + 7 * 86_400_000
+    const todayStart = startOfToday();
+    const todayEnd = todayStart + 86_400_000;
+    const weekEnd = todayStart + 7 * 86_400_000;
 
-    const overdue: MyTaskItem[] = []
-    const today: MyTaskItem[] = []
-    const upcoming: MyTaskItem[] = []
-    const later: MyTaskItem[] = []
-    const completed: MyTaskItem[] = []
+    const overdue: MyTaskItem[] = [];
+    const today: MyTaskItem[] = [];
+    const upcoming: MyTaskItem[] = [];
+    const later: MyTaskItem[] = [];
+    const completed: MyTaskItem[] = [];
 
     for (const task of tasks) {
       if (task.isCompleted) {
-        completed.push(task)
-        continue
+        completed.push(task);
+        continue;
       }
       if (task.dueDate === null) {
-        later.push(task)
+        later.push(task);
       } else if (task.dueDate < todayStart) {
-        overdue.push(task)
+        overdue.push(task);
       } else if (task.dueDate < todayEnd) {
-        today.push(task)
+        today.push(task);
       } else if (task.dueDate < weekEnd) {
-        upcoming.push(task)
+        upcoming.push(task);
       } else {
-        later.push(task)
+        later.push(task);
       }
     }
 
     const byDue = (a: MyTaskItem, b: MyTaskItem) =>
-      (a.dueDate ?? Number.MAX_SAFE_INTEGER) - (b.dueDate ?? Number.MAX_SAFE_INTEGER)
-    overdue.sort(byDue)
-    today.sort(byDue)
-    upcoming.sort(byDue)
-    completed.sort((a, b) => b.createdAt - a.createdAt)
+      (a.dueDate ?? Number.MAX_SAFE_INTEGER) - (b.dueDate ?? Number.MAX_SAFE_INTEGER);
+    overdue.sort(byDue);
+    today.sort(byDue);
+    upcoming.sort(byDue);
+    completed.sort((a, b) => b.createdAt - a.createdAt);
 
-    return { overdue, today, upcoming, later, completed }
-  }, [tasks])
+    return { overdue, today, upcoming, later, completed };
+  }, [tasks]);
 
   const handleComplete = (task: MyTaskItem) => {
     if (task.isCompleted) {
       // Re-open: move back to the first non-done column on its board.
-      ;(async () => {
+      (async () => {
         try {
-          const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } })
-          if (!res.ok) return
-          const board = (await res.json()) as { columns: Array<{ id: string; name: string }> }
-          const openCol = board.columns.find(
-            (c) => !/done|completed|closed|shipped/i.test(c.name),
-          )
+          const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
+          if (!res.ok) return;
+          const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
+          const openCol = board.columns.find((c) => !/done|completed|closed|shipped/i.test(c.name));
           if (openCol) {
             moveCardMutation.mutate({
               cardId: task.id,
               boardId: task.boardId,
               columnId: openCol.id,
-            })
+            });
           }
         } catch {
           /* ignore */
         }
-      })()
-      return
+      })();
+      return;
     }
 
     // Complete: move into the board's Done/Completed column.
-    ;(async () => {
+    (async () => {
       try {
-        const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } })
-        if (!res.ok) return
-        const board = (await res.json()) as { columns: Array<{ id: string; name: string }> }
-        const doneCol = board.columns.find((c) =>
-          /done|completed|closed|shipped/i.test(c.name),
-        )
+        const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
+        if (!res.ok) return;
+        const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
+        const doneCol = board.columns.find((c) => /done|completed|closed|shipped/i.test(c.name));
         if (!doneCol) {
-          window.alert(
-            `"${task.boardName}" has no Done/Completed column to move this card into.`,
-          )
-          return
+          window.alert(`"${task.boardName}" has no Done/Completed column to move this card into.`);
+          return;
         }
         moveCardMutation.mutate({
           cardId: task.id,
           boardId: task.boardId,
           columnId: doneCol.id,
-        })
+        });
       } catch {
         /* ignore */
       }
-    })()
-  }
+    })();
+  };
 
   const handleSnooze = (task: MyTaskItem) => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(0, 0, 0, 0)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
     updateCardMutation.mutate({
       cardId: task.id,
       boardId: task.boardId,
       dueDate: tomorrow.getTime(),
-    })
-  }
+    });
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--bg)]">
@@ -307,9 +294,7 @@ export function MyTasksView() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2.5">
             <Inbox className="w-6 h-6 text-[var(--accent)]" />
-            <h1 className="text-2xl font-bold text-[var(--text)]">
-              My Tasks
-            </h1>
+            <h1 className="text-2xl font-bold text-[var(--text)]">My Tasks</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -448,5 +433,5 @@ export function MyTasksView() {
         />
       )}
     </div>
-  )
+  );
 }

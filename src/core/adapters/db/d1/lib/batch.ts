@@ -1,13 +1,13 @@
-import type { BatchItem } from 'drizzle-orm/batch'
-import type { DB } from '../client'
-import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types'
+import type { BatchItem } from 'drizzle-orm/batch';
+import type { DB } from '../client';
+import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
 
-type D1BindValue = Parameters<D1PreparedStatement['bind']>[number]
+type D1BindValue = Parameters<D1PreparedStatement['bind']>[number];
 
 /** Compiled SQL text plus driver-mapped bound params. */
 interface CompiledStatement {
-  sql: string
-  params: unknown[]
+  sql: string;
+  params: unknown[];
 }
 
 /**
@@ -19,14 +19,14 @@ interface CompiledStatement {
  */
 function compileStatement(chunk: BatchItem<'sqlite'>): CompiledStatement {
   const candidate = chunk as {
-    getQuery?: () => CompiledStatement
-    toSQL?: () => CompiledStatement
-  }
-  const query = candidate.getQuery?.() ?? candidate.toSQL?.()
+    getQuery?: () => CompiledStatement;
+    toSQL?: () => CompiledStatement;
+  };
+  const query = candidate.getQuery?.() ?? candidate.toSQL?.();
   if (!query) {
-    throw new Error('runBatch: statement is neither raw SQL nor a drizzle builder')
+    throw new Error('runBatch: statement is neither raw SQL nor a drizzle builder');
   }
-  return query
+  return query;
 }
 
 /** True when the drizzle `$client` is a D1Database (has native batch()). */
@@ -35,7 +35,7 @@ function isD1Client(client: unknown): client is D1Database {
     typeof client === 'object' &&
     client !== null &&
     typeof (client as { batch?: unknown }).batch === 'function'
-  )
+  );
 }
 
 /**
@@ -57,31 +57,28 @@ function isD1Client(client: unknown): client is D1Database {
  * what a caller means (services build arrays that can legitimately be empty —
  * callers must skip the write instead).
  */
-export async function runBatch(
-  db: DB,
-  statements: BatchItem<'sqlite'>[],
-): Promise<unknown> {
-  const [first, ...rest] = statements
+export async function runBatch(db: DB, statements: BatchItem<'sqlite'>[]): Promise<unknown> {
+  const [first, ...rest] = statements;
   if (first === undefined) {
-    throw new Error('runBatch: refusing to execute an empty statement batch')
+    throw new Error('runBatch: refusing to execute an empty statement batch');
   }
-  const client = (db as { $client: unknown }).$client
+  const client = (db as { $client: unknown }).$client;
   if (isD1Client(client)) {
     const batch = [first, ...rest].map((chunk) => {
-      const query = compileStatement(chunk)
-      return client.prepare(query.sql).bind(...(query.params as D1BindValue[]))
-    })
-    return client.batch(batch)
+      const query = compileStatement(chunk);
+      return client.prepare(query.sql).bind(...(query.params as D1BindValue[]));
+    });
+    return client.batch(batch);
   }
-  const compiled = [first, ...rest].map(compileStatement)
+  const compiled = [first, ...rest].map(compileStatement);
   const sqlite = client as {
-    prepare(sql: string): { run(...params: unknown[]): unknown }
-    transaction<T>(fn: () => T): () => T
-  }
+    prepare(sql: string): { run(...params: unknown[]): unknown };
+    transaction<T>(fn: () => T): () => T;
+  };
   sqlite.transaction(() => {
     for (const query of compiled) {
-      sqlite.prepare(query.sql).run(...query.params)
+      sqlite.prepare(query.sql).run(...query.params);
     }
-  })()
-  return []
+  })();
+  return [];
 }

@@ -1,8 +1,8 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  active?: boolean
+  active?: boolean;
 }
 
 /** Angular filter chip — touch-friendly, horizontally scrollable on mobile. */
@@ -22,5 +22,5 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       {...props}
     />
   ),
-)
-Chip.displayName = 'Chip'
+);
+Chip.displayName = 'Chip';

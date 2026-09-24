@@ -1,6 +1,6 @@
 # Burrow
 
-> *Dig in. Nest your notes.*
+> _Dig in. Nest your notes._
 
 A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. Built to run entirely on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA.
 
@@ -30,16 +30,19 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
 ### Setup & Local Development
 
 1. **Install dependencies:**
+
    ```bash
    pnpm install
    ```
 
 2. **Run local migrations:**
+
    ```bash
    pnpm db:migrate:local
    ```
 
 3. **Seed demo data (two users, projects, boards, cards):**
+
    ```bash
    pnpm seed:local
    ```
@@ -54,16 +57,16 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
 
 ## Scripts
 
-| Script | Purpose |
-|---|---|
-| `pnpm dev` | Vite dev server with local Worker and local D1 (Miniflare) |
-| `pnpm build` | Production build of the React SPA to `dist/web` |
-| `pnpm check` | Full local CI replacement: runs typecheck (`tsc -b`), linting (`eslint`), and API tests (`vitest`) |
+| Script            | Purpose                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`        | Vite dev server with local Worker and local D1 (Miniflare)                                                                    |
+| `pnpm build`      | Production build of the React SPA to `dist/web`                                                                               |
+| `pnpm check`      | Full local CI replacement: runs typecheck (`tsc -b`), linting (`eslint`), and API tests (`vitest`)                            |
 | `pnpm check:data` | Verifies that all 10 database invariants hold (`scripts/check-invariants.sql`) against local D1, or `--remote` for production |
-| `pnpm seed:local` | Seeds demo workspace, projects, nested notepads, tags, and Kanban boards with cards |
-| `pnpm setup` | First-time provision and deployment (`--dry-run` available) |
-| `pnpm deploy` | Production release: checks, builds, captures D1 Time Travel bookmark, applies remote migrations, and deploys |
-| `pnpm logs` | Streams live Worker logs via `wrangler tail` |
+| `pnpm seed:local` | Seeds demo workspace, projects, nested notepads, tags, and Kanban boards with cards                                           |
+| `pnpm setup`      | First-time provision and deployment (`--dry-run` available)                                                                   |
+| `pnpm deploy`     | Production release: checks, builds, captures D1 Time Travel bookmark, applies remote migrations, and deploys                  |
+| `pnpm logs`       | Streams live Worker logs via `wrangler tail`                                                                                  |
 
 ---
 

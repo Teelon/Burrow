@@ -1,8 +1,8 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  tone?: 'neutral' | 'accent' | 'danger' | 'c1' | 'c2' | 'c3' | 'c4'
+  tone?: 'neutral' | 'accent' | 'danger' | 'c1' | 'c2' | 'c3' | 'c4';
 }
 
 const TONES: Record<NonNullable<BadgeProps['tone']>, string> = {
@@ -13,7 +13,7 @@ const TONES: Record<NonNullable<BadgeProps['tone']>, string> = {
   c2: 'bg-transparent text-[var(--c2)] border-[var(--c2)]',
   c3: 'bg-transparent text-[var(--c3)] border-[var(--c3)]',
   c4: 'bg-transparent text-[var(--c4)] border-[var(--c4)]',
-}
+};
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, tone = 'neutral', ...props }, ref) => (
@@ -27,5 +27,5 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
       {...props}
     />
   ),
-)
-Badge.displayName = 'Badge'
+);
+Badge.displayName = 'Badge';

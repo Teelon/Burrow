@@ -8,5 +8,5 @@ interface CardPanelProps {
     }>;
     onClose: () => void;
 }
-export declare function CardPanel({ cardId, boardId, columns, onClose, }: CardPanelProps): import("react").JSX.Element;
+export declare function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps): import("react").JSX.Element;
 export {};

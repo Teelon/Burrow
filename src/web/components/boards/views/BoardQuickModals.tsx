@@ -1,31 +1,39 @@
-import { useEffect, useState } from 'react'
-import { Calendar, User, X } from 'lucide-react'
-import { useMembers, useUpdateCard } from '../../../lib/queries'
-import { Avatar } from '../../ui/Avatar'
-import { Badge } from '../../ui/Badge'
-import { ModalShell } from '../../ui/ModalShell'
-import { priorityBadgeTone } from '../../ui/status'
-import { PRIORITY_BADGES, PRIORITIES, type CardItem, type Priority } from './types'
+import { useEffect, useState } from 'react';
+import { Calendar, User, X } from 'lucide-react';
+import { useMembers, useUpdateCard } from '../../../lib/queries';
+import { Avatar } from '../../ui/Avatar';
+import { Badge } from '../../ui/Badge';
+import { ModalShell } from '../../ui/ModalShell';
+import { priorityBadgeTone } from '../../ui/status';
+import { PRIORITY_BADGES, PRIORITIES, type CardItem, type Priority } from './types';
 
-function Backdrop({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title?: string }) {
+function Backdrop({
+  children,
+  onClose,
+  title,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  title?: string;
+}) {
   return (
     <ModalShell open onClose={onClose} title={title} className="max-w-sm">
       {children}
     </ModalShell>
-  )
+  );
 }
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        e.stopPropagation()
-        onClose()
+        e.stopPropagation();
+        onClose();
       }
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose])
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
 }
 
 function CardHeading({ card, columnName }: { card: CardItem; columnName?: string }) {
@@ -34,7 +42,10 @@ function CardHeading({ card, columnName }: { card: CardItem; columnName?: string
       <div className="min-w-0">
         <div
           className="text-sm text-[var(--text)]"
-          style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 700" }}
+          style={{
+            fontFamily: 'Archivo, sans-serif',
+            fontVariationSettings: "'wdth' 122, 'wght' 700",
+          }}
         >
           {card.title || 'Untitled'}
         </div>
@@ -48,7 +59,7 @@ function CardHeading({ card, columnName }: { card: CardItem; columnName?: string
         </Badge>
       )}
     </div>
-  )
+  );
 }
 
 /** Space-bar quick peek: read-only snapshot of the focused card. */
@@ -57,11 +68,11 @@ export function QuickPeekModal({
   columnName,
   onClose,
 }: {
-  card: CardItem
-  columnName?: string
-  onClose: () => void
+  card: CardItem;
+  columnName?: string;
+  onClose: () => void;
 }) {
-  useEscape(onClose)
+  useEscape(onClose);
 
   const dueLabel = card.dueDate
     ? new Date(card.dueDate).toLocaleDateString(undefined, {
@@ -69,8 +80,8 @@ export function QuickPeekModal({
         month: 'short',
         day: 'numeric',
       })
-    : null
-  const overdue = card.dueDate != null && card.dueDate < Date.now()
+    : null;
+  const overdue = card.dueDate != null && card.dueDate < Date.now();
 
   return (
     <Backdrop onClose={onClose}>
@@ -130,7 +141,7 @@ export function QuickPeekModal({
         </button>
       </div>
     </Backdrop>
-  )
+  );
 }
 
 /** P-key quick priority picker for the focused card. */
@@ -139,17 +150,17 @@ export function PriorityPickerModal({
   boardId,
   onClose,
 }: {
-  card: CardItem
-  boardId: string
-  onClose: () => void
+  card: CardItem;
+  boardId: string;
+  onClose: () => void;
 }) {
-  useEscape(onClose)
-  const updateCard = useUpdateCard()
+  useEscape(onClose);
+  const updateCard = useUpdateCard();
 
   const set = (priority: Priority | null) => {
-    updateCard.mutate({ cardId: card.id, boardId, priority })
-    onClose()
-  }
+    updateCard.mutate({ cardId: card.id, boardId, priority });
+    onClose();
+  };
 
   return (
     <Backdrop onClose={onClose} title="Set priority">
@@ -181,7 +192,7 @@ export function PriorityPickerModal({
         ))}
       </div>
     </Backdrop>
-  )
+  );
 }
 
 /** M-key member assign picker for the focused card (toggles assigneeIds). */
@@ -190,30 +201,30 @@ export function AssignPickerModal({
   boardId,
   onClose,
 }: {
-  card: CardItem
-  boardId: string
-  onClose: () => void
+  card: CardItem;
+  boardId: string;
+  onClose: () => void;
 }) {
-  useEscape(onClose)
-  const { data: members = [] } = useMembers()
-  const updateCard = useUpdateCard()
-  const [saving, setSaving] = useState(false)
+  useEscape(onClose);
+  const { data: members = [] } = useMembers();
+  const updateCard = useUpdateCard();
+  const [saving, setSaving] = useState(false);
 
-  const currentIds = card.assignees.map((a) => a.userId)
+  const currentIds = card.assignees.map((a) => a.userId);
 
   const toggle = async (userId: string) => {
-    if (saving) return
+    if (saving) return;
     const next = currentIds.includes(userId)
       ? currentIds.filter((id) => id !== userId)
-      : [...currentIds, userId]
-    setSaving(true)
+      : [...currentIds, userId];
+    setSaving(true);
     try {
-      await updateCard.mutateAsync({ cardId: card.id, boardId, assigneeIds: next })
-      onClose()
+      await updateCard.mutateAsync({ cardId: card.id, boardId, assigneeIds: next });
+      onClose();
     } catch {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <Backdrop onClose={onClose} title="Assign member">
@@ -222,7 +233,7 @@ export function AssignPickerModal({
           <div className="px-1 py-2 text-xs italic text-[var(--muted)]">No members</div>
         )}
         {members.map((m) => {
-          const assigned = currentIds.includes(m.userId)
+          const assigned = currentIds.includes(m.userId);
           return (
             <button
               key={m.userId}
@@ -239,9 +250,9 @@ export function AssignPickerModal({
               <span className="min-w-0 flex-1 truncate">{m.name || m.email}</span>
               {assigned && <X className="h-3 w-3 opacity-60" aria-hidden />}
             </button>
-          )
+          );
         })}
       </div>
     </Backdrop>
-  )
+  );
 }

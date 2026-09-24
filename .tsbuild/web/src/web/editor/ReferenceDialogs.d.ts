@@ -9,5 +9,5 @@ interface TaskPickerModalProps {
     onClose: () => void;
     onCardCreated: (cardId: string) => void;
 }
-export declare function TaskPickerModal({ projectId, onClose, onCardCreated, }: TaskPickerModalProps): import("react").JSX.Element;
+export declare function TaskPickerModal({ projectId, onClose, onCardCreated }: TaskPickerModalProps): import("react").JSX.Element;
 export {};

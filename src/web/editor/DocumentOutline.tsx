@@ -1,51 +1,51 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { BlockNoteEditor } from '@blocknote/core'
-import { ListTree, X } from 'lucide-react'
-import { Button } from '../components/ui/Button'
-import { StatusDiamond } from '../components/ui/StatusDiamond'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { BlockNoteEditor } from '@blocknote/core';
+import { ListTree, X } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { StatusDiamond } from '../components/ui/StatusDiamond';
 
 interface HeadingEntry {
-  id: string
-  level: number
-  text: string
+  id: string;
+  level: number;
+  text: string;
 }
 
 interface DocumentOutlineProps {
-  editor: BlockNoteEditor<any, any, any>
+  editor: BlockNoteEditor<any, any, any>;
   /** Scroll container that owns the editor DOM (used for data-id lookups). */
-  containerRef: React.RefObject<HTMLDivElement | null>
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function inlineText(content: unknown): string {
-  if (typeof content === 'string') return content
-  if (!Array.isArray(content)) return ''
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
   return content
     .map((item) => {
-      if (typeof item === 'string') return item
+      if (typeof item === 'string') return item;
       if (item && typeof item === 'object') {
-        const rec = item as Record<string, unknown>
-        if (typeof rec.text === 'string') return rec.text
-        if (Array.isArray(rec.content)) return inlineText(rec.content)
+        const rec = item as Record<string, unknown>;
+        if (typeof rec.text === 'string') return rec.text;
+        if (Array.isArray(rec.content)) return inlineText(rec.content);
         if (rec.type === 'mention') {
-          const props = rec.props as Record<string, unknown> | undefined
-          return typeof props?.label === 'string' ? props.label : ''
+          const props = rec.props as Record<string, unknown> | undefined;
+          return typeof props?.label === 'string' ? props.label : '';
         }
       }
-      return ''
+      return '';
     })
-    .join('')
+    .join('');
 }
 
 function collectHeadings(blocks: unknown[], out: HeadingEntry[]) {
   for (const raw of blocks) {
-    if (!raw || typeof raw !== 'object') continue
-    const block = raw as Record<string, unknown>
+    if (!raw || typeof raw !== 'object') continue;
+    const block = raw as Record<string, unknown>;
     if (block.type === 'heading' && typeof block.id === 'string') {
-      const props = block.props as Record<string, unknown> | undefined
-      const level = typeof props?.level === 'number' ? props.level : 1
-      out.push({ id: block.id, level, text: inlineText(block.content).trim() || 'Untitled' })
+      const props = block.props as Record<string, unknown> | undefined;
+      const level = typeof props?.level === 'number' ? props.level : 1;
+      out.push({ id: block.id, level, text: inlineText(block.content).trim() || 'Untitled' });
     }
-    if (Array.isArray(block.children)) collectHeadings(block.children, out)
+    if (Array.isArray(block.children)) collectHeadings(block.children, out);
   }
 }
 
@@ -54,68 +54,68 @@ function collectHeadings(blocks: unknown[], out: HeadingEntry[]) {
  * on click, and highlights the section currently in view.
  */
 export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) {
-  const [open, setOpen] = useState(false)
-  const [headings, setHeadings] = useState<HeadingEntry[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)
+  const [open, setOpen] = useState(false);
+  const [headings, setHeadings] = useState<HeadingEntry[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   const refresh = useCallback(() => {
-    const out: HeadingEntry[] = []
-    collectHeadings(editor.document, out)
-    setHeadings(out)
-  }, [editor])
+    const out: HeadingEntry[] = [];
+    collectHeadings(editor.document, out);
+    setHeadings(out);
+  }, [editor]);
 
   // Recompute outline whenever the document changes.
   useEffect(() => {
-    refresh()
-    const unbind = editor.onChange(refresh)
-    return unbind
-  }, [editor, refresh])
+    refresh();
+    const unbind = editor.onChange(refresh);
+    return unbind;
+  }, [editor, refresh]);
 
   // Highlight the active section while scrolling.
   useEffect(() => {
-    if (!open || headings.length === 0) return
-    const root = containerRef.current
-    if (!root) return
+    if (!open || headings.length === 0) return;
+    const root = containerRef.current;
+    if (!root) return;
 
-    const elements: HTMLElement[] = []
+    const elements: HTMLElement[] = [];
     for (const heading of headings) {
-      const el = root.querySelector<HTMLElement>(`[data-id="${heading.id}"]`)
-      if (el) elements.push(el)
+      const el = root.querySelector<HTMLElement>(`[data-id="${heading.id}"]`);
+      if (el) elements.push(el);
     }
-    if (elements.length === 0) return
+    if (elements.length === 0) return;
 
-    let best: { id: string; top: number } | null = null
+    let best: { id: string; top: number } | null = null;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const el = entry.target as HTMLElement
-          const id = el.getAttribute('data-id')
-          if (!id) continue
+          const el = entry.target as HTMLElement;
+          const id = el.getAttribute('data-id');
+          if (!id) continue;
           if (entry.isIntersecting) {
-            const top = entry.boundingClientRect.top
-            if (!best || top < best.top) best = { id, top }
+            const top = entry.boundingClientRect.top;
+            if (!best || top < best.top) best = { id, top };
           }
         }
-        if (best) setActiveId(best.id)
+        if (best) setActiveId(best.id);
       },
       { root: null, rootMargin: '-72px 0px -60% 0px', threshold: [0, 1] },
-    )
-    for (const el of elements) observer.observe(el)
-    observerRef.current = observer
-    return () => observer.disconnect()
-  }, [open, headings, containerRef])
+    );
+    for (const el of elements) observer.observe(el);
+    observerRef.current = observer;
+    return () => observer.disconnect();
+  }, [open, headings, containerRef]);
 
   const scrollTo = (heading: HeadingEntry) => {
-    const root = containerRef.current
-    const el = root?.querySelector<HTMLElement>(`[data-id="${heading.id}"]`)
+    const root = containerRef.current;
+    const el = root?.querySelector<HTMLElement>(`[data-id="${heading.id}"]`);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setActiveId(heading.id)
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveId(heading.id);
     }
-  }
+  };
 
-  const ordered = useMemo(() => headings, [headings])
+  const ordered = useMemo(() => headings, [headings]);
 
   return (
     <div className="no-print relative">
@@ -166,9 +166,7 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
                   style={{ paddingLeft: `${8 + (heading.level - 1) * 12}px` }}
                 >
                   <StatusDiamond
-                    color={
-                      activeId === heading.id ? 'var(--accent-ink)' : 'var(--muted)'
-                    }
+                    color={activeId === heading.id ? 'var(--accent-ink)' : 'var(--muted)'}
                     size={6}
                   />
                   <span className="truncate">{heading.text}</span>
@@ -179,5 +177,5 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
         </div>
       )}
     </div>
-  )
+  );
 }

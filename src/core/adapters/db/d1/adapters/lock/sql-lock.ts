@@ -1,22 +1,20 @@
-import { and, eq } from 'drizzle-orm'
-import type { DB } from '../../client'
-import * as t from '../../schema'
-import type { ILockAdapter, LockAcquireResult } from './types'
+import { and, eq } from 'drizzle-orm';
+import type { DB } from '../../client';
+import * as t from '../../schema';
+import type { ILockAdapter, LockAcquireResult } from './types';
 
 export interface LockAcquireOptions {
-  takeover?: boolean
+  takeover?: boolean;
 }
 
 export interface LockReleaseOptions {
-  userId?: string
+  userId?: string;
 }
 
 export class SqlLockAdapter implements ILockAdapter {
   constructor(
     private readonly db: DB,
-    private readonly resolveHolderName?: (
-      userId: string,
-    ) => Promise<string | null>,
+    private readonly resolveHolderName?: (userId: string) => Promise<string | null>,
   ) {}
 
   async acquire(
@@ -26,13 +24,13 @@ export class SqlLockAdapter implements ILockAdapter {
     ttlMs: number,
     opts?: LockAcquireOptions,
   ): Promise<LockAcquireResult> {
-    const now = Date.now()
-    const expiresAt = now + ttlMs
+    const now = Date.now();
+    const expiresAt = now + ttlMs;
 
     const [existing] = await this.db
       .select()
       .from(t.editLocks)
-      .where(eq(t.editLocks.notepadId, resourceId))
+      .where(eq(t.editLocks.notepadId, resourceId));
 
     if (
       existing &&
@@ -40,17 +38,17 @@ export class SqlLockAdapter implements ILockAdapter {
       (existing.userId !== userId || existing.clientId !== clientId)
     ) {
       if (!(existing.userId === userId && opts?.takeover)) {
-        let holderName: string | undefined
+        let holderName: string | undefined;
         if (this.resolveHolderName) {
-          const name = await this.resolveHolderName(existing.userId)
-          if (name) holderName = name
+          const name = await this.resolveHolderName(existing.userId);
+          if (name) holderName = name;
         }
         return {
           acquired: false,
           holderUserId: existing.userId,
           holderName,
           expiresAt: existing.expiresAt,
-        }
+        };
       }
     }
 
@@ -69,47 +67,36 @@ export class SqlLockAdapter implements ILockAdapter {
           clientId,
           expiresAt,
         },
-      })
+      });
 
-    return { acquired: true, expiresAt }
+    return { acquired: true, expiresAt };
   }
 
-  async heartbeat(
-    resourceId: string,
-    clientId: string,
-    ttlMs: number,
-  ): Promise<boolean> {
-    const now = Date.now()
+  async heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean> {
+    const now = Date.now();
     const [existing] = await this.db
       .select()
       .from(t.editLocks)
-      .where(eq(t.editLocks.notepadId, resourceId))
+      .where(eq(t.editLocks.notepadId, resourceId));
 
     if (!existing || existing.expiresAt <= now || existing.clientId !== clientId) {
-      return false
+      return false;
     }
 
     await this.db
       .update(t.editLocks)
       .set({ expiresAt: now + ttlMs })
-      .where(eq(t.editLocks.notepadId, resourceId))
+      .where(eq(t.editLocks.notepadId, resourceId));
 
-    return true
+    return true;
   }
 
-  async release(
-    resourceId: string,
-    clientId: string,
-    opts?: LockReleaseOptions,
-  ): Promise<void> {
-    const conditions = [
-      eq(t.editLocks.notepadId, resourceId),
-      eq(t.editLocks.clientId, clientId),
-    ]
+  async release(resourceId: string, clientId: string, opts?: LockReleaseOptions): Promise<void> {
+    const conditions = [eq(t.editLocks.notepadId, resourceId), eq(t.editLocks.clientId, clientId)];
     if (opts?.userId !== undefined) {
-      conditions.push(eq(t.editLocks.userId, opts.userId))
+      conditions.push(eq(t.editLocks.userId, opts.userId));
     }
-    await this.db.delete(t.editLocks).where(and(...conditions))
+    await this.db.delete(t.editLocks).where(and(...conditions));
   }
 }
 

@@ -1,6 +1,6 @@
 # Burrow: Build Plan for the Coding Agent
 
-> *Dig in. Nest your notes.*
+> _Dig in. Nest your notes._
 
 A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. It runs entirely on Cloudflare (Workers + D1).
 
@@ -27,18 +27,19 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
 
 ## 1. Product summary
 
-| Concept | Meaning |
-|---|---|
-| **Workspace** | Top-level container. One or more members with roles (owner, editor, viewer). |
-| **Project** | A separated area of work. Notepads, boards, tags and search are all scoped to one project. |
-| **Notepad** | A rich-text note (block editor). Notepads nest in a tree, can be favorited, tagged, trashed and searched. |
-| **Board** | A Kanban board inside a project, made of columns. |
-| **Card** | A task on a board. Each card has its own body, which is a notepad of kind `card`, so it can hold detailed notes, checklists and images. |
-| **Slash menu (`/`)** | Command menu in every editor and in the card quick-add input. |
-| **Mention (`@`)** | Inline reference to a person, notepad, card or date. Mentioned people get a notification. |
-| **Tag (`#`)** | Coloured label scoped to a project. |
+| Concept              | Meaning                                                                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Workspace**        | Top-level container. One or more members with roles (owner, editor, viewer).                                                            |
+| **Project**          | A separated area of work. Notepads, boards, tags and search are all scoped to one project.                                              |
+| **Notepad**          | A rich-text note (block editor). Notepads nest in a tree, can be favorited, tagged, trashed and searched.                               |
+| **Board**            | A Kanban board inside a project, made of columns.                                                                                       |
+| **Card**             | A task on a board. Each card has its own body, which is a notepad of kind `card`, so it can hold detailed notes, checklists and images. |
+| **Slash menu (`/`)** | Command menu in every editor and in the card quick-add input.                                                                           |
+| **Mention (`@`)**    | Inline reference to a person, notepad, card or date. Mentioned people get a notification.                                               |
+| **Tag (`#`)**        | Coloured label scoped to a project.                                                                                                     |
 
 ### In scope for v1
+
 - Sign in, workspace bootstrap, **invite-based multi-user** (owner, editor, viewer)
 - Create, rename, reorder, archive and delete projects; instant switching
 - Nested notepads with a block editor, autosave, icons, covers, drag-reorder in the sidebar
@@ -50,28 +51,29 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
 - Responsive layout, light/dark theme
 
 ### Out of scope for v1 (see section 14)
+
 Real-time collaboration, comments, public sharing, database/table views, offline mode, native mobile apps, email notifications, per-project permissions.
 
 ---
 
 ## 2. Stack
 
-| Layer | Choice |
-|---|---|
-| Runtime and API | Cloudflare Workers, **Hono**, TypeScript (strict) |
-| Database | **Cloudflare D1** (SQLite), **Drizzle ORM**, migrations via `wrangler d1 migrations` |
-| Frontend | **React + Vite**, **TanStack Router**, **TanStack Query**, served from the same Worker via Workers Static Assets |
-| UI | Tailwind CSS + shadcn/ui, `lucide-react` icons, `cmdk` for the command palette and quick-add menu |
-| Drag and drop | `@dnd-kit/core` + `@dnd-kit/sortable` |
-| Editor | **BlockNote** (`@blocknote/core`, `@blocknote/react`, `@blocknote/shadcn`) with custom blocks, custom inline content and custom suggestion menus |
-| Natural dates | `chrono-node` (for `/due tomorrow`, `@friday`) |
-| Ordering | `fractional-indexing` |
-| IDs | `nanoid` as text primary keys |
-| Auth | **Better Auth** with the Drizzle/D1 adapter |
-| Files | **R2** (images, covers) |
-| Validation | `zod` + `@hono/zod-validator`; share types with the client via Hono RPC (`hc`) |
-| Tests | Vitest + `@cloudflare/vitest-pool-workers` (API), Playwright (e2e) |
-| Tooling | pnpm, ESLint, Prettier, Wrangler CLI (deploys run from your machine; no CI/CD pipeline) |
+| Layer           | Choice                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime and API | Cloudflare Workers, **Hono**, TypeScript (strict)                                                                                                |
+| Database        | **Cloudflare D1** (SQLite), **Drizzle ORM**, migrations via `wrangler d1 migrations`                                                             |
+| Frontend        | **React + Vite**, **TanStack Router**, **TanStack Query**, served from the same Worker via Workers Static Assets                                 |
+| UI              | Tailwind CSS + shadcn/ui, `lucide-react` icons, `cmdk` for the command palette and quick-add menu                                                |
+| Drag and drop   | `@dnd-kit/core` + `@dnd-kit/sortable`                                                                                                            |
+| Editor          | **BlockNote** (`@blocknote/core`, `@blocknote/react`, `@blocknote/shadcn`) with custom blocks, custom inline content and custom suggestion menus |
+| Natural dates   | `chrono-node` (for `/due tomorrow`, `@friday`)                                                                                                   |
+| Ordering        | `fractional-indexing`                                                                                                                            |
+| IDs             | `nanoid` as text primary keys                                                                                                                    |
+| Auth            | **Better Auth** with the Drizzle/D1 adapter                                                                                                      |
+| Files           | **R2** (images, covers)                                                                                                                          |
+| Validation      | `zod` + `@hono/zod-validator`; share types with the client via Hono RPC (`hc`)                                                                   |
+| Tests           | Vitest + `@cloudflare/vitest-pool-workers` (API), Playwright (e2e)                                                                               |
+| Tooling         | pnpm, ESLint, Prettier, Wrangler CLI (deploys run from your machine; no CI/CD pipeline)                                                          |
 
 ---
 
@@ -88,6 +90,7 @@ Cloudflare Worker  (Hono)
 ```
 
 Principles:
+
 - **One deployable.** The Worker serves both the API and the built SPA, so there is no CORS and only one domain.
 - **A notepad is one JSON document** (BlockNote's block array stored as text), not one row per block. Autosave is a single update.
 - **References are derived from content.** Mentions and links live inside the JSON; on every save the server extracts them into the `notepad_links` table (for backlinks and notifications). Content is the source of truth, the table is an index.
@@ -166,14 +169,10 @@ Bindings are declared **without resource IDs** so Wrangler can create them for y
   "assets": {
     "directory": "./dist/web",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*"],
   },
-  "d1_databases": [
-    { "binding": "DB", "database_name": "burrow", "migrations_dir": "migrations" }
-  ],
-  "r2_buckets": [
-    { "binding": "FILES", "bucket_name": "burrow-files" }
-  ]
+  "d1_databases": [{ "binding": "DB", "database_name": "burrow", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "burrow-files" }],
 }
 ```
 
@@ -183,11 +182,11 @@ Wrangler 4.45 and later can auto-provision missing D1 databases and R2 buckets d
 
 Set by the setup script, never committed:
 
-| Secret | Purpose |
-|---|---|
-| `BETTER_AUTH_SECRET` | Random 32 bytes. Generated once and never rotated by re-running setup (rotating logs everyone out). |
-| `BETTER_AUTH_URL` | The deployed origin (workers.dev URL or custom domain). |
-| `BOOTSTRAP_TOKEN` | One-time code required for the very first sign-up, so nobody else can claim the owner account in the gap between deploy and your first sign-up. |
+| Secret               | Purpose                                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET` | Random 32 bytes. Generated once and never rotated by re-running setup (rotating logs everyone out).                                             |
+| `BETTER_AUTH_URL`    | The deployed origin (workers.dev URL or custom domain).                                                                                         |
+| `BOOTSTRAP_TOKEN`    | One-time code required for the very first sign-up, so nobody else can claim the owner account in the gap between deploy and your first sign-up. |
 
 Local values live in `.dev.vars` (git-ignored); commit `.dev.vars.example`.
 
@@ -214,19 +213,19 @@ Flags: `--dry-run` (print every command without running it), `--domain notes.exa
 
 ### Scripts
 
-| Script | Purpose |
-|---|---|
-| `dev` | Vite dev server plus local Worker with local D1 (Miniflare) |
-| `build` | Build the SPA to `dist/web` |
-| `setup` | First-time provision and deploy (above) |
-| `deploy` | Release (above) |
-| `check` | Typecheck, lint and API tests (the local replacement for CI) |
-| `check:data` | Run the invariant queries (section 6.1) against local D1, or `--remote` for production |
-| `db:generate` | `drizzle-kit generate` |
-| `db:migrate:local` / `db:migrate:remote` | Apply migrations to local / remote D1 |
-| `seed:local` | Demo data |
-| `test`, `e2e` | Vitest, Playwright |
-| `logs` | `wrangler tail` |
+| Script                                   | Purpose                                                                                |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `dev`                                    | Vite dev server plus local Worker with local D1 (Miniflare)                            |
+| `build`                                  | Build the SPA to `dist/web`                                                            |
+| `setup`                                  | First-time provision and deploy (above)                                                |
+| `deploy`                                 | Release (above)                                                                        |
+| `check`                                  | Typecheck, lint and API tests (the local replacement for CI)                           |
+| `check:data`                             | Run the invariant queries (section 6.1) against local D1, or `--remote` for production |
+| `db:generate`                            | `drizzle-kit generate`                                                                 |
+| `db:migrate:local` / `db:migrate:remote` | Apply migrations to local / remote D1                                                  |
+| `seed:local`                             | Demo data                                                                              |
+| `test`, `e2e`                            | Vitest, Playwright                                                                     |
+| `logs`                                   | `wrangler tail`                                                                        |
 
 ---
 
@@ -385,6 +384,7 @@ CREATE VIRTUAL TABLE notepads_fts USING fts5(
 ```
 
 Rules:
+
 - **Cards own a notepad.** Creating a card also creates a `notepads` row with `kind='card'` in the same `db.batch`. Card notepads never appear in the sidebar notepad tree; they open in a panel on the board and are reachable via search.
 - **Card title lives in `notepads.title`.** There is no separate card title column.
 - **Deleting a card** soft-deletes the card's notepad and the card together (they always share deleted state). Board queries join notepads with `deleted_at IS NULL`.
@@ -413,18 +413,18 @@ Rules:
 
 These must hold at all times. They are enforced by **service functions**, and a check script verifies them.
 
-| # | Invariant |
-|---|---|
-| I1 | Every `cards.notepad_id` points to a notepad with `kind = 'card'`, and every `kind = 'card'` notepad has exactly one card. |
-| I2 | A card notepad has `parent_id IS NULL` (it is never part of the notepad tree). |
-| I3 | A card's board, its column's board, and its notepad all belong to the same project. |
-| I4 | A notepad and its parent belong to the same project; every row's `workspace_id` matches its project's. |
-| I5 | A card and its notepad always have the same soft-delete state (`deleted_at` equal). |
-| I6 | A non-deleted notepad has no deleted ancestors, unless it was trashed on its own (its own `deleted_at` is set). |
-| I7 | Every non-deleted notepad has exactly one `notepads_fts` row; no FTS row exists for a deleted or missing notepad. |
-| I8 | `notepad_links.source_id` always references an existing notepad. Target existence is **not** required: targets of type user, notepad, card or board may be deleted or missing and must render gracefully. Link rows are only ever written for targets in the caller's workspace. |
-| I9 | Every `notepad_tags` row (including tags on card notepads) references a tag whose `project_id` equals the notepad's `project_id`. |
-| I10 | Every `card_assignees.user_id` is a current member of the card's workspace. Removing a member deletes that member's `card_assignees` rows in the same batch. |
+| #   | Invariant                                                                                                                                                                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I1  | Every `cards.notepad_id` points to a notepad with `kind = 'card'`, and every `kind = 'card'` notepad has exactly one card.                                                                                                                                                       |
+| I2  | A card notepad has `parent_id IS NULL` (it is never part of the notepad tree).                                                                                                                                                                                                   |
+| I3  | A card's board, its column's board, and its notepad all belong to the same project.                                                                                                                                                                                              |
+| I4  | A notepad and its parent belong to the same project; every row's `workspace_id` matches its project's.                                                                                                                                                                           |
+| I5  | A card and its notepad always have the same soft-delete state (`deleted_at` equal).                                                                                                                                                                                              |
+| I6  | A non-deleted notepad has no deleted ancestors, unless it was trashed on its own (its own `deleted_at` is set).                                                                                                                                                                  |
+| I7  | Every non-deleted notepad has exactly one `notepads_fts` row; no FTS row exists for a deleted or missing notepad.                                                                                                                                                                |
+| I8  | `notepad_links.source_id` always references an existing notepad. Target existence is **not** required: targets of type user, notepad, card or board may be deleted or missing and must render gracefully. Link rows are only ever written for targets in the caller's workspace. |
+| I9  | Every `notepad_tags` row (including tags on card notepads) references a tag whose `project_id` equals the notepad's `project_id`.                                                                                                                                                |
+| I10 | Every `card_assignees.user_id` is a current member of the card's workspace. Removing a member deletes that member's `card_assignees` rows in the same batch.                                                                                                                     |
 
 ---
 
@@ -443,6 +443,7 @@ Typing `/` in any editor opens a searchable, keyboard-navigable menu (arrow keys
 ## 9. Frontend
 
 Routes:
+
 - `/login`
 - `/invite/:token`
 - `/` -> redirects to last project

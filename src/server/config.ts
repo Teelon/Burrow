@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 const configSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8788),
@@ -8,9 +8,9 @@ const configSchema = z.object({
   BETTER_AUTH_URL: z.string().min(1).default('http://localhost:8788'),
   BOOTSTRAP_TOKEN: z.string().default(''),
   DATABASE_URL: z.string().optional(),
-})
+});
 
-export type ServerConfig = z.infer<typeof configSchema>
+export type ServerConfig = z.infer<typeof configSchema>;
 
 /** Load + validate the Node server env. Throws a zod error on bad input. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -22,5 +22,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     BETTER_AUTH_URL: env.BETTER_AUTH_URL,
     BOOTSTRAP_TOKEN: env.BOOTSTRAP_TOKEN,
     DATABASE_URL: env.DATABASE_URL,
-  })
+  });
 }

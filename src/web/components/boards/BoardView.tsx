@@ -1,125 +1,112 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  CalendarDays,
-  Filter,
-  Kanban,
-  List,
-  Plus,
-  Search,
-  X,
-} from 'lucide-react'
-import {
-  useBoard,
-  useMembers,
-  useProjectTags,
-  useUpdateBoard,
-} from '../../lib/queries'
-import { CardPanel } from './CardPanel'
-import { KanbanView } from './views/KanbanView'
-import { ListView } from './views/ListView'
-import { CalendarView } from './views/CalendarView'
-import { Button } from '../ui/Button'
-import { Chip } from '../ui/Chip'
-import { Input } from '../ui/Input'
-import { SegmentedControl } from '../ui/SegmentedControl'
-import { Select } from '../ui/Select'
-import type { ColumnItem } from './views/types'
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, Filter, Kanban, List, Plus, Search, X } from 'lucide-react';
+import { useBoard, useMembers, useProjectTags, useUpdateBoard } from '../../lib/queries';
+import { CardPanel } from './CardPanel';
+import { KanbanView } from './views/KanbanView';
+import { ListView } from './views/ListView';
+import { CalendarView } from './views/CalendarView';
+import { Button } from '../ui/Button';
+import { Chip } from '../ui/Chip';
+import { Input } from '../ui/Input';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { Select } from '../ui/Select';
+import type { ColumnItem } from './views/types';
 
 interface BoardViewProps {
-  boardId: string
-  projectId: string
+  boardId: string;
+  projectId: string;
 }
 
-type BoardViewMode = 'kanban' | 'list' | 'calendar'
+type BoardViewMode = 'kanban' | 'list' | 'calendar';
 
-const VIEW_STORAGE_PREFIX = 'burrow:board-view:'
+const VIEW_STORAGE_PREFIX = 'burrow:board-view:';
 
 function readStoredMode(boardId: string): BoardViewMode {
   try {
-    const v = localStorage.getItem(VIEW_STORAGE_PREFIX + boardId)
-    if (v === 'list' || v === 'calendar' || v === 'kanban') return v
+    const v = localStorage.getItem(VIEW_STORAGE_PREFIX + boardId);
+    if (v === 'list' || v === 'calendar' || v === 'kanban') return v;
   } catch {
     // localStorage unavailable (private mode) — fall back to kanban
   }
-  return 'kanban'
+  return 'kanban';
 }
 
 const VIEW_TABS: Array<{ mode: BoardViewMode; label: string; icon: typeof Kanban }> = [
   { mode: 'kanban', label: 'Kanban', icon: Kanban },
   { mode: 'list', label: 'List', icon: List },
   { mode: 'calendar', label: 'Calendar', icon: CalendarDays },
-]
+];
 
 export function BoardView({ boardId, projectId }: BoardViewProps) {
-  const { data: board, isLoading } = useBoard(boardId)
-  const updateBoardMutation = useUpdateBoard()
+  const { data: board, isLoading } = useBoard(boardId);
+  const updateBoardMutation = useUpdateBoard();
 
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
-  const [isEditingBoardName, setIsEditingBoardName] = useState(false)
-  const [boardName, setBoardName] = useState('')
-  const [isAddingColumn, setIsAddingColumn] = useState(false)
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [isEditingBoardName, setIsEditingBoardName] = useState(false);
+  const [boardName, setBoardName] = useState('');
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
 
   // Board filters
-  const [filterSearch, setFilterSearch] = useState('')
-  const [filterPriority, setFilterPriority] = useState<string>('all')
-  const [filterAssignee, setFilterAssignee] = useState<string>('all')
-  const [filterTag, setFilterTag] = useState<string>('all')
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [filterAssignee, setFilterAssignee] = useState<string>('all');
+  const [filterTag, setFilterTag] = useState<string>('all');
 
   // View switcher, persisted per board (FEATURE_PLAN 2.2)
-  const [viewMode, setViewMode] = useState<BoardViewMode>(() => readStoredMode(boardId))
+  const [viewMode, setViewMode] = useState<BoardViewMode>(() => readStoredMode(boardId));
   useEffect(() => {
-    setViewMode(readStoredMode(boardId))
-    setIsAddingColumn(false)
-  }, [boardId])
+    setViewMode(readStoredMode(boardId));
+    setIsAddingColumn(false);
+  }, [boardId]);
 
   const changeView = (mode: BoardViewMode) => {
-    setViewMode(mode)
+    setViewMode(mode);
     try {
-      localStorage.setItem(VIEW_STORAGE_PREFIX + boardId, mode)
+      localStorage.setItem(VIEW_STORAGE_PREFIX + boardId, mode);
     } catch {
       // ignore quota/private-mode errors
     }
-  }
+  };
 
-  const { data: members = [] } = useMembers()
-  const { data: tags = [] } = useProjectTags(projectId)
+  const { data: members = [] } = useMembers();
+  const { data: tags = [] } = useProjectTags(projectId);
 
-  const columns = useMemo<ColumnItem[]>(() => board?.columns || [], [board?.columns])
+  const columns = useMemo<ColumnItem[]>(() => board?.columns || [], [board?.columns]);
 
   const filteredColumns = useMemo(() => {
     return columns.map((col) => ({
       ...col,
       cards: col.cards.filter((card) => {
         if (filterSearch.trim()) {
-          const q = filterSearch.toLowerCase()
-          if (!card.title.toLowerCase().includes(q)) return false
+          const q = filterSearch.toLowerCase();
+          if (!card.title.toLowerCase().includes(q)) return false;
         }
         if (filterPriority !== 'all' && card.priority !== filterPriority) {
-          return false
+          return false;
         }
         if (filterAssignee !== 'all') {
-          if (!card.assignees.some((a) => a.userId === filterAssignee)) return false
+          if (!card.assignees.some((a) => a.userId === filterAssignee)) return false;
         }
         if (filterTag !== 'all') {
-          if (!card.tags.some((t) => t.id === filterTag)) return false
+          if (!card.tags.some((t) => t.id === filterTag)) return false;
         }
-        return true
+        return true;
       }),
-    }))
-  }, [columns, filterSearch, filterPriority, filterAssignee, filterTag])
+    }));
+  }, [columns, filterSearch, filterPriority, filterAssignee, filterTag]);
 
   const isFiltered =
     filterSearch.trim() !== '' ||
     filterPriority !== 'all' ||
     filterAssignee !== 'all' ||
-    filterTag !== 'all'
+    filterTag !== 'all';
 
   if (isLoading || !board) {
     return (
       <div className="p-8 flex items-center justify-center text-sm text-[var(--muted)]">
         Loading board…
       </div>
-    )
+    );
   }
 
   const handleBoardNameSave = () => {
@@ -127,13 +114,13 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
       updateBoardMutation.mutate({
         boardId,
         name: boardName.trim(),
-      })
+      });
     }
-    setIsEditingBoardName(false)
-  }
+    setIsEditingBoardName(false);
+  };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-full flex flex-col min-h-0 bg-[var(--bg)] text-[var(--text)]">
       {/* Board Header Bar */}
       <div className="p-4 px-4 md:px-6 border-b border-[var(--line)] flex items-center justify-between gap-4 bg-[var(--surface)]">
         <div className="flex items-center gap-3 min-w-0">
@@ -146,20 +133,27 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
               onChange={(e) => setBoardName(e.target.value)}
               onBlur={handleBoardNameSave}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleBoardNameSave()
-                if (e.key === 'Escape') setIsEditingBoardName(false)
+                if (e.key === 'Enter') handleBoardNameSave();
+                if (e.key === 'Escape') setIsEditingBoardName(false);
               }}
               className="text-xl bg-transparent border-b-2 border-[var(--accent)] focus:outline-none text-[var(--text)] min-w-0 text-[16px]"
-              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+              style={{
+                fontFamily: 'Archivo, sans-serif',
+                fontVariationSettings: "'wdth' 122, 'wght' 800",
+              }}
             />
           ) : (
             <h1
               onClick={() => {
-                setBoardName(board.name)
-                setIsEditingBoardName(true)
+                setBoardName(board.name);
+                setIsEditingBoardName(true);
               }}
               className="text-xl md:text-2xl text-[var(--text)] cursor-pointer hover:opacity-80 truncate tracking-tight"
-              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800", letterSpacing: '-0.02em' }}
+              style={{
+                fontFamily: 'Archivo, sans-serif',
+                fontVariationSettings: "'wdth' 122, 'wght' 800",
+                letterSpacing: '-0.02em',
+              }}
               title="Click to rename"
             >
               {board.name}
@@ -169,11 +163,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
 
         <div className="flex items-center gap-2 shrink-0">
           {viewMode === 'kanban' && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsAddingColumn(true)}
-            >
+            <Button variant="primary" size="sm" onClick={() => setIsAddingColumn(true)}>
               <Plus className="w-3.5 h-3.5" />
               <span>Add Column</span>
             </Button>
@@ -251,10 +241,10 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
             <Chip
               active
               onClick={() => {
-                setFilterSearch('')
-                setFilterPriority('all')
-                setFilterAssignee('all')
-                setFilterTag('all')
+                setFilterSearch('');
+                setFilterPriority('all');
+                setFilterAssignee('all');
+                setFilterTag('all');
               }}
               className="shrink-0"
             >
@@ -318,5 +308,5 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
         />
       )}
     </div>
-  )
+  );
 }

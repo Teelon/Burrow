@@ -1,4 +1,4 @@
-import { ModalShell } from '../ui/ModalShell'
+import { ModalShell } from '../ui/ModalShell';
 
 export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   const groups: Array<{ title: string; items: Array<[string, string]> }> = [
@@ -31,15 +31,10 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
         ['#', 'Heading (Markdown)'],
       ],
     },
-  ]
+  ];
 
   return (
-    <ModalShell
-      open
-      onClose={onClose}
-      title="Keyboard shortcuts"
-      className="sm:max-w-lg"
-    >
+    <ModalShell open onClose={onClose} title="Keyboard shortcuts" className="sm:max-w-lg">
       <div className="space-y-4">
         {groups.map((g) => (
           <div key={g.title}>
@@ -48,10 +43,7 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
             </div>
             <ul className="divide-y divide-hair">
               {g.items.map(([keys, desc]) => (
-                <li
-                  key={desc}
-                  className="flex items-center justify-between gap-4 py-1.5 text-sm"
-                >
+                <li key={desc} className="flex items-center justify-between gap-4 py-1.5 text-sm">
                   <span className="text-muted">{desc}</span>
                   <kbd className="shrink-0 border border-line bg-surface2 px-1.5 py-0.5 font-mono text-xs text-text">
                     {keys}
@@ -63,5 +55,5 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
         ))}
       </div>
     </ModalShell>
-  )
+  );
 }

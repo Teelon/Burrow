@@ -1,10 +1,10 @@
 # Burrow — Dual-Runtime & Multi-Engine Architecture Plan
 
 > **Status:** Groundwork Established — Phase 1 Cloudflare Focus (Active)  
-> **Strategy:** Lay clean domain groundwork and interface boundaries, but build, stabilize, and harden exclusively for **Cloudflare (Workers + D1 + R2 + SQLite FTS5)** first. Other adapters (PostgreSQL, Node, Docker, MongoDB) are staged for future phases once Cloudflare is rock-solid.  
->  
+> **Strategy:** Lay clean domain groundwork and interface boundaries, but build, stabilize, and harden exclusively for **Cloudflare (Workers + D1 + R2 + SQLite FTS5)** first. Other adapters (PostgreSQL, Node, Docker, MongoDB) are staged for future phases once Cloudflare is rock-solid.
+>
 > **Primary Target (Active):** Cloudflare Workers, Cloudflare D1/SQLite, Cloudflare R2  
-> **Future Targets (Groundwork Ready / Staged):** Node.js runtime, PostgreSQL, MongoDB, S3/MinIO/Local storage  
+> **Future Targets (Groundwork Ready / Staged):** Node.js runtime, PostgreSQL, MongoDB, S3/MinIO/Local storage
 
 ---
 
@@ -57,29 +57,29 @@ PostgreSQL and MongoDB may use fundamentally different internal models as long a
 
 # 2. Locked Architectural Decisions
 
-| Decision | Decision |
-| :--- | :--- |
-| Runtime hosts | Cloudflare Worker + Node.js |
-| Cloudflare runtime | Cloudflare Workers with D1 and R2 |
-| Node runtime | Node.js using `@hono/node-server` |
-| Core framework | Hono |
-| Frontend | React 19 |
-| Database engines | D1/SQLite, PostgreSQL, MongoDB |
-| Relational ORM | Drizzle ORM |
-| Mongo client | Official `mongodb` driver |
-| Search | Native database search |
-| External search service | **Not required** |
-| Cloud object storage | R2 |
-| S3-compatible storage | AWS S3, MinIO, Supabase Storage, R2 S3 API |
-| Offline object storage | Local filesystem |
-| Auth | Better Auth with engine-specific adapter |
-| Domain layer | Runtime and ORM agnostic |
-| Database abstraction | Domain-oriented repositories |
-| Transaction abstraction | Explicit application transaction boundaries where needed |
-| Mongo modeling | Native document-oriented model; do not force relational parity |
-| Search consistency | Search is a derived/read model, not authoritative application state |
-| Deployment | Cloudflare, Docker, VPS, Kubernetes, local |
-| Cloudflare dependency | None in the Node runtime |
+| Decision                | Decision                                                            |
+| :---------------------- | :------------------------------------------------------------------ |
+| Runtime hosts           | Cloudflare Worker + Node.js                                         |
+| Cloudflare runtime      | Cloudflare Workers with D1 and R2                                   |
+| Node runtime            | Node.js using `@hono/node-server`                                   |
+| Core framework          | Hono                                                                |
+| Frontend                | React 19                                                            |
+| Database engines        | D1/SQLite, PostgreSQL, MongoDB                                      |
+| Relational ORM          | Drizzle ORM                                                         |
+| Mongo client            | Official `mongodb` driver                                           |
+| Search                  | Native database search                                              |
+| External search service | **Not required**                                                    |
+| Cloud object storage    | R2                                                                  |
+| S3-compatible storage   | AWS S3, MinIO, Supabase Storage, R2 S3 API                          |
+| Offline object storage  | Local filesystem                                                    |
+| Auth                    | Better Auth with engine-specific adapter                            |
+| Domain layer            | Runtime and ORM agnostic                                            |
+| Database abstraction    | Domain-oriented repositories                                        |
+| Transaction abstraction | Explicit application transaction boundaries where needed            |
+| Mongo modeling          | Native document-oriented model; do not force relational parity      |
+| Search consistency      | Search is a derived/read model, not authoritative application state |
+| Deployment              | Cloudflare, Docker, VPS, Kubernetes, local                          |
+| Cloudflare dependency   | None in the Node runtime                                            |
 
 ---
 
@@ -245,15 +245,15 @@ src/worker/index.ts
 
 Responsibilities:
 
-* Read Cloudflare bindings.
-* Construct Cloudflare infrastructure.
-* Construct the shared Hono application.
-* Export the Worker `fetch` handler.
+- Read Cloudflare bindings.
+- Construct Cloudflare infrastructure.
+- Construct the shared Hono application.
+- Export the Worker `fetch` handler.
 
 Conceptually:
 
 ```ts
-const infrastructure = createCloudflareInfrastructure(env)
+const infrastructure = createCloudflareInfrastructure(env);
 
 const app = createCoreApp({
   repositories: infrastructure.repositories,
@@ -261,7 +261,7 @@ const app = createCoreApp({
   search: infrastructure.search,
   locks: infrastructure.locks,
   auth: infrastructure.auth,
-})
+});
 ```
 
 The Worker should contain minimal business logic.
@@ -278,21 +278,21 @@ src/server/index.ts
 
 Responsibilities:
 
-* Validate environment variables.
-* Construct Node infrastructure.
-* Initialize database clients.
-* Initialize storage.
-* Initialize search.
-* Initialize Better Auth.
-* Create the shared Hono application.
-* Start `@hono/node-server`.
+- Validate environment variables.
+- Construct Node infrastructure.
+- Initialize database clients.
+- Initialize storage.
+- Initialize search.
+- Initialize Better Auth.
+- Create the shared Hono application.
+- Start `@hono/node-server`.
 
 Conceptually:
 
 ```ts
-const config = loadConfig()
+const config = loadConfig();
 
-const infrastructure = await createNodeInfrastructure(config)
+const infrastructure = await createNodeInfrastructure(config);
 
 const app = createCoreApp({
   repositories: infrastructure.repositories,
@@ -300,12 +300,12 @@ const app = createCoreApp({
   search: infrastructure.search,
   locks: infrastructure.locks,
   auth: infrastructure.auth,
-})
+});
 
 serve({
   fetch: app.fetch,
   port: config.PORT,
-})
+});
 ```
 
 The Node runtime must not import Cloudflare-specific modules.
@@ -322,20 +322,20 @@ src/core/app.ts
 
 It is responsible for:
 
-* Hono initialization.
-* Middleware.
-* Authentication middleware.
-* Request context.
-* Route registration.
-* Dependency injection.
+- Hono initialization.
+- Middleware.
+- Authentication middleware.
+- Request context.
+- Route registration.
+- Dependency injection.
 
 It should not know whether the application is running on:
 
-* Workers
-* Node
-* Docker
-* Kubernetes
-* a VPS
+- Workers
+- Node
+- Docker
+- Kubernetes
+- a VPS
 
 It should only receive infrastructure dependencies.
 
@@ -405,34 +405,34 @@ Better Auth Mongo adapter
 
 Entities must be independent of:
 
-* Drizzle
-* MongoDB
-* PostgreSQL
-* D1
-* Hono
-* Cloudflare
+- Drizzle
+- MongoDB
+- PostgreSQL
+- D1
+- Hono
+- Cloudflare
 
 Example:
 
 ```ts
 export interface Project {
-  id: string
-  workspaceId: string
-  name: string
-  description: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
 Do not expose:
 
 ```ts
-PgTable
-Document
-ObjectId
-D1Result
-MongoClient
+PgTable;
+Document;
+ObjectId;
+D1Result;
+MongoClient;
 ```
 
 from the domain entity layer.
@@ -447,38 +447,26 @@ Example:
 
 ```ts
 export interface IProjectRepository {
-  getById(
-    workspaceId: string,
-    projectId: string
-  ): Promise<Project | null>
+  getById(workspaceId: string, projectId: string): Promise<Project | null>;
 
-  list(
-    workspaceId: string
-  ): Promise<Project[]>
+  list(workspaceId: string): Promise<Project[]>;
 
-  create(
-    input: CreateProjectInput
-  ): Promise<Project>
+  create(input: CreateProjectInput): Promise<Project>;
 
-  update(
-    projectId: string,
-    input: UpdateProjectInput
-  ): Promise<Project>
+  update(projectId: string, input: UpdateProjectInput): Promise<Project>;
 
-  delete(
-    projectId: string
-  ): Promise<void>
+  delete(projectId: string): Promise<void>;
 }
 ```
 
 The interface must not dictate whether the underlying implementation uses:
 
-* joins
-* aggregation pipelines
-* recursive CTEs
-* multiple queries
-* embedded documents
-* denormalized projections
+- joins
+- aggregation pipelines
+- recursive CTEs
+- multiple queries
+- embedded documents
+- denormalized projections
 
 That is an implementation concern.
 
@@ -543,12 +531,12 @@ Possible shape:
 ```ts
 export interface ITransactionContext {
   repositories: {
-    workspaces: IWorkspaceRepository
-    projects: IProjectRepository
-    boards: IBoardRepository
-    cards: ICardRepository
-    notepads: INotepadRepository
-  }
+    workspaces: IWorkspaceRepository;
+    projects: IProjectRepository;
+    boards: IBoardRepository;
+    cards: ICardRepository;
+    notepads: INotepadRepository;
+  };
 }
 ```
 
@@ -564,31 +552,21 @@ Use transactions deliberately.
 
 ```ts
 export interface StorageObject {
-  body: ReadableStream | ArrayBuffer
-  contentType?: string
-  contentLength?: number
-  etag?: string
-  lastModified?: Date
+  body: ReadableStream | ArrayBuffer;
+  contentType?: string;
+  contentLength?: number;
+  etag?: string;
+  lastModified?: Date;
 }
 
 export interface IStorageAdapter {
-  put(
-    key: string,
-    data: ArrayBuffer | Uint8Array,
-    contentType?: string
-  ): Promise<void>
+  put(key: string, data: ArrayBuffer | Uint8Array, contentType?: string): Promise<void>;
 
-  get(
-    key: string
-  ): Promise<StorageObject | null>
+  get(key: string): Promise<StorageObject | null>;
 
-  delete(
-    key: string
-  ): Promise<void>
+  delete(key: string): Promise<void>;
 
-  deletePrefix(
-    prefix: string
-  ): Promise<void>
+  deletePrefix(prefix: string): Promise<void>;
 }
 ```
 
@@ -605,8 +583,8 @@ R2StorageAdapter
 Uses:
 
 ```ts
-env.FILES.put()
-env.FILES.get()
+env.FILES.put();
+env.FILES.get();
 ```
 
 Only the adapter knows about R2.
@@ -627,10 +605,10 @@ Uses:
 
 Supported providers include:
 
-* AWS S3
-* MinIO
-* Supabase S3-compatible endpoints
-* Cloudflare R2 S3 API
+- AWS S3
+- MinIO
+- Supabase S3-compatible endpoints
+- Cloudflare R2 S3 API
 
 Configuration should be endpoint-driven.
 
@@ -675,35 +653,35 @@ The system should eventually reconcile the search index.
 
 ```ts
 export interface SearchHit {
-  id: string
-  title: string
-  icon?: string | null
-  kind: 'notepad' | 'card'
-  projectId: string
-  projectName: string
-  snippet: string
+  id: string;
+  title: string;
+  icon?: string | null;
+  kind: 'notepad' | 'card';
+  projectId: string;
+  projectName: string;
+  snippet: string;
 }
 
 export interface ISearchAdapter {
   indexDocument(doc: {
-    id: string
-    workspaceId: string
-    projectId: string
-    kind: 'notepad' | 'card'
-    title: string
-    body: string
-  }): Promise<void>
+    id: string;
+    workspaceId: string;
+    projectId: string;
+    kind: 'notepad' | 'card';
+    title: string;
+    body: string;
+  }): Promise<void>;
 
-  deleteDocument(id: string): Promise<void>
+  deleteDocument(id: string): Promise<void>;
 
-  deleteByProject(projectId: string): Promise<void>
+  deleteByProject(projectId: string): Promise<void>;
 
   search(query: {
-    workspaceId: string
-    projectId?: string
-    text: string
-    limit?: number
-  }): Promise<SearchHit[]>
+    workspaceId: string;
+    projectId?: string;
+    text: string;
+    limit?: number;
+  }): Promise<SearchHit[]>;
 }
 ```
 
@@ -843,23 +821,16 @@ export interface ILockAdapter {
     resourceId: string,
     userId: string,
     clientId: string,
-    ttlMs: number
+    ttlMs: number,
   ): Promise<{
-    acquired: boolean
-    holderUserId?: string
-    expiresAt?: number
-  }>
+    acquired: boolean;
+    holderUserId?: string;
+    expiresAt?: number;
+  }>;
 
-  heartbeat(
-    resourceId: string,
-    clientId: string,
-    ttlMs: number
-  ): Promise<boolean>
+  heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean>;
 
-  release(
-    resourceId: string,
-    clientId: string
-  ): Promise<void>
+  release(resourceId: string, clientId: string): Promise<void>;
 }
 ```
 
@@ -869,8 +840,8 @@ export interface ILockAdapter {
 
 Used by:
 
-* D1
-* PostgreSQL
+- D1
+- PostgreSQL
 
 Table:
 
@@ -880,11 +851,11 @@ edit_locks
 
 Required behavior:
 
-* Atomic acquisition.
-* TTL expiration.
-* Heartbeat.
-* Release.
-* Ownership validation.
+- Atomic acquisition.
+- TTL expiration.
+- Heartbeat.
+- Release.
+- Ownership validation.
 
 The implementation must avoid race conditions when two clients attempt acquisition simultaneously.
 
@@ -900,10 +871,10 @@ findOneAndUpdate
 
 with:
 
-* resource ID
-* expiration check
-* client ID
-* user ID
+- resource ID
+- expiration check
+- client ID
+- user ID
 
 Mongo should also have an appropriate TTL index.
 
@@ -938,12 +909,12 @@ D1NotificationRepository
 
 Existing behavior must be preserved:
 
-* Card/notepad atomic synchronization.
-* Version checking.
-* Tree reconstruction.
-* Existing cascade behavior.
-* Existing search behavior.
-* Existing workspace isolation.
+- Card/notepad atomic synchronization.
+- Version checking.
+- Tree reconstruction.
+- Existing cascade behavior.
+- Existing search behavior.
+- Existing workspace isolation.
 
 ---
 
@@ -1074,7 +1045,7 @@ Use Better Auth:
 drizzleAdapter(pgDb, {
   provider: 'pg',
   schema,
-})
+});
 ```
 
 Authentication-specific tables should live in the PostgreSQL schema and be managed independently from domain repositories where appropriate.
@@ -1291,11 +1262,11 @@ The core application should receive an infrastructure object similar to:
 
 ```ts
 interface Infrastructure {
-  repositories: RepositoryContainer
-  storage: IStorageAdapter
-  search: ISearchAdapter
-  locks: ILockAdapter
-  auth: AuthProvider
+  repositories: RepositoryContainer;
+  storage: IStorageAdapter;
+  search: ISearchAdapter;
+  locks: ILockAdapter;
+  auth: AuthProvider;
 }
 ```
 
@@ -1309,35 +1280,35 @@ The core application should not instantiate infrastructure itself.
 
 Before database refactoring, isolate:
 
-* Storage
-* Search
-* Locks
+- Storage
+- Search
+- Locks
 
 ## Storage
 
-* [ ] Create `IStorageAdapter`.
-* [ ] Create `R2StorageAdapter`.
-* [ ] Create `S3StorageAdapter`.
-* [ ] Create `LocalStorageAdapter`.
-* [ ] Refactor file routes.
-* [ ] Refactor project deletion to use `deletePrefix()`.
+- [ ] Create `IStorageAdapter`.
+- [ ] Create `R2StorageAdapter`.
+- [ ] Create `S3StorageAdapter`.
+- [ ] Create `LocalStorageAdapter`.
+- [ ] Refactor file routes.
+- [ ] Refactor project deletion to use `deletePrefix()`.
 
 ## Search
 
-* [ ] Create `ISearchAdapter`.
-* [ ] Create `SearchHit`.
-* [ ] Wrap existing FTS5 implementation.
-* [ ] Refactor search routes.
-* [ ] Remove raw FTS SQL from domain services.
+- [ ] Create `ISearchAdapter`.
+- [ ] Create `SearchHit`.
+- [ ] Wrap existing FTS5 implementation.
+- [ ] Refactor search routes.
+- [ ] Remove raw FTS SQL from domain services.
 
 ## Locks
 
-* [ ] Create `ILockAdapter`.
-* [ ] Create SQL lock adapter.
-* [ ] Refactor notepad locking routes.
-* [ ] Verify concurrent acquisition behavior.
-* [ ] Verify heartbeat expiration.
-* [ ] Verify release ownership.
+- [ ] Create `ILockAdapter`.
+- [ ] Create SQL lock adapter.
+- [ ] Refactor notepad locking routes.
+- [ ] Verify concurrent acquisition behavior.
+- [ ] Verify heartbeat expiration.
+- [ ] Verify release ownership.
 
 ### Completion criteria
 
@@ -1357,37 +1328,37 @@ src/core/services/
 
 ## Entities
 
-* [ ] Workspace
-* [ ] Member
-* [ ] Invite
-* [ ] Project
-* [ ] Board
-* [ ] BoardColumn
-* [ ] Card
-* [ ] CardAssignee
-* [ ] CardSubtask
-* [ ] CardComment
-* [ ] Notepad
-* [ ] NotepadLink
-* [ ] NotepadTag
-* [ ] Notification
+- [ ] Workspace
+- [ ] Member
+- [ ] Invite
+- [ ] Project
+- [ ] Board
+- [ ] BoardColumn
+- [ ] Card
+- [ ] CardAssignee
+- [ ] CardSubtask
+- [ ] CardComment
+- [ ] Notepad
+- [ ] NotepadLink
+- [ ] NotepadTag
+- [ ] Notification
 
 ## Repository interfaces
 
-* [ ] Workspace
-* [ ] Project
-* [ ] Board
-* [ ] Card
-* [ ] Notepad
-* [ ] Tag
-* [ ] Notification
+- [ ] Workspace
+- [ ] Project
+- [ ] Board
+- [ ] Card
+- [ ] Notepad
+- [ ] Tag
+- [ ] Notification
 
 ## Application
 
-* [ ] Extract shared Hono app.
-* [ ] Move routes to `src/core`.
-* [ ] Introduce dependency injection.
-* [ ] Remove runtime-specific imports from core services.
+- [ ] Extract shared Hono app.
+- [ ] Move routes to `src/core`.
+- [ ] Introduce dependency injection.
+- [ ] Remove runtime-specific imports from core services.
 
 ### Completion criteria
 
@@ -1411,17 +1382,17 @@ D1NotificationRepository
 
 Tasks:
 
-* [ ] Preserve current schema.
-* [ ] Preserve current behavior.
-* [ ] Preserve version checks.
-* [ ] Preserve tree reconstruction.
-* [ ] Preserve card/notepad synchronization.
-* [ ] Preserve tenant isolation.
-* [ ] Wire D1 repositories into infrastructure.
-* [ ] Wire R2.
-* [ ] Wire SQLite FTS5.
-* [ ] Wire SQL locks.
-* [ ] Wire Better Auth.
+- [ ] Preserve current schema.
+- [ ] Preserve current behavior.
+- [ ] Preserve version checks.
+- [ ] Preserve tree reconstruction.
+- [ ] Preserve card/notepad synchronization.
+- [ ] Preserve tenant isolation.
+- [ ] Wire D1 repositories into infrastructure.
+- [ ] Wire R2.
+- [ ] Wire SQLite FTS5.
+- [ ] Wire SQL locks.
+- [ ] Wire Better Auth.
 
 Validation:
 
@@ -1440,44 +1411,44 @@ Cloudflare deployment works with no functional regression.
 
 ## Runtime
 
-* [ ] Create `src/server/index.ts`.
-* [ ] Install `@hono/node-server`.
-* [ ] Create runtime config.
-* [ ] Validate configuration using Zod.
-* [ ] Add health endpoint.
+- [ ] Create `src/server/index.ts`.
+- [ ] Install `@hono/node-server`.
+- [ ] Create runtime config.
+- [ ] Validate configuration using Zod.
+- [ ] Add health endpoint.
 
 ## Database
 
-* [ ] Create PostgreSQL schema.
-* [ ] Configure Drizzle.
-* [ ] Create migrations.
-* [ ] Add foreign keys.
-* [ ] Add cascade rules.
-* [ ] Add indexes.
-* [ ] Add constraints.
+- [ ] Create PostgreSQL schema.
+- [ ] Configure Drizzle.
+- [ ] Create migrations.
+- [ ] Add foreign keys.
+- [ ] Add cascade rules.
+- [ ] Add indexes.
+- [ ] Add constraints.
 
 ## Repositories
 
-* [ ] Workspace.
-* [ ] Project.
-* [ ] Board.
-* [ ] Card.
-* [ ] Notepad.
-* [ ] Tag.
-* [ ] Notification.
+- [ ] Workspace.
+- [ ] Project.
+- [ ] Board.
+- [ ] Card.
+- [ ] Notepad.
+- [ ] Tag.
+- [ ] Notification.
 
 ## Search
 
-* [ ] PostgreSQL search vector.
-* [ ] GIN index.
-* [ ] `websearch_to_tsquery()`.
-* [ ] Ranking.
-* [ ] Highlighting.
-* [ ] Search contract tests.
+- [ ] PostgreSQL search vector.
+- [ ] GIN index.
+- [ ] `websearch_to_tsquery()`.
+- [ ] Ranking.
+- [ ] Highlighting.
+- [ ] Search contract tests.
 
 ## Authentication
 
-* [ ] Better Auth PostgreSQL adapter.
+- [ ] Better Auth PostgreSQL adapter.
 
 ### Completion criteria
 
@@ -1497,17 +1468,17 @@ with no Cloudflare dependency.
 
 Before MongoDB, fully stabilize the Node runtime.
 
-* [ ] Configuration validation.
-* [ ] Graceful shutdown.
-* [ ] Database connection lifecycle.
-* [ ] Storage initialization.
-* [ ] Health checks.
-* [ ] Readiness checks.
-* [ ] Logging.
-* [ ] Error handling.
-* [ ] Production build.
-* [ ] Environment documentation.
-* [ ] Docker compatibility.
+- [ ] Configuration validation.
+- [ ] Graceful shutdown.
+- [ ] Database connection lifecycle.
+- [ ] Storage initialization.
+- [ ] Health checks.
+- [ ] Readiness checks.
+- [ ] Logging.
+- [ ] Error handling.
+- [ ] Production build.
+- [ ] Environment documentation.
+- [ ] Docker compatibility.
 
 ### Completion criteria
 
@@ -1618,24 +1589,24 @@ pnpm dev:mongo
 
 Only begin MongoDB after:
 
-* [ ] Core repository contracts are stable.
-* [ ] Node runtime is stable.
-* [ ] PostgreSQL implementation is stable.
-* [ ] Storage abstraction is stable.
-* [ ] Search abstraction is stable.
-* [ ] Lock abstraction is stable.
+- [ ] Core repository contracts are stable.
+- [ ] Node runtime is stable.
+- [ ] PostgreSQL implementation is stable.
+- [ ] Storage abstraction is stable.
+- [ ] Search abstraction is stable.
+- [ ] Lock abstraction is stable.
 
 Then implement:
 
-* [ ] Mongo collections.
-* [ ] Mongo indexes.
-* [ ] Mongo repositories.
-* [ ] Mongo transactions.
-* [ ] Cascade service.
-* [ ] Materialized path hierarchy.
-* [ ] Mongo search.
-* [ ] Mongo locks.
-* [ ] Better Auth Mongo adapter.
+- [ ] Mongo collections.
+- [ ] Mongo indexes.
+- [ ] Mongo repositories.
+- [ ] Mongo transactions.
+- [ ] Cascade service.
+- [ ] Materialized path hierarchy.
+- [ ] Mongo search.
+- [ ] Mongo locks.
+- [ ] Better Auth Mongo adapter.
 
 ---
 
@@ -1653,10 +1624,10 @@ For example, if a small object is always retrieved with its parent and has no in
 
 If an entity:
 
-* has independent lifecycle,
-* is queried independently,
-* grows significantly,
-* or requires independent authorization,
+- has independent lifecycle,
+- is queried independently,
+- grows significantly,
+- or requires independent authorization,
 
 keep it as its own collection.
 
@@ -1666,12 +1637,12 @@ keep it as its own collection.
 
 Once all engines work:
 
-* [ ] Define domain events.
-* [ ] Define search projection events.
-* [ ] Add retry behavior.
-* [ ] Add reconciliation tooling.
-* [ ] Add search rebuild command.
-* [ ] Add consistency tests.
+- [ ] Define domain events.
+- [ ] Define search projection events.
+- [ ] Add retry behavior.
+- [ ] Add reconciliation tooling.
+- [ ] Add search rebuild command.
+- [ ] Add consistency tests.
 
 Potential command:
 
@@ -1754,16 +1725,16 @@ Example:
 
 The migration CLI must provide:
 
-* [ ] Dry-run mode.
-* [ ] Validation.
-* [ ] Entity counts.
-* [ ] Error reporting.
-* [ ] Idempotency where possible.
-* [ ] Transactional batches where supported.
-* [ ] Progress reporting.
-* [ ] Search rebuild.
-* [ ] Referential integrity validation.
-* [ ] Workspace-level migration support.
+- [ ] Dry-run mode.
+- [ ] Validation.
+- [ ] Entity counts.
+- [ ] Error reporting.
+- [ ] Idempotency where possible.
+- [ ] Transactional batches where supported.
+- [ ] Progress reporting.
+- [ ] Search rebuild.
+- [ ] Referential integrity validation.
+- [ ] Workspace-level migration support.
 
 Example:
 
@@ -1786,7 +1757,7 @@ Every repository operation must enforce workspace scope.
 Avoid APIs such as:
 
 ```ts
-getCard(cardId)
+getCard(cardId);
 ```
 
 when the caller context already knows the workspace.
@@ -1794,19 +1765,19 @@ when the caller context already knows the workspace.
 Prefer:
 
 ```ts
-getCard(workspaceId, cardId)
+getCard(workspaceId, cardId);
 ```
 
 This makes accidental cross-tenant access harder.
 
 The same principle must apply to:
 
-* Search.
-* Storage keys.
-* Locks.
-* Notifications.
-* Migration tooling.
-* Background jobs.
+- Search.
+- Storage keys.
+- Locks.
+- Notifications.
+- Migration tooling.
+- Background jobs.
 
 ---
 
@@ -1850,17 +1821,17 @@ Each implementation runs against the same business-level test cases.
 
 Tests should verify:
 
-* [ ] Create.
-* [ ] Read.
-* [ ] Update.
-* [ ] Delete.
-* [ ] Tenant isolation.
-* [ ] Authorization boundaries.
-* [ ] Hierarchy behavior.
-* [ ] Concurrent updates.
-* [ ] Lock behavior.
-* [ ] Search behavior.
-* [ ] Cascade behavior.
+- [ ] Create.
+- [ ] Read.
+- [ ] Update.
+- [ ] Delete.
+- [ ] Tenant isolation.
+- [ ] Authorization boundaries.
+- [ ] Hierarchy behavior.
+- [ ] Concurrent updates.
+- [ ] Lock behavior.
+- [ ] Search behavior.
+- [ ] Cascade behavior.
 
 The tests should verify **behavior**, not identical SQL/query implementations.
 
@@ -1870,16 +1841,16 @@ The tests should verify **behavior**, not identical SQL/query implementations.
 
 Each search implementation should verify:
 
-* [ ] Exact terms.
-* [ ] Multiple terms.
-* [ ] Ranking.
-* [ ] Workspace isolation.
-* [ ] Project filtering.
-* [ ] Result limits.
-* [ ] Snippets.
-* [ ] Deletion.
-* [ ] Project deletion.
-* [ ] Re-indexing.
+- [ ] Exact terms.
+- [ ] Multiple terms.
+- [ ] Ranking.
+- [ ] Workspace isolation.
+- [ ] Project filtering.
+- [ ] Result limits.
+- [ ] Snippets.
+- [ ] Deletion.
+- [ ] Project deletion.
+- [ ] Re-indexing.
 
 Search ranking does not need to be numerically identical between engines.
 
@@ -1969,15 +1940,15 @@ Authentication configuration should be environment-specific but remain outside d
 
 # 59. Configuration Matrix
 
-| Runtime | Database | Storage | Search |
-| :--- | :--- | :--- | :--- |
-| Cloudflare | D1 | R2 | SQLite FTS5 |
-| Node | PostgreSQL | S3 | PostgreSQL FTS |
-| Node | PostgreSQL | MinIO | PostgreSQL FTS |
-| Node | PostgreSQL | Local | PostgreSQL FTS |
-| Node | MongoDB | S3 | Mongo `$text` |
-| Node | MongoDB | MinIO | Mongo `$text` |
-| Node | MongoDB | Local | Mongo `$text` |
+| Runtime    | Database   | Storage | Search         |
+| :--------- | :--------- | :------ | :------------- |
+| Cloudflare | D1         | R2      | SQLite FTS5    |
+| Node       | PostgreSQL | S3      | PostgreSQL FTS |
+| Node       | PostgreSQL | MinIO   | PostgreSQL FTS |
+| Node       | PostgreSQL | Local   | PostgreSQL FTS |
+| Node       | MongoDB    | S3      | Mongo `$text`  |
+| Node       | MongoDB    | MinIO   | Mongo `$text`  |
+| Node       | MongoDB    | Local   | Mongo `$text`  |
 
 ---
 
@@ -2111,59 +2082,59 @@ Before declaring the architecture complete:
 
 ## Runtime
 
-* [ ] Cloudflare Worker works.
-* [ ] Node runtime works.
-* [ ] Core app is shared.
-* [ ] Node build contains no Cloudflare dependency.
+- [ ] Cloudflare Worker works.
+- [ ] Node runtime works.
+- [ ] Core app is shared.
+- [ ] Node build contains no Cloudflare dependency.
 
 ## Database
 
-* [ ] D1 works.
-* [ ] PostgreSQL works.
-* [ ] MongoDB works.
-* [ ] Repository contract tests pass.
+- [ ] D1 works.
+- [ ] PostgreSQL works.
+- [ ] MongoDB works.
+- [ ] Repository contract tests pass.
 
 ## Storage
 
-* [ ] R2 works.
-* [ ] S3 works.
-* [ ] MinIO works.
-* [ ] Local filesystem works.
+- [ ] R2 works.
+- [ ] S3 works.
+- [ ] MinIO works.
+- [ ] Local filesystem works.
 
 ## Search
 
-* [ ] D1 FTS5 works.
-* [ ] PostgreSQL FTS works.
-* [ ] Mongo `$text` works.
-* [ ] Search projection can be rebuilt.
+- [ ] D1 FTS5 works.
+- [ ] PostgreSQL FTS works.
+- [ ] Mongo `$text` works.
+- [ ] Search projection can be rebuilt.
 
 ## Locks
 
-* [ ] D1 locks work.
-* [ ] PostgreSQL locks work.
-* [ ] Mongo locks work.
-* [ ] Expiration is tested.
+- [ ] D1 locks work.
+- [ ] PostgreSQL locks work.
+- [ ] Mongo locks work.
+- [ ] Expiration is tested.
 
 ## Authentication
 
-* [ ] D1 Better Auth works.
-* [ ] PostgreSQL Better Auth works.
-* [ ] Mongo Better Auth works.
+- [ ] D1 Better Auth works.
+- [ ] PostgreSQL Better Auth works.
+- [ ] Mongo Better Auth works.
 
 ## Docker
 
-* [ ] PostgreSQL Compose stack works.
-* [ ] Mongo Compose stack works.
-* [ ] Persistent volumes work.
-* [ ] Production image works.
+- [ ] PostgreSQL Compose stack works.
+- [ ] Mongo Compose stack works.
+- [ ] Persistent volumes work.
+- [ ] Production image works.
 
 ## Migration
 
-* [ ] D1 → PostgreSQL.
-* [ ] D1 → MongoDB.
-* [ ] PostgreSQL → MongoDB.
-* [ ] Migration validation works.
-* [ ] Search rebuild works.
+- [ ] D1 → PostgreSQL.
+- [ ] D1 → MongoDB.
+- [ ] PostgreSQL → MongoDB.
+- [ ] Migration validation works.
+- [ ] Search rebuild works.
 
 ---
 
@@ -2242,6 +2213,7 @@ The first model preserves database-specific strengths while keeping the applicat
 The implementation sequence is structured in two major stages:
 
 ### Stage 1: Groundwork & Production Cloudflare Focus (Active)
+
 ```text
 1. Decouple Auxiliary Systems (Storage, Search, Locks)     [DONE]
         ↓
@@ -2259,6 +2231,7 @@ The implementation sequence is structured in two major stages:
 ```
 
 ### Stage 2: Multi-Engine & Multi-Runtime Expansion (Deferred)
+
 ```text
 6. Complete PostgreSQL Repositories & Migrations
         ↓

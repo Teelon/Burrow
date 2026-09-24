@@ -1,10 +1,10 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface StatusDiamondProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Any CSS color (typically a Basalt token var). */
-  color?: string
-  size?: number
+  color?: string;
+  size?: number;
 }
 
 /** Rotated-square status marker. Visual footprint is small; wrapper keeps layout. */
@@ -26,4 +26,4 @@ export const StatusDiamond: React.FC<StatusDiamondProps> = ({
       style={{ width: size, height: size, backgroundColor: color }}
     />
   </span>
-)
+);

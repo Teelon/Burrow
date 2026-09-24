@@ -1,66 +1,66 @@
-import { useState, useRef, useEffect } from 'react'
-import { Bell, Check } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
-import { useMarkNotificationsRead, useNotifications } from '../../lib/queries'
-import { Avatar } from '../ui/Avatar'
-import { StatusDiamond } from '../ui/StatusDiamond'
+import { useState, useRef, useEffect } from 'react';
+import { Bell, Check } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { useMarkNotificationsRead, useNotifications } from '../../lib/queries';
+import { Avatar } from '../ui/Avatar';
+import { StatusDiamond } from '../ui/StatusDiamond';
 
 interface NotificationItem {
-  id: string
-  type: 'mention' | 'assigned'
+  id: string;
+  type: 'mention' | 'assigned';
   actor: {
-    id: string
-    name: string
-    image?: string | null
-  }
-  notepadId?: string | null
-  cardId?: string | null
-  targetTitle?: string
-  readAt?: number | null
-  createdAt: number
+    id: string;
+    name: string;
+    image?: string | null;
+  };
+  notepadId?: string | null;
+  cardId?: string | null;
+  targetTitle?: string;
+  readAt?: number | null;
+  createdAt: number;
 }
 
 export function NotificationsBell({ projectId }: { projectId?: string }) {
-  const navigate = useNavigate()
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: notifications = [] } = useNotifications()
-  const markReadMutation = useMarkNotificationsRead()
+  const { data: notifications = [] } = useNotifications();
+  const markReadMutation = useMarkNotificationsRead();
 
-  const unreadCount = notifications.filter((n) => !n.readAt).length
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const handleNotificationClick = async (notif: NotificationItem) => {
     if (!notif.readAt) {
-      markReadMutation.mutate([notif.id])
+      markReadMutation.mutate([notif.id]);
     }
-    setIsOpen(false)
+    setIsOpen(false);
 
     if (notif.notepadId && projectId) {
       navigate({
         to: '/p/$projectId/notepads/$notepadId',
         params: { projectId, notepadId: notif.notepadId },
-      })
+      });
     }
-  }
+  };
 
   const handleMarkAllRead = () => {
-    markReadMutation.mutate(undefined)
-  }
+    markReadMutation.mutate(undefined);
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -96,9 +96,7 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
 
           <div className="max-h-72 overflow-y-auto py-1 space-y-1">
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-muted italic">
-                No notifications yet
-              </div>
+              <div className="p-6 text-center text-muted italic">No notifications yet</div>
             ) : (
               notifications.map((n) => (
                 <div
@@ -111,24 +109,14 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
                   }`}
                 >
                   {!n.readAt && (
-                    <span
-                      aria-hidden
-                      className="absolute left-0 top-0 bottom-0 w-1 bg-accent"
-                    />
+                    <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
                   )}
-                  <Avatar
-                    name={n.actor.name}
-                    src={n.actor.image}
-                    size="xs"
-                    className="mt-0.5"
-                  />
+                  <Avatar name={n.actor.name} src={n.actor.image} size="xs" className="mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="leading-tight">
                       <strong>{n.actor.name}</strong>{' '}
                       {n.type === 'mention' ? 'mentioned you in' : 'assigned you to'}{' '}
-                      <span className="font-medium text-text">
-                        {n.targetTitle || 'a task'}
-                      </span>
+                      <span className="font-medium text-text">{n.targetTitle || 'a task'}</span>
                     </div>
                     <div className="text-[10px] text-muted mt-1">
                       {new Date(n.createdAt).toLocaleDateString(undefined, {
@@ -139,9 +127,7 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
                       })}
                     </div>
                   </div>
-                  {!n.readAt && (
-                    <StatusDiamond color="var(--accent)" size={6} className="mt-1.5" />
-                  )}
+                  {!n.readAt && <StatusDiamond color="var(--accent)" size={6} className="mt-1.5" />}
                 </div>
               ))
             )}
@@ -149,5 +135,5 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
         </div>
       )}
     </div>
-  )
+  );
 }

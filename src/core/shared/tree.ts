@@ -4,8 +4,8 @@
  */
 
 export interface TreeNode {
-  id: string
-  parentId: string | null
+  id: string;
+  parentId: string | null;
 }
 
 /**
@@ -16,18 +16,18 @@ export async function getDescendantIds(
   getChildren: (parentIds: string[]) => Promise<TreeNode[]>,
   rootId: string,
 ): Promise<string[]> {
-  const descendants: string[] = []
-  let currentParentIds = [rootId]
+  const descendants: string[] = [];
+  let currentParentIds = [rootId];
 
   while (currentParentIds.length > 0) {
-    const children = await getChildren(currentParentIds)
-    if (children.length === 0) break
-    const childIds = children.map((c) => c.id)
-    descendants.push(...childIds)
-    currentParentIds = childIds
+    const children = await getChildren(currentParentIds);
+    if (children.length === 0) break;
+    const childIds = children.map((c) => c.id);
+    descendants.push(...childIds);
+    currentParentIds = childIds;
   }
 
-  return descendants
+  return descendants;
 }
 
 /**
@@ -38,17 +38,17 @@ export async function getDepth(
   getParent: (id: string) => Promise<TreeNode | null>,
   nodeId: string,
 ): Promise<number> {
-  let depth = 1
-  let currentId: string | null = nodeId
+  let depth = 1;
+  let currentId: string | null = nodeId;
 
   while (currentId && depth <= 20) {
-    const parent = await getParent(currentId)
-    if (!parent || !parent.parentId) break
-    depth++
-    currentId = parent.parentId
+    const parent = await getParent(currentId);
+    if (!parent || !parent.parentId) break;
+    depth++;
+    currentId = parent.parentId;
   }
 
-  return depth
+  return depth;
 }
 
 /**
@@ -58,17 +58,17 @@ export async function getSubtreeHeight(
   getChildren: (parentIds: string[]) => Promise<TreeNode[]>,
   rootId: string,
 ): Promise<number> {
-  let height = 1
-  let currentParentIds = [rootId]
+  let height = 1;
+  let currentParentIds = [rootId];
 
   while (currentParentIds.length > 0) {
-    const children = await getChildren(currentParentIds)
-    if (children.length === 0) break
-    height++
-    currentParentIds = children.map((c) => c.id)
+    const children = await getChildren(currentParentIds);
+    if (children.length === 0) break;
+    height++;
+    currentParentIds = children.map((c) => c.id);
   }
 
-  return height
+  return height;
 }
 
 /**
@@ -79,9 +79,9 @@ export async function wouldCauseCycle(
   sourceId: string,
   targetParentId: string | null,
 ): Promise<boolean> {
-  if (!targetParentId) return false
-  if (sourceId === targetParentId) return true
+  if (!targetParentId) return false;
+  if (sourceId === targetParentId) return true;
 
-  const descendants = await getDescendants(sourceId)
-  return descendants.includes(targetParentId)
+  const descendants = await getDescendants(sourceId);
+  return descendants.includes(targetParentId);
 }

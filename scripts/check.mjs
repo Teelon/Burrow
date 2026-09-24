@@ -1,16 +1,16 @@
-import { bin, run } from './lib.mjs'
+import { bin, run } from './lib.mjs';
 
 /** Local replacement for CI: typecheck, lint, API tests. Aborts on first failure. */
-console.log('check: typecheck')
-run(bin('typescript', 'tsc'), ['-b'])
+console.log('check: typecheck');
+run(bin('typescript', 'tsc'), ['-b']);
 
-console.log('check: basalt')
-run('./scripts/check-basalt.mjs', [])
+console.log('check: basalt');
+run('./scripts/check-basalt.mjs', []);
 
-console.log('check: lint')
-run(bin('eslint'), ['.'])
+console.log('check: lint');
+run(bin('eslint'), ['.']);
 
-console.log('check: tests')
-run(bin('vitest'), ['run'])
+console.log('check: tests');
+run(bin('vitest'), ['run']);
 
-console.log('check: OK')
+console.log('check: OK');

@@ -1,7 +1,12 @@
-import type { ISearchAdapter, SearchHit, SearchQuery, SearchIndexDoc } from '../../../adapters/search'
-import { eq, sql } from 'drizzle-orm'
-import type { PostgresDb } from './index'
-import { notepads, projects } from './schema'
+import type {
+  ISearchAdapter,
+  SearchHit,
+  SearchQuery,
+  SearchIndexDoc,
+} from '../../../adapters/search';
+import { eq, sql } from 'drizzle-orm';
+import type { PostgresDb } from './index';
+import { notepads, projects } from './schema';
 
 export class PostgresSearchAdapter implements ISearchAdapter {
   constructor(private db: PostgresDb) {}
@@ -9,10 +14,7 @@ export class PostgresSearchAdapter implements ISearchAdapter {
   async indexDocument(doc: SearchIndexDoc): Promise<void> {
     // FTS is handled by generated column on notepads table
     // This is a no-op for Postgres since the search_vector is auto-generated
-    await this.db
-      .update(notepads)
-      .set({ plainText: doc.body })
-      .where(eq(notepads.id, doc.id))
+    await this.db.update(notepads).set({ plainText: doc.body }).where(eq(notepads.id, doc.id));
   }
 
   async deleteDocument(_id: string): Promise<void> {
@@ -44,9 +46,9 @@ export class PostgresSearchAdapter implements ISearchAdapter {
         ${q.projectId ? sql`AND n.project_id = ${q.projectId}` : sql``}
       ORDER BY rank DESC
       LIMIT ${q.limit ?? 20}
-    `
+    `;
 
-    const result = await this.db.execute(query)
+    const result = await this.db.execute(query);
     return result.map((row: any) => ({
       id: row.id as string,
       title: row.title as string,
@@ -55,6 +57,6 @@ export class PostgresSearchAdapter implements ISearchAdapter {
       projectId: row.projectId as string,
       projectName: row.projectName as string,
       snippet: (row.snippet as string) ?? '',
-    }))
+    }));
   }
 }

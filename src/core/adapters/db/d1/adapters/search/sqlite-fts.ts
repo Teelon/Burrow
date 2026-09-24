@@ -1,27 +1,27 @@
-import { sql } from 'drizzle-orm'
-import type { DB } from '../../client'
-import { ftsDeleteAllStmt, ftsInsertNowStmt } from '../../lib/search'
-import type { ISearchAdapter, SearchHit, SearchIndexDoc, SearchQuery } from './types'
+import { sql } from 'drizzle-orm';
+import type { DB } from '../../client';
+import { ftsDeleteAllStmt, ftsInsertNowStmt } from '../../lib/search';
+import type { ISearchAdapter, SearchHit, SearchIndexDoc, SearchQuery } from './types';
 
 export class SqliteFtsSearchAdapter implements ISearchAdapter {
   constructor(private db: DB) {}
 
   async indexDocument(doc: SearchIndexDoc): Promise<void> {
-    await this.db.run(ftsInsertNowStmt(doc.id, doc.title, doc.body))
+    await this.db.run(ftsInsertNowStmt(doc.id, doc.title, doc.body));
   }
 
   async deleteDocument(id: string): Promise<void> {
-    await this.db.run(ftsDeleteAllStmt(id))
+    await this.db.run(ftsDeleteAllStmt(id));
   }
 
   async deleteByProject(projectId: string): Promise<void> {
-    await this.db.run(sql`DELETE FROM notepads_fts WHERE project_id = ${projectId}`)
+    await this.db.run(sql`DELETE FROM notepads_fts WHERE project_id = ${projectId}`);
   }
 
   async search(q: SearchQuery): Promise<SearchHit[]> {
-    const trimmed = (q.text ?? '').trim()
+    const trimmed = (q.text ?? '').trim();
     if (!trimmed) {
-      return []
+      return [];
     }
 
     // Sanitize query terms for FTS5 prefix matching (identical to former route logic)
@@ -29,14 +29,14 @@ export class SqliteFtsSearchAdapter implements ISearchAdapter {
       .replace(/["*(){}:^]/g, ' ')
       .split(/\s+/)
       .map((w) => w.trim())
-      .filter((w) => w.length > 0)
+      .filter((w) => w.length > 0);
 
     if (words.length === 0) {
-      return []
+      return [];
     }
 
-    const ftsQuery = words.map((w) => `"${w.replace(/"/g, '""')}"*`).join(' ')
-    const limit = Math.min(q.limit ?? 25, 50)
+    const ftsQuery = words.map((w) => `"${w.replace(/"/g, '""')}"*`).join(' ');
+    const limit = Math.min(q.limit ?? 25, 50);
 
     try {
       if (q.projectId) {
@@ -58,8 +58,8 @@ export class SqliteFtsSearchAdapter implements ISearchAdapter {
             AND n.project_id = ${q.projectId}
           ORDER BY rank
           LIMIT ${limit}
-        `
-        return await this.db.all<SearchHit>(query)
+        `;
+        return await this.db.all<SearchHit>(query);
       }
 
       const query = sql`
@@ -79,11 +79,11 @@ export class SqliteFtsSearchAdapter implements ISearchAdapter {
           AND n.deleted_at IS NULL
         ORDER BY rank
         LIMIT ${limit}
-      `
-      return await this.db.all<SearchHit>(query)
+      `;
+      return await this.db.all<SearchHit>(query);
     } catch (err) {
-      console.warn('FTS5 search error:', err)
-      return []
+      console.warn('FTS5 search error:', err);
+      return [];
     }
   }
 }

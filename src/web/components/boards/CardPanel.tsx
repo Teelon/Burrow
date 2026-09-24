@@ -1,17 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
-import { toast } from 'sonner'
-import {
-  Calendar,
-  Flag,
-  Tag,
-  Trash2,
-  Users,
-  X,
-} from 'lucide-react'
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { toast } from 'sonner';
+import { Calendar, Flag, Tag, Trash2, Users, X } from 'lucide-react';
 
 const LazyNotepadEditor = lazy(() =>
   import('../../editor/NotepadEditor').then((m) => ({ default: m.NotepadEditor })),
-)
+);
 import {
   useCard,
   useDeleteCard,
@@ -19,23 +12,23 @@ import {
   useMoveCard,
   useRestoreCard,
   useUpdateCard,
-} from '../../lib/queries'
-import { SubtasksSection } from './SubtasksSection'
-import { CommentsFeed } from './CommentsFeed'
-import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
-import { Select } from '../ui/Select'
-import { Badge } from '../ui/Badge'
-import { Avatar } from '../ui/Avatar'
-import { SegmentedControl } from '../ui/SegmentedControl'
-import { StatusDiamond } from '../ui/StatusDiamond'
+} from '../../lib/queries';
+import { SubtasksSection } from './SubtasksSection';
+import { CommentsFeed } from './CommentsFeed';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { Badge } from '../ui/Badge';
+import { Avatar } from '../ui/Avatar';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { StatusDiamond } from '../ui/StatusDiamond';
 
 interface CardPanelProps {
-  cardId: string
-  boardId: string
-  projectId: string
-  columns: Array<{ id: string; name: string }>
-  onClose: () => void
+  cardId: string;
+  boardId: string;
+  projectId: string;
+  columns: Array<{ id: string; name: string }>;
+  onClose: () => void;
 }
 
 // Basalt priority → status token mapping (Layer 4 adapter).
@@ -44,35 +37,30 @@ const PRIORITIES = [
   { value: 'medium', label: 'Medium', colorVar: 'var(--c3)' },
   { value: 'high', label: 'High', colorVar: 'var(--c2)' },
   { value: 'urgent', label: 'Urgent', colorVar: 'var(--danger)' },
-] as const
+] as const;
 
-export function CardPanel({
-  cardId,
-  boardId,
-  columns,
-  onClose,
-}: CardPanelProps) {
-  const { data: card, isLoading } = useCard(cardId)
-  const { data: members = [] } = useMembers()
-  const updateCardMutation = useUpdateCard()
-  const moveCardMutation = useMoveCard()
-  const deleteCardMutation = useDeleteCard()
-  const restoreCardMutation = useRestoreCard()
+export function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps) {
+  const { data: card, isLoading } = useCard(cardId);
+  const { data: members = [] } = useMembers();
+  const updateCardMutation = useUpdateCard();
+  const moveCardMutation = useMoveCard();
+  const deleteCardMutation = useDeleteCard();
+  const restoreCardMutation = useRestoreCard();
 
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState('');
 
   useEffect(() => {
     if (card) {
-      setTitle(card.title || '')
+      setTitle(card.title || '');
     }
-  }, [card])
+  }, [card]);
 
   if (isLoading || !card) {
     return (
       <div className="fixed inset-x-0 bottom-0 top-[8dvh] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[540px] md:w-[680px] h-[100dvh] bg-[var(--surface)] border-t-2 border-[var(--line)] sm:border-t-0 sm:border-l sm:border-l-[var(--line)] z-50 p-6 flex flex-col items-center justify-center pb-[env(safe-area-inset-bottom)]">
         <div className="text-sm text-[var(--muted)]">Loading card…</div>
       </div>
-    )
+    );
   }
 
   const handleTitleBlur = () => {
@@ -81,27 +69,27 @@ export function CardPanel({
         cardId,
         boardId,
         title: title.trim(),
-      })
+      });
     }
-  }
+  };
 
   const handlePriorityChange = (priority: 'low' | 'medium' | 'high' | 'urgent' | null) => {
     updateCardMutation.mutate({
       cardId,
       boardId,
       priority,
-    })
-  }
+    });
+  };
 
   const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    const timestamp = val ? new Date(val).getTime() : null
+    const val = e.target.value;
+    const timestamp = val ? new Date(val).getTime() : null;
     updateCardMutation.mutate({
       cardId,
       boardId,
       dueDate: timestamp,
-    })
-  }
+    });
+  };
 
   const handleColumnChange = (newColId: string) => {
     if (newColId !== card.columnId) {
@@ -109,41 +97,45 @@ export function CardPanel({
         cardId,
         boardId,
         columnId: newColId,
-      })
+      });
     }
-  }
+  };
+
+  const assignees = (card as any).assignees || [];
+  const tags = (card as any).tags || [];
+  const subtasks = (card as any).subtasks || [];
 
   const toggleAssignee = (userId: string) => {
-    const current = card.assignees.map((a) => a.userId)
+    const current = assignees.map((a: any) => a.userId);
     const next = current.includes(userId)
-      ? current.filter((id) => id !== userId)
-      : [...current, userId]
+      ? current.filter((id: string) => id !== userId)
+      : [...current, userId];
     updateCardMutation.mutate({
       cardId,
       boardId,
       assigneeIds: next,
-    })
-  }
+    });
+  };
 
   const handleDelete = () => {
     deleteCardMutation.mutate(
       { cardId, boardId },
       {
         onSuccess: () => {
-          onClose()
+          onClose();
           toast('Card moved to trash', {
             duration: 6000,
             action: {
               label: 'Undo',
               onClick: () => restoreCardMutation.mutate({ cardId }),
             },
-          })
+          });
         },
       },
-    )
-  }
+    );
+  };
 
-  const isoDueDate = card.dueDate ? new Date(card.dueDate).toISOString().slice(0, 10) : ''
+  const isoDueDate = card.dueDate ? new Date(card.dueDate).toISOString().slice(0, 10) : '';
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-[8dvh] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[540px] md:w-[680px] h-[100dvh] bg-[var(--surface)] border-t-2 border-[var(--line)] sm:border-t-0 sm:border-l sm:border-l-[var(--line)] z-50 flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]">
@@ -155,11 +147,15 @@ export function CardPanel({
             onChange={(e) => handleColumnChange(e.target.value)}
             className="px-2.5 py-1 text-xs font-semibold min-h-[44px] sm:min-h-0"
           >
-            {columns.map((col) => (
-              <option key={col.id} value={col.id}>
-                {col.name}
-              </option>
-            ))}
+            {columns.length > 0 ? (
+              columns.map((col) => (
+                <option key={col.id} value={col.id}>
+                  {col.name}
+                </option>
+              ))
+            ) : (
+              <option value={card.columnId}>{(card as any).columnName || 'Column'}</option>
+            )}
           </Select>
         </div>
 
@@ -209,9 +205,7 @@ export function CardPanel({
               value={card.priority ?? ''}
               onValueChange={(v) =>
                 handlePriorityChange(
-                  card.priority === v
-                    ? null
-                    : (v as 'low' | 'medium' | 'high' | 'urgent'),
+                  card.priority === v ? null : (v as 'low' | 'medium' | 'high' | 'urgent'),
                 )
               }
               options={PRIORITIES.map((p) => ({
@@ -236,7 +230,7 @@ export function CardPanel({
               type="date"
               value={isoDueDate}
               onChange={handleDueDateChange}
-              className="px-2 py-1 text-xs min-h-[44px] sm:min-h-0"
+              className="px-2 py-1 text-xs min-h-[44px] sm:min-h-0 w-auto max-w-[10rem]"
             />
           </div>
 
@@ -248,7 +242,7 @@ export function CardPanel({
             </div>
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {members.map((m) => {
-                const isAssigned = card.assignees.some((a) => a.userId === m.userId)
+                const isAssigned = assignees.some((a: any) => a.userId === m.userId);
                 return (
                   <button
                     key={m.userId}
@@ -263,20 +257,20 @@ export function CardPanel({
                     <Avatar name={m.name} size="xs" />
                     <span>{m.name}</span>
                   </button>
-                )
+                );
               })}
             </div>
           </div>
 
           {/* Tags */}
-          {card.tags && card.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-[var(--muted)] w-28">
                 <Tag className="w-3.5 h-3.5" />
                 <span>Tags</span>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
-                {card.tags.map((t) => (
+                {tags.map((t: any) => (
                   <Badge key={t.id} style={{ borderLeftColor: t.color || '#64748b' }}>
                     #{t.name}
                   </Badge>
@@ -287,25 +281,25 @@ export function CardPanel({
         </div>
 
         {/* Subtasks / Checklist */}
-        <SubtasksSection cardId={cardId} boardId={boardId} subtasks={card.subtasks || []} />
+        <SubtasksSection cardId={cardId} boardId={boardId} subtasks={subtasks} />
 
         {/* Card Body (BlockNote Notepad Editor) */}
-        <div className="border-t border-[var(--hair)] pt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
-            Card Notes & Body
-          </h3>
-          <Suspense
-            fallback={
-              <div className="p-4 text-xs text-[var(--muted)]">Loading card notes…</div>
-            }
-          >
-            <LazyNotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />
-          </Suspense>
-        </div>
+        {card.notepadId && (
+          <div className="border-t border-[var(--hair)] pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
+              Card Notes & Body
+            </h3>
+            <Suspense
+              fallback={<div className="p-4 text-xs text-[var(--muted)]">Loading card notes…</div>}
+            >
+              <LazyNotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />
+            </Suspense>
+          </div>
+        )}
 
         {/* Discussion thread */}
         <CommentsFeed cardId={cardId} />
       </div>
     </div>
-  )
+  );
 }

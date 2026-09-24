@@ -7,41 +7,41 @@
  */
 
 export interface TemplateBlock {
-  id?: string
-  type?: string
-  props?: Record<string, unknown>
-  content?: unknown
-  children?: TemplateBlock[]
+  id?: string;
+  type?: string;
+  props?: Record<string, unknown>;
+  content?: unknown;
+  children?: TemplateBlock[];
 }
 
 export interface StarterTemplate {
-  id: string
-  name: string
-  icon: string
-  description: string
-  blocks: TemplateBlock[]
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  blocks: TemplateBlock[];
 }
 
 const h = (level: 1 | 2 | 3, text: string): TemplateBlock => ({
   type: 'heading',
   props: { level },
   content: text,
-})
+});
 
-const p = (text: string): TemplateBlock => ({ type: 'paragraph', content: text })
+const p = (text: string): TemplateBlock => ({ type: 'paragraph', content: text });
 
 const bullet = (text: string, children?: TemplateBlock[]): TemplateBlock => ({
   type: 'bulletListItem',
   content: text,
   ...(children ? { children } : {}),
-})
+});
 
 const numbered = (text: string): TemplateBlock => ({
   type: 'numberedListItem',
   content: text,
-})
+});
 
-const todo = (text: string): TemplateBlock => ({ type: 'checkListItem', content: text })
+const todo = (text: string): TemplateBlock => ({ type: 'checkListItem', content: text });
 
 export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
@@ -141,8 +141,8 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
       todo('Follow-up item'),
     ],
   },
-]
+];
 
 export function getTemplateById(id: string): StarterTemplate | undefined {
-  return STARTER_TEMPLATES.find((t) => t.id === id)
+  return STARTER_TEMPLATES.find((t) => t.id === id);
 }

@@ -18,6 +18,7 @@ tools:
 You are a focused, parallel worker subagent for the Burrow codebase.
 
 ## Behavioral Rules & Instructions
+
 - **Strict Scope**: Only read and edit files explicitly assigned in your prompt scope. Never modify shared files outside your assignment.
 - **Type Safety**: Adhere strictly to the project's TypeScript types. Run type checks only on demand.
 - **UI & Test Policy**: Do NOT run UI tests (browser tests, Playwright) or full automated test suites.

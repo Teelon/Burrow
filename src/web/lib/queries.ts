@@ -1,194 +1,194 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from './api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from './api';
 
 export function useHealth() {
   return useQuery({
     queryKey: ['health'],
     queryFn: async () => {
-      const res = await api.api.health.$get()
-      if (!res.ok) throw new Error(`Health check failed: ${res.status}`)
-      return res.json()
+      const res = await api.api.health.$get();
+      if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+      return res.json();
     },
     staleTime: 30_000,
-  })
+  });
 }
 
 export function useMe() {
   return useQuery({
     queryKey: ['me'],
     queryFn: async () => {
-      const res = await api.api.me.$get()
-      if (res.status === 401) return null
-      if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`)
-      return res.json()
+      const res = await api.api.me.$get();
+      if (res.status === 401) return null;
+      if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`);
+      return res.json();
     },
     staleTime: 10_000,
-  })
+  });
 }
 
 export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const res = await api.api.projects.$get()
-      if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`)
-      return res.json()
+      const res = await api.api.projects.$get();
+      if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
+      return res.json();
     },
-  })
+  });
 }
 
 export function useCreateProject() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { name: string; icon?: string | null; color?: string | null }) => {
-      const res = await api.api.projects.$post({ json: data })
+      const res = await api.api.projects.$post({ json: data });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to create project')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to create project');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-  })
+  });
 }
 
 export function useUpdateProject() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       id,
       ...data
     }: {
-      id: string
-      name?: string
-      icon?: string | null
-      color?: string | null
-      archived?: boolean
+      id: string;
+      name?: string;
+      icon?: string | null;
+      color?: string | null;
+      archived?: boolean;
     }) => {
       const res = await api.api.projects[':id'].$patch({
         param: { id },
         json: data,
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to update project')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to update project');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-  })
+  });
 }
 
 export function useDeleteProject() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, confirmName }: { id: string; confirmName: string }) => {
       const res = await api.api.projects[':id'].$delete({
         param: { id },
         query: { confirm: confirmName },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete project')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete project');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-  })
+  });
 }
 
 export function useMembers() {
   return useQuery({
     queryKey: ['members'],
     queryFn: async () => {
-      const res = await api.api.members.$get()
-      if (!res.ok) throw new Error(`Failed to load members: ${res.status}`)
-      return res.json()
+      const res = await api.api.members.$get();
+      if (!res.ok) throw new Error(`Failed to load members: ${res.status}`);
+      return res.json();
     },
-  })
+  });
 }
 
 export function useInvites() {
   return useQuery({
     queryKey: ['invites'],
     queryFn: async () => {
-      const res = await api.api.invites.$get()
-      if (!res.ok) throw new Error(`Failed to load invites: ${res.status}`)
-      return res.json()
+      const res = await api.api.invites.$get();
+      if (!res.ok) throw new Error(`Failed to load invites: ${res.status}`);
+      return res.json();
     },
-  })
+  });
 }
 
 export function useCreateInvite() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { email: string; role: 'editor' | 'viewer' }) => {
-      const res = await api.api.invites.$post({ json: data })
+      const res = await api.api.invites.$post({ json: data });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to create invite')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to create invite');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invites'] })
+      queryClient.invalidateQueries({ queryKey: ['invites'] });
     },
-  })
+  });
 }
 
 export function useRevokeInvite() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.invites[':id'].$delete({ param: { id } })
+      const res = await api.api.invites[':id'].$delete({ param: { id } });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to revoke invite')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to revoke invite');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invites'] })
+      queryClient.invalidateQueries({ queryKey: ['invites'] });
     },
-  })
+  });
 }
 
 export function useInviteInfo(token: string | undefined) {
   return useQuery({
     queryKey: ['invite-info', token],
     queryFn: async () => {
-      if (!token) throw new Error('Invite token is required')
-      const res = await fetch(`/api/invites/info/${encodeURIComponent(token)}`)
+      if (!token) throw new Error('Invite token is required');
+      const res = await fetch(`/api/invites/info/${encodeURIComponent(token)}`);
       const data = (await res.json().catch(() => ({}))) as {
-        valid?: boolean
-        token?: string
-        email?: string
-        role?: 'editor' | 'viewer'
-        workspaceName?: string
-        expiresAt?: number
-        error?: { message?: string }
-      }
+        valid?: boolean;
+        token?: string;
+        email?: string;
+        role?: 'editor' | 'viewer';
+        workspaceName?: string;
+        expiresAt?: number;
+        error?: { message?: string };
+      };
       if (!res.ok) {
-        throw new Error(data.error?.message || 'Invalid or expired invite')
+        throw new Error(data.error?.message || 'Invalid or expired invite');
       }
       return data as {
-        valid: boolean
-        token: string
-        email: string
-        role: 'editor' | 'viewer'
-        workspaceName: string
-        expiresAt: number
-      }
+        valid: boolean;
+        token: string;
+        email: string;
+        role: 'editor' | 'viewer';
+        workspaceName: string;
+        expiresAt: number;
+      };
     },
     enabled: !!token,
     retry: false,
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -199,138 +199,138 @@ export function useBoards(projectId: string | undefined) {
   return useQuery({
     queryKey: ['boards', projectId],
     queryFn: async () => {
-      if (!projectId) return []
+      if (!projectId) return [];
       const res = await api.api.projects[':pid'].boards.$get({
         param: { pid: projectId },
-      })
-      if (!res.ok) throw new Error(`Failed to load boards: ${res.status}`)
-      return res.json()
+      });
+      if (!res.ok) throw new Error(`Failed to load boards: ${res.status}`);
+      return res.json();
     },
     enabled: !!projectId,
-  })
+  });
 }
 
 export function useBoard(boardId: string | undefined) {
   return useQuery({
     queryKey: ['board', boardId],
     queryFn: async () => {
-      if (!boardId) return null
+      if (!boardId) return null;
       const res = await api.api.boards[':id'].$get({
         param: { id: boardId },
-      })
-      if (!res.ok) throw new Error(`Failed to load board: ${res.status}`)
-      return res.json()
+      });
+      if (!res.ok) throw new Error(`Failed to load board: ${res.status}`);
+      return res.json();
     },
     enabled: !!boardId,
-  })
+  });
 }
 
 export function useCreateBoard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       projectId,
       name,
       icon,
     }: {
-      projectId: string
-      name: string
-      icon?: string | null
+      projectId: string;
+      name: string;
+      icon?: string | null;
     }) => {
       const res = await api.api.projects[':pid'].boards.$post({
         param: { pid: projectId },
         json: { name, icon },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to create board')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to create board');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] });
     },
-  })
+  });
 }
 
 export function useUpdateBoard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId,
       name,
       icon,
     }: {
-      boardId: string
-      name?: string
-      icon?: string | null
+      boardId: string;
+      name?: string;
+      icon?: string | null;
     }) => {
       const res = await api.api.boards[':id'].$patch({
         param: { id: boardId },
         json: { name, icon },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to update board')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to update board');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
-      queryClient.invalidateQueries({ queryKey: ['boards'] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+      queryClient.invalidateQueries({ queryKey: ['boards'] });
     },
-  })
+  });
 }
 
 export function useDeleteBoard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (boardId: string) => {
       const res = await api.api.boards[':id'].$delete({
         param: { id: boardId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete board')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete board');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['boards'] })
+      queryClient.invalidateQueries({ queryKey: ['boards'] });
     },
-  })
+  });
 }
 
 export function useCreateColumn() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId,
       name,
       color,
     }: {
-      boardId: string
-      name: string
-      color?: string | null
+      boardId: string;
+      name: string;
+      color?: string | null;
     }) => {
       const res = await api.api.boards[':id'].columns.$post({
         param: { id: boardId },
         json: { name, color: color || null },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to create column')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to create column');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useUpdateColumn() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId: _boardId,
@@ -339,119 +339,115 @@ export function useUpdateColumn() {
       color,
       wipLimit,
     }: {
-      boardId: string
-      columnId: string
-      name?: string
-      color?: string | null
-      wipLimit?: number | null
+      boardId: string;
+      columnId: string;
+      name?: string;
+      color?: string | null;
+      wipLimit?: number | null;
     }) => {
       const res = await api.api.columns[':id'].$patch({
         param: { id: columnId },
         json: { name, color, wipLimit },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to update column')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to update column');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useDeleteColumn() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId: _boardId,
       columnId,
       moveTo,
     }: {
-      boardId: string
-      columnId: string
-      moveTo?: string | null
+      boardId: string;
+      columnId: string;
+      moveTo?: string | null;
     }) => {
       const res = await api.api.columns[':id'].$delete({
         param: { id: columnId },
         query: { moveTo: moveTo || undefined },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete column')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete column');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useMoveColumn() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId: _boardId,
       columnId,
       afterId,
     }: {
-      boardId: string
-      columnId: string
-      afterId?: string | null
+      boardId: string;
+      columnId: string;
+      afterId?: string | null;
     }) => {
       const res = await api.api.columns[':id'].move.$post({
         param: { id: columnId },
         json: { afterId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to move column')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to move column');
       }
-      return res.json()
+      return res.json();
     },
     onMutate: async ({ boardId, columnId, afterId }) => {
-      await queryClient.cancelQueries({ queryKey: ['board', boardId] })
-      const prevBoard = queryClient.getQueryData<any>(['board', boardId])
+      await queryClient.cancelQueries({ queryKey: ['board', boardId] });
+      const prevBoard = queryClient.getQueryData<any>(['board', boardId]);
       if (prevBoard?.columns) {
-        const nextColumns = [...prevBoard.columns]
-        const fromIndex = nextColumns.findIndex(
-          (col: any) => col.id === columnId,
-        )
+        const nextColumns = [...prevBoard.columns];
+        const fromIndex = nextColumns.findIndex((col: any) => col.id === columnId);
         if (fromIndex !== -1) {
-          const [moved] = nextColumns.splice(fromIndex, 1)
-          let insertAt: number
+          const [moved] = nextColumns.splice(fromIndex, 1);
+          let insertAt: number;
           if (!afterId) {
-            insertAt = 0
+            insertAt = 0;
           } else {
-            const targetIndex = nextColumns.findIndex(
-              (col: any) => col.id === afterId,
-            )
-            insertAt = targetIndex === -1 ? nextColumns.length : targetIndex + 1
+            const targetIndex = nextColumns.findIndex((col: any) => col.id === afterId);
+            insertAt = targetIndex === -1 ? nextColumns.length : targetIndex + 1;
           }
-          nextColumns.splice(insertAt, 0, moved)
+          nextColumns.splice(insertAt, 0, moved);
           queryClient.setQueryData(['board', boardId], {
             ...prevBoard,
             columns: nextColumns,
-          })
+          });
         }
       }
-      return { prevBoard }
+      return { prevBoard };
     },
     onError: (_err, vars, context) => {
       if (context?.prevBoard) {
-        queryClient.setQueryData(['board', vars.boardId], context.prevBoard)
+        queryClient.setQueryData(['board', vars.boardId], context.prevBoard);
       }
     },
     onSettled: (_, __, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useCreateCard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       boardId: _boardId,
@@ -463,14 +459,14 @@ export function useCreateCard() {
       tagIds,
       notepad,
     }: {
-      boardId: string
-      columnId: string
-      title: string
-      priority?: 'low' | 'medium' | 'high' | 'urgent' | null
-      dueDate?: number | null
-      assigneeIds?: string[]
-      tagIds?: string[]
-      notepad?: { mode: 'new' } | { mode: 'existing'; id: string }
+      boardId: string;
+      columnId: string;
+      title: string;
+      priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
+      dueDate?: number | null;
+      assigneeIds?: string[];
+      tagIds?: string[];
+      notepad?: { mode: 'new' } | { mode: 'existing'; id: string };
     }) => {
       const res = await api.api.columns[':id'].cards.$post({
         param: { id: columnId },
@@ -482,71 +478,71 @@ export function useCreateCard() {
           tagIds,
           notepad,
         },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to create card')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to create card');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useCard(cardId: string | undefined) {
   return useQuery({
     queryKey: ['card', cardId],
     queryFn: async () => {
-      if (!cardId) return null
+      if (!cardId) return null;
       const res = await api.api.cards[':id'].$get({
         param: { id: cardId },
-      })
-      if (!res.ok) throw new Error(`Failed to load card: ${res.status}`)
-      return res.json()
+      });
+      if (!res.ok) throw new Error(`Failed to load card: ${res.status}`);
+      return res.json();
     },
     enabled: !!cardId,
-  })
+  });
 }
 
 export function useUpdateCard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       cardId,
       boardId: _boardId,
       ...data
     }: {
-      cardId: string
-      boardId?: string
-      title?: string
-      priority?: 'low' | 'medium' | 'high' | 'urgent' | null
-      dueDate?: number | null
-      assigneeIds?: string[]
-      tagIds?: string[]
+      cardId: string;
+      boardId?: string;
+      title?: string;
+      priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
+      dueDate?: number | null;
+      assigneeIds?: string[];
+      tagIds?: string[];
     }) => {
       const res = await api.api.cards[':id'].$patch({
         param: { id: cardId },
         json: data,
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to update card')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to update card');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
       if (vars.boardId) {
-        queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+        queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
       }
     },
-  })
+  });
 }
 
 export function useMoveCard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       cardId,
@@ -554,119 +550,113 @@ export function useMoveCard() {
       columnId,
       afterId,
     }: {
-      cardId: string
-      boardId: string
-      columnId: string
-      afterId?: string | null
+      cardId: string;
+      boardId: string;
+      columnId: string;
+      afterId?: string | null;
     }) => {
       const res = await api.api.cards[':id'].move.$post({
         param: { id: cardId },
         json: { columnId, afterId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to move card')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to move card');
       }
-      return res.json()
+      return res.json();
     },
     onMutate: async ({ cardId, boardId, columnId, afterId }) => {
-      await queryClient.cancelQueries({ queryKey: ['board', boardId] })
-      const prevBoard = queryClient.getQueryData<any>(['board', boardId])
+      await queryClient.cancelQueries({ queryKey: ['board', boardId] });
+      const prevBoard = queryClient.getQueryData<any>(['board', boardId]);
       if (prevBoard && prevBoard.columns) {
-        let movedCard: any = null
+        let movedCard: any = null;
         const nextColumns = prevBoard.columns.map((col: any) => {
-          const card = col.cards?.find((c: any) => c.id === cardId)
+          const card = col.cards?.find((c: any) => c.id === cardId);
           if (card) {
-            movedCard = { ...card, columnId }
+            movedCard = { ...card, columnId };
             return {
               ...col,
               cards: col.cards.filter((c: any) => c.id !== cardId),
-            }
+            };
           }
-          return col
-        })
+          return col;
+        });
 
         if (movedCard) {
           const finalColumns = nextColumns.map((col: any) => {
             if (col.id === columnId) {
-              const cards = [...(col.cards || [])]
+              const cards = [...(col.cards || [])];
               if (!afterId) {
-                cards.unshift(movedCard)
+                cards.unshift(movedCard);
               } else {
-                const idx = cards.findIndex((c: any) => c.id === afterId)
+                const idx = cards.findIndex((c: any) => c.id === afterId);
                 if (idx === -1) {
-                  cards.push(movedCard)
+                  cards.push(movedCard);
                 } else {
-                  cards.splice(idx + 1, 0, movedCard)
+                  cards.splice(idx + 1, 0, movedCard);
                 }
               }
-              return { ...col, cards }
+              return { ...col, cards };
             }
-            return col
-          })
+            return col;
+          });
 
           queryClient.setQueryData(['board', boardId], {
             ...prevBoard,
             columns: finalColumns,
-          })
+          });
         }
       }
-      return { prevBoard }
+      return { prevBoard };
     },
     onError: (_err, vars, context) => {
       if (context?.prevBoard) {
-        queryClient.setQueryData(['board', vars.boardId], context.prevBoard)
+        queryClient.setQueryData(['board', vars.boardId], context.prevBoard);
       }
     },
     onSettled: (_, __, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useDeleteCard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      cardId,
-      boardId: _boardId,
-    }: {
-      cardId: string
-      boardId: string
-    }) => {
+    mutationFn: async ({ cardId, boardId: _boardId }: { cardId: string; boardId: string }) => {
       const res = await api.api.cards[':id'].$delete({
         param: { id: cardId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete card')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete card');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useRestoreCard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ cardId }: { cardId: string }) => {
       const res = await api.api.cards[':id'].restore.$post({
         param: { id: cardId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to restore card')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to restore card');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['board'] })
-      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['board'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -674,41 +664,41 @@ export function useRestoreCard() {
 // ---------------------------------------------------------------------------
 
 export interface MyTaskItem {
-  id: string
-  notepadId: string
-  boardId: string
-  columnId: string
-  projectId: string
-  title: string
-  dueDate: number | null
-  priority: 'low' | 'medium' | 'high' | 'urgent' | null
-  isCompleted: boolean
-  createdAt: number
-  boardName: string
-  columnName: string
-  projectName: string
-  projectIcon: string | null
-  projectColor: string | null
-  tags: Array<{ id: string; name: string; color?: string | null }>
+  id: string;
+  notepadId: string;
+  boardId: string;
+  columnId: string;
+  projectId: string;
+  title: string;
+  dueDate: number | null;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
+  isCompleted: boolean;
+  createdAt: number;
+  boardName: string;
+  columnName: string;
+  projectName: string;
+  projectIcon: string | null;
+  projectColor: string | null;
+  tags: Array<{ id: string; name: string; color?: string | null }>;
 }
 
 export function useMyTasks(filters?: {
-  status?: 'all' | 'open' | 'completed'
-  projectId?: string
+  status?: 'all' | 'open' | 'completed';
+  projectId?: string;
 }) {
-  const status = filters?.status ?? 'all'
-  const projectId = filters?.projectId
+  const status = filters?.status ?? 'all';
+  const projectId = filters?.projectId;
   return useQuery({
     queryKey: ['my-tasks', status, projectId],
     queryFn: async () => {
       const res = await api.api['my-tasks'].$get({
         query: { status, ...(projectId ? { projectId } : {}) },
-      })
-      if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`)
-      return res.json() as Promise<MyTaskItem[]>
+      });
+      if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`);
+      return res.json() as Promise<MyTaskItem[]>;
     },
     staleTime: 30_000,
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -716,45 +706,45 @@ export function useMyTasks(filters?: {
 // ---------------------------------------------------------------------------
 
 export interface SubtaskItem {
-  id: string
-  cardId: string
-  title: string
-  completed: boolean
-  position: string
-  createdAt: number
+  id: string;
+  cardId: string;
+  title: string;
+  completed: boolean;
+  position: string;
+  createdAt: number;
 }
 
 export function useCreateSubtask() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       cardId,
       boardId: _boardId,
       title,
     }: {
-      cardId: string
-      boardId?: string
-      title: string
+      cardId: string;
+      boardId?: string;
+      title: string;
     }) => {
       const res = await api.api.cards[':id'].subtasks.$post({
         param: { id: cardId },
         json: { title },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to add subtask')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to add subtask');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
-      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 export function useUpdateSubtask() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       cardId,
@@ -764,57 +754,57 @@ export function useUpdateSubtask() {
       completed,
       afterId,
     }: {
-      cardId: string
-      boardId?: string
-      subtaskId: string
-      title?: string
-      completed?: boolean
-      afterId?: string | null
+      cardId: string;
+      boardId?: string;
+      subtaskId: string;
+      title?: string;
+      completed?: boolean;
+      afterId?: string | null;
     }) => {
       const res = await api.api.cards[':id'].subtasks[':subtaskId'].$patch({
         param: { id: cardId, subtaskId },
         json: { title, completed, afterId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to update subtask')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to update subtask');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
-      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
-      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
     },
-  })
+  });
 }
 
 export function useDeleteSubtask() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       cardId,
       boardId: _boardId,
       subtaskId,
     }: {
-      cardId: string
-      boardId?: string
-      subtaskId: string
+      cardId: string;
+      boardId?: string;
+      subtaskId: string;
     }) => {
       const res = await api.api.cards[':id'].subtasks[':subtaskId'].$delete({
         param: { id: cardId, subtaskId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete subtask')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete subtask');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] })
-      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
+      queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
+      if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -822,69 +812,69 @@ export function useDeleteSubtask() {
 // ---------------------------------------------------------------------------
 
 export interface CommentItem {
-  id: string
-  cardId: string
-  userId: string
-  content: string
-  createdAt: number
-  updatedAt: number
-  name: string
-  image: string | null
+  id: string;
+  cardId: string;
+  userId: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+  name: string;
+  image: string | null;
 }
 
 export function useComments(cardId: string | undefined) {
   return useQuery({
     queryKey: ['comments', cardId],
     queryFn: async () => {
-      if (!cardId) return []
+      if (!cardId) return [];
       const res = await api.api.cards[':id'].comments.$get({
         param: { id: cardId },
-      })
-      if (!res.ok) throw new Error(`Failed to load comments: ${res.status}`)
-      return res.json() as Promise<CommentItem[]>
+      });
+      if (!res.ok) throw new Error(`Failed to load comments: ${res.status}`);
+      return res.json() as Promise<CommentItem[]>;
     },
     enabled: !!cardId,
-  })
+  });
 }
 
 export function useCreateComment() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ cardId, content }: { cardId: string; content: string }) => {
       const res = await api.api.cards[':id'].comments.$post({
         param: { id: cardId },
         json: { content },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to post comment')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to post comment');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] })
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
-  })
+  });
 }
 
 export function useDeleteComment() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ cardId, commentId }: { cardId: string; commentId: string }) => {
       const res = await api.api.cards[':id'].comments[':commentId'].$delete({
         param: { id: cardId, commentId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to delete comment')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to delete comment');
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] })
+      queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -897,28 +887,28 @@ export function useNotifications(unreadOnly?: boolean) {
     queryFn: async () => {
       const res = await api.api.notifications.$get({
         query: unreadOnly ? { unread: '1' } : {},
-      })
-      if (!res.ok) throw new Error(`Failed to load notifications: ${res.status}`)
-      return res.json()
+      });
+      if (!res.ok) throw new Error(`Failed to load notifications: ${res.status}`);
+      return res.json();
     },
     refetchInterval: 60_000,
-  })
+  });
 }
 
 export function useMarkNotificationsRead() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (ids?: string[]) => {
       const res = await api.api.notifications.read.$post({
         json: { ids },
-      })
-      if (!res.ok) throw new Error('Failed to mark notifications read')
-      return res.json()
+      });
+      if (!res.ok) throw new Error('Failed to mark notifications read');
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -926,107 +916,131 @@ export function useMarkNotificationsRead() {
 // ---------------------------------------------------------------------------
 
 export interface TrashedNotepad {
-  id: string
-  kind: 'notepad' | 'card'
-  title: string
-  icon?: string | null
-  deletedAt: number
+  id: string;
+  kind: 'notepad' | 'card';
+  title: string;
+  icon?: string | null;
+  deletedAt: number;
 }
 
 export interface TrashedBoard {
-  id: string
-  name: string
-  icon?: string | null
-  deletedAt: number
+  id: string;
+  name: string;
+  icon?: string | null;
+  deletedAt: number;
 }
 
 export function useTrash(projectId?: string) {
   return useQuery({
     queryKey: ['trash', projectId],
     queryFn: async () => {
-      if (!projectId) return { notepads: [], boards: [] }
-      const res = await fetch(`/api/projects/${projectId}/trash`)
-      if (!res.ok) throw new Error('Failed to load trash')
-      return (await res.json()) as { notepads: TrashedNotepad[]; boards: TrashedBoard[] }
+      if (!projectId) return { notepads: [], boards: [] };
+      const res = await fetch(`/api/projects/${projectId}/trash`);
+      if (!res.ok) throw new Error('Failed to load trash');
+      return (await res.json()) as { notepads: TrashedNotepad[]; boards: TrashedBoard[] };
     },
     enabled: !!projectId,
-  })
+  });
 }
 
 export function useRestoreNotepad() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ notepadId, projectId: _projectId }: { notepadId: string; projectId: string }) => {
-      const res = await fetch(`/api/notepads/${notepadId}/restore`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to restore notepad')
-      return res.json()
+    mutationFn: async ({
+      notepadId,
+      projectId: _projectId,
+    }: {
+      notepadId: string;
+      projectId: string;
+    }) => {
+      const res = await fetch(`/api/notepads/${notepadId}/restore`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to restore notepad');
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['notepads', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['notepads', vars.projectId] });
     },
-  })
+  });
 }
 
 export function usePermanentDeleteNotepad() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ notepadId, projectId: _projectId }: { notepadId: string; projectId: string }) => {
-      const res = await fetch(`/api/notepads/${notepadId}/permanent`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to permanently delete notepad')
-      return res.json()
+    mutationFn: async ({
+      notepadId,
+      projectId: _projectId,
+    }: {
+      notepadId: string;
+      projectId: string;
+    }) => {
+      const res = await fetch(`/api/notepads/${notepadId}/permanent`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to permanently delete notepad');
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
     },
-  })
+  });
 }
 
 export function useRestoreBoard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ boardId, projectId: _projectId }: { boardId: string; projectId: string }) => {
-      const res = await fetch(`/api/boards/${boardId}/restore`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to restore board')
-      return res.json()
+    mutationFn: async ({
+      boardId,
+      projectId: _projectId,
+    }: {
+      boardId: string;
+      projectId: string;
+    }) => {
+      const res = await fetch(`/api/boards/${boardId}/restore`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to restore board');
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] });
     },
-  })
+  });
 }
 
 export function usePermanentDeleteBoard() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ boardId, projectId: _projectId }: { boardId: string; projectId: string }) => {
-      const res = await fetch(`/api/boards/${boardId}/permanent`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to permanently delete board')
-      return res.json()
+    mutationFn: async ({
+      boardId,
+      projectId: _projectId,
+    }: {
+      boardId: string;
+      projectId: string;
+    }) => {
+      const res = await fetch(`/api/boards/${boardId}/permanent`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to permanently delete board');
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
     },
-  })
+  });
 }
 
 export function useRecentNotepads(projectId?: string) {
   return useQuery({
     queryKey: ['recent-notepads', projectId],
     queryFn: async () => {
-      if (!projectId) return []
-      const res = await fetch(`/api/projects/${projectId}/recent`)
-      if (!res.ok) throw new Error('Failed to load recent notepads')
+      if (!projectId) return [];
+      const res = await fetch(`/api/projects/${projectId}/recent`);
+      if (!res.ok) throw new Error('Failed to load recent notepads');
       return (await res.json()) as Array<{
-        id: string
-        title: string
-        icon?: string | null
-        updatedAt: number
-      }>
+        id: string;
+        title: string;
+        icon?: string | null;
+        updatedAt: number;
+      }>;
     },
     enabled: !!projectId,
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1034,72 +1048,72 @@ export function useRecentNotepads(projectId?: string) {
 // ---------------------------------------------------------------------------
 
 export interface NotepadNode {
-  id: string
-  parentId: string | null
-  title: string
-  icon?: string | null
-  position: string
-  isFavorite: boolean
+  id: string;
+  parentId: string | null;
+  title: string;
+  icon?: string | null;
+  position: string;
+  isFavorite: boolean;
 }
 
 export function useMoveNotepad(projectId: string) {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       notepadId,
       parentId,
       afterId,
     }: {
-      notepadId: string
-      parentId: string | null
-      afterId: string | null
+      notepadId: string;
+      parentId: string | null;
+      afterId: string | null;
     }) => {
       const res = await api.api.notepads[':id'].move.$post({
         param: { id: notepadId },
         json: { parentId, afterId },
-      })
+      });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: { message?: string } }
-        throw new Error(err.error?.message || 'Failed to move notepad')
+        const err = (await res.json()) as { error?: { message?: string } };
+        throw new Error(err.error?.message || 'Failed to move notepad');
       }
-      return res.json()
+      return res.json();
     },
     onMutate: async ({ notepadId, parentId, afterId }) => {
-      await queryClient.cancelQueries({ queryKey: ['notepads', projectId] })
-      const prev = queryClient.getQueryData<NotepadNode[]>(['notepads', projectId])
+      await queryClient.cancelQueries({ queryKey: ['notepads', projectId] });
+      const prev = queryClient.getQueryData<NotepadNode[]>(['notepads', projectId]);
       if (prev) {
-        const moved = prev.find((n) => n.id === notepadId)
+        const moved = prev.find((n) => n.id === notepadId);
         if (moved) {
           // The flat list is position-ordered per sibling group; splicing the
           // moved entry next to its new siblings keeps every group's relative
           // order correct until the authoritative refetch lands.
-          const rest = prev.filter((n) => n.id !== notepadId)
-          const updated: NotepadNode = { ...moved, parentId }
-          let insertAt: number
+          const rest = prev.filter((n) => n.id !== notepadId);
+          const updated: NotepadNode = { ...moved, parentId };
+          let insertAt: number;
           if (afterId) {
-            const idx = rest.findIndex((n) => n.id === afterId)
-            insertAt = idx === -1 ? rest.length : idx + 1
+            const idx = rest.findIndex((n) => n.id === afterId);
+            insertAt = idx === -1 ? rest.length : idx + 1;
           } else {
             const idx = rest.findIndex((n) =>
               parentId ? n.parentId === parentId : n.parentId === null,
-            )
-            insertAt = idx === -1 ? rest.length : idx
+            );
+            insertAt = idx === -1 ? rest.length : idx;
           }
-          rest.splice(insertAt, 0, updated)
-          queryClient.setQueryData<NotepadNode[]>(['notepads', projectId], rest)
+          rest.splice(insertAt, 0, updated);
+          queryClient.setQueryData<NotepadNode[]>(['notepads', projectId], rest);
         }
       }
-      return { prev }
+      return { prev };
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {
-        queryClient.setQueryData(['notepads', projectId], context.prev)
+        queryClient.setQueryData(['notepads', projectId], context.prev);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notepads', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['notepads', projectId] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1107,63 +1121,63 @@ export function useMoveNotepad(projectId: string) {
 // ---------------------------------------------------------------------------
 
 export interface TagItem {
-  id: string
-  projectId: string
-  name: string
-  color?: string | null
+  id: string;
+  projectId: string;
+  name: string;
+  color?: string | null;
 }
 
 export function useProjectTags(projectId?: string) {
   return useQuery({
     queryKey: ['tags', projectId],
     queryFn: async () => {
-      if (!projectId) return []
-      const res = await fetch(`/api/projects/${projectId}/tags`)
-      if (!res.ok) throw new Error('Failed to load tags')
-      return (await res.json()) as TagItem[]
+      if (!projectId) return [];
+      const res = await fetch(`/api/projects/${projectId}/tags`);
+      if (!res.ok) throw new Error('Failed to load tags');
+      return (await res.json()) as TagItem[];
     },
     enabled: !!projectId,
-  })
+  });
 }
 
 export function useCreateTag() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       projectId,
       name,
       color,
     }: {
-      projectId: string
-      name: string
-      color?: string | null
+      projectId: string;
+      name: string;
+      color?: string | null;
     }) => {
       const res = await fetch(`/api/projects/${projectId}/tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, color }),
-      })
-      if (!res.ok) throw new Error('Failed to create tag')
-      return (await res.json()) as TagItem
+      });
+      if (!res.ok) throw new Error('Failed to create tag');
+      return (await res.json()) as TagItem;
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] });
     },
-  })
+  });
 }
 
 export function useDeleteTag() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ tagId, projectId: _projectId }: { tagId: string; projectId: string }) => {
-      const res = await fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete tag')
-      return res.json()
+      const res = await fetch(`/api/tags/${tagId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete tag');
+      return res.json();
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] });
     },
-  })
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1171,30 +1185,30 @@ export function useDeleteTag() {
 // ---------------------------------------------------------------------------
 
 export interface SearchItem {
-  id: string
-  title: string
-  icon?: string | null
-  kind: 'notepad' | 'card'
-  projectId: string
-  projectName: string
-  snippet: string
+  id: string;
+  title: string;
+  icon?: string | null;
+  kind: 'notepad' | 'card';
+  projectId: string;
+  projectName: string;
+  snippet: string;
 }
 
 export function useSearch(query: string, projectId?: string, scope: 'project' | 'all' = 'project') {
   return useQuery({
     queryKey: ['search', query, projectId, scope],
     queryFn: async () => {
-      const clean = query.trim()
-      if (!clean) return []
+      const clean = query.trim();
+      if (!clean) return [];
       const params = new URLSearchParams({
         q: clean,
         scope,
         ...(projectId ? { projectId } : {}),
-      })
-      const res = await fetch(`/api/search?${params.toString()}`)
-      if (!res.ok) throw new Error('Failed to execute search')
-      return (await res.json()) as SearchItem[]
+      });
+      const res = await fetch(`/api/search?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to execute search');
+      return (await res.json()) as SearchItem[];
     },
     enabled: query.trim().length > 0,
-  })
+  });
 }

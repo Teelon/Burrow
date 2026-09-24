@@ -1,47 +1,47 @@
-import { nanoid } from 'nanoid'
+import { nanoid } from 'nanoid';
 import type {
   IBoardRepository,
   ICardRepository,
   Board,
   BoardColumn,
   BoardWithDetails,
-} from '../infrastructure/types'
-import { notFound, badRequest } from './errors'
-import { positionAfterLast, positionBetween } from './utils/ordering'
+} from '../infrastructure/types';
+import { notFound, badRequest } from './errors';
+import { positionAfterLast, positionBetween } from './utils/ordering';
 
 export interface CreateBoardArgs {
-  workspaceId: string
-  projectId: string
-  name: string
-  icon?: string | null
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  icon?: string | null;
 }
 
 export class BoardService {
   constructor(
     private readonly repos: {
-      boards: IBoardRepository
-      cards?: ICardRepository
+      boards: IBoardRepository;
+      cards?: ICardRepository;
     },
   ) {}
 
   async listBoards(_workspaceId: string, projectId: string): Promise<Board[]> {
     // Filter by workspace in repository
-    return this.repos.boards.listByProject(projectId)
+    return this.repos.boards.listByProject(projectId);
   }
 
   async createBoard(args: CreateBoardArgs): Promise<{ id: string; position: string }> {
     // Verify project exists and is accessible (caller should validate)
-    const boards = await this.repos.boards.listByProject(args.projectId)
-    const boardPosition = positionAfterLast(boards[boards.length - 1]?.position ?? null)
-    const boardId = nanoid()
-    const now = Date.now()
+    const boards = await this.repos.boards.listByProject(args.projectId);
+    const boardPosition = positionAfterLast(boards[boards.length - 1]?.position ?? null);
+    const boardId = nanoid();
+    const now = Date.now();
 
     // Default columns: To do, In progress, Done
     const defaultColumns = [
       { id: nanoid(), name: 'To do', color: '#64748b', position: 'a0', wipLimit: null },
       { id: nanoid(), name: 'In progress', color: '#3b82f6', position: 'a1', wipLimit: null },
       { id: nanoid(), name: 'Done', color: '#10b981', position: 'a2', wipLimit: null },
-    ]
+    ];
 
     await this.repos.boards.create({
       id: boardId,
@@ -52,7 +52,7 @@ export class BoardService {
       position: boardPosition,
       createdAt: now,
       updatedAt: now,
-    })
+    });
 
     for (const col of defaultColumns) {
       await this.repos.boards.createColumn({
@@ -62,27 +62,30 @@ export class BoardService {
         color: col.color,
         position: col.position,
         wipLimit: col.wipLimit,
-      })
+      });
     }
 
-    return { id: boardId, position: boardPosition }
+    return { id: boardId, position: boardPosition };
   }
 
-  async getBoard(workspaceId: string, boardId: string): Promise<BoardWithDetails | (Board & { columns: (BoardColumn & { cards: any[] })[] })> {
+  async getBoard(
+    workspaceId: string,
+    boardId: string,
+  ): Promise<BoardWithDetails | (Board & { columns: (BoardColumn & { cards: any[] })[] })> {
     if (this.repos.boards.getBoardWithDetails) {
-      const board = await this.repos.boards.getBoardWithDetails(boardId, workspaceId)
-      if (!board) throw notFound('not_found', 'Board not found')
-      return board
+      const board = await this.repos.boards.getBoardWithDetails(boardId, workspaceId);
+      if (!board) throw notFound('not_found', 'Board not found');
+      return board;
     }
 
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, workspaceId)
-    if (!board) throw notFound('not_found', 'Board not found')
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, workspaceId);
+    if (!board) throw notFound('not_found', 'Board not found');
 
-    const columns = await this.repos.boards.listColumns(boardId)
+    const columns = await this.repos.boards.listColumns(boardId);
     return {
       ...board,
       columns: columns.map((col) => ({ ...col, cards: [] })),
-    }
+    };
   }
 
   async updateBoard(
@@ -90,42 +93,42 @@ export class BoardService {
     boardId: string,
     updates: { name?: string; icon?: string | null },
   ): Promise<void> {
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId)
-    if (!board) throw notFound('not_found', 'Board not found')
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId);
+    if (!board) throw notFound('not_found', 'Board not found');
 
     await this.repos.boards.update(boardId, {
       name: updates.name ? updates.name.trim() : undefined,
       icon: updates.icon !== undefined ? updates.icon : undefined,
       updatedAt: Date.now(),
-    })
+    });
   }
 
   async softDeleteBoard(_workspaceId: string, boardId: string): Promise<void> {
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId)
-    if (!board) throw notFound('not_found', 'Board not found')
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId);
+    if (!board) throw notFound('not_found', 'Board not found');
 
-    const now = Date.now()
+    const now = Date.now();
     // The worker also soft-deleted card notepads and removed FTS entries
     // That logic belongs in the repository or a composite operation
-    await this.repos.boards.softDelete(boardId, now)
+    await this.repos.boards.softDelete(boardId, now);
   }
 
   async restoreBoard(_workspaceId: string, boardId: string): Promise<void> {
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId)
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId);
     if (!board || board.deletedAt === null) {
-      throw notFound('not_found', 'Deleted board not found')
+      throw notFound('not_found', 'Deleted board not found');
     }
 
-    await this.repos.boards.restore(boardId)
+    await this.repos.boards.restore(boardId);
   }
 
   async permanentDeleteBoard(_workspaceId: string, boardId: string): Promise<void> {
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId)
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId);
     if (!board || board.deletedAt === null) {
-      throw notFound('not_found', 'Deleted board not found in trash')
+      throw notFound('not_found', 'Deleted board not found in trash');
     }
 
-    await this.repos.boards.hardDelete(boardId)
+    await this.repos.boards.hardDelete(boardId);
   }
 
   // ---------------------------------------------------------------------------
@@ -137,12 +140,12 @@ export class BoardService {
     name: string,
     color?: string | null,
   ): Promise<{ id: string; position: string }> {
-    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId)
-    if (!board) throw notFound('not_found', 'Board not found')
+    const board = await this.repos.boards.findByIdAndWorkspace(boardId, _workspaceId);
+    if (!board) throw notFound('not_found', 'Board not found');
 
-    const columns = await this.repos.boards.listColumns(boardId)
-    const position = positionAfterLast(columns[columns.length - 1]?.position ?? null)
-    const id = nanoid()
+    const columns = await this.repos.boards.listColumns(boardId);
+    const position = positionAfterLast(columns[columns.length - 1]?.position ?? null);
+    const id = nanoid();
 
     await this.repos.boards.createColumn({
       id,
@@ -151,9 +154,9 @@ export class BoardService {
       color: color ?? null,
       position,
       wipLimit: null,
-    })
+    });
 
-    return { id, position }
+    return { id, position };
   }
 
   async updateColumn(
@@ -162,14 +165,14 @@ export class BoardService {
     updates: { name?: string; color?: string | null; wipLimit?: number | null },
   ): Promise<void> {
     // Verify column belongs to a board in the workspace
-    const column = await this.findColumnInWorkspace(columnId, _workspaceId)
-    if (!column) throw notFound('not_found', 'Column not found')
+    const column = await this.findColumnInWorkspace(columnId, _workspaceId);
+    if (!column) throw notFound('not_found', 'Column not found');
 
     await this.repos.boards.updateColumn(columnId, {
       name: updates.name ? updates.name.trim() : undefined,
       color: updates.color !== undefined ? updates.color : undefined,
       wipLimit: updates.wipLimit !== undefined ? updates.wipLimit : undefined,
-    })
+    });
   }
 
   async moveColumn(
@@ -177,26 +180,26 @@ export class BoardService {
     columnId: string,
     afterId?: string | null,
   ): Promise<{ position: string }> {
-    const column = await this.findColumnInWorkspace(columnId, _workspaceId)
-    if (!column) throw notFound('not_found', 'Column not found')
+    const column = await this.findColumnInWorkspace(columnId, _workspaceId);
+    if (!column) throw notFound('not_found', 'Column not found');
 
-    const columns = await this.repos.boards.listColumns(column.boardId)
-    const others = columns.filter((c) => c.id !== columnId)
+    const columns = await this.repos.boards.listColumns(column.boardId);
+    const others = columns.filter((c) => c.id !== columnId);
 
-    let newPosition: string
+    let newPosition: string;
     if (!afterId) {
-      const next = others[0]?.position ?? null
-      newPosition = positionBetween(null, next)
+      const next = others[0]?.position ?? null;
+      newPosition = positionBetween(null, next);
     } else {
-      const afterIndex = others.findIndex((c) => c.id === afterId)
-      if (afterIndex === -1) throw badRequest('invalid_after_id', 'afterId not found')
-      const prev = others[afterIndex]!.position
-      const next = others[afterIndex + 1]?.position ?? null
-      newPosition = positionBetween(prev, next)
+      const afterIndex = others.findIndex((c) => c.id === afterId);
+      if (afterIndex === -1) throw badRequest('invalid_after_id', 'afterId not found');
+      const prev = others[afterIndex]!.position;
+      const next = others[afterIndex + 1]?.position ?? null;
+      newPosition = positionBetween(prev, next);
     }
 
-    await this.repos.boards.moveColumn(columnId, newPosition)
-    return { position: newPosition }
+    await this.repos.boards.moveColumn(columnId, newPosition);
+    return { position: newPosition };
   }
 
   async deleteColumn(
@@ -204,36 +207,39 @@ export class BoardService {
     columnId: string,
     moveToColumnId?: string | null,
   ): Promise<void> {
-    const column = await this.findColumnInWorkspace(columnId, _workspaceId)
-    if (!column) throw notFound('not_found', 'Column not found')
+    const column = await this.findColumnInWorkspace(columnId, _workspaceId);
+    if (!column) throw notFound('not_found', 'Column not found');
 
     if (this.repos.cards) {
-      const columnCards = await this.repos.cards.listByColumn(columnId)
+      const columnCards = await this.repos.cards.listByColumn(columnId);
       if (columnCards.length > 0) {
         if (!moveToColumnId) {
           throw badRequest(
             'destination_required',
             'Column has cards; specify ?moveTo=<columnId> to migrate them',
-          )
+          );
         }
 
-        const dest = await this.findColumnInWorkspace(moveToColumnId, _workspaceId)
+        const dest = await this.findColumnInWorkspace(moveToColumnId, _workspaceId);
         if (!dest || dest.boardId !== column.boardId) {
-          throw badRequest('invalid_destination', 'Destination column not found on this board')
+          throw badRequest('invalid_destination', 'Destination column not found on this board');
         }
 
         for (const card of columnCards) {
-          await this.repos.cards.move(card.id, moveToColumnId, card.position)
+          await this.repos.cards.move(card.id, moveToColumnId, card.position);
         }
       }
     }
 
-    await this.repos.boards.deleteColumn(columnId)
+    await this.repos.boards.deleteColumn(columnId);
   }
 
-  private async findColumnInWorkspace(columnId: string, _workspaceId: string): Promise<BoardColumn | null> {
+  private async findColumnInWorkspace(
+    columnId: string,
+    _workspaceId: string,
+  ): Promise<BoardColumn | null> {
     // This would need a repository method to find column by ID and verify workspace
     // For now, we'll add a helper to the board repository
-    return this.repos.boards.findColumnByIdAndWorkspace(columnId, _workspaceId)
+    return this.repos.boards.findColumnByIdAndWorkspace(columnId, _workspaceId);
   }
 }

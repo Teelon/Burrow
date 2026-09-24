@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(() => {
@@ -8,20 +8,20 @@ export function ThemeToggle() {
         localStorage.getItem('burrow-theme') === 'dark' ||
         (!localStorage.getItem('burrow-theme') &&
           window.matchMedia('(prefers-color-scheme: dark)').matches)
-      )
+      );
     }
-    return false
-  })
+    return false;
+  });
 
   useEffect(() => {
     if (isDark) {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('burrow-theme', 'dark')
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('burrow-theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('burrow-theme', 'light')
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('burrow-theme', 'light');
     }
-  }, [isDark])
+  }, [isDark]);
 
   return (
     <button
@@ -32,5 +32,5 @@ export function ThemeToggle() {
     >
       {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
-  )
+  );
 }

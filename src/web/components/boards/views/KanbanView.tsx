@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -11,14 +11,14 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
-} from '@dnd-kit/core'
+} from '@dnd-kit/core';
 import {
   SortableContext,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+} from '@dnd-kit/sortable';
 import {
   Calendar,
   CheckSquare,
@@ -30,63 +30,59 @@ import {
   Trash2,
   Edit2,
   X,
-} from 'lucide-react'
-import confetti from 'canvas-confetti'
-import { toast } from 'sonner'
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
 import {
   useCreateColumn,
   useDeleteColumn,
   useMoveCard,
   useMoveColumn,
   useUpdateColumn,
-} from '../../../lib/queries'
-import { QuickAddCard } from '../QuickAddCard'
-import { useBoardKeyboardNav } from '../useBoardKeyboardNav'
-import { Avatar, AvatarGroup } from '../../ui/Avatar'
-import { Badge } from '../../ui/Badge'
-import { Button } from '../../ui/Button'
-import { Card } from '../../ui/Card'
-import { Input } from '../../ui/Input'
-import { StatusDiamond } from '../../ui/StatusDiamond'
-import { priorityBadgeTone } from '../../ui/status'
-import {
-  AssignPickerModal,
-  PriorityPickerModal,
-  QuickPeekModal,
-} from './BoardQuickModals'
-import { COMPLETED_COLUMN_RE, PRIORITY_BADGES, type CardItem, type ColumnItem } from './types'
+} from '../../../lib/queries';
+import { QuickAddCard } from '../QuickAddCard';
+import { useBoardKeyboardNav } from '../useBoardKeyboardNav';
+import { Avatar, AvatarGroup } from '../../ui/Avatar';
+import { Badge } from '../../ui/Badge';
+import { Button } from '../../ui/Button';
+import { Card } from '../../ui/Card';
+import { Input } from '../../ui/Input';
+import { StatusDiamond } from '../../ui/StatusDiamond';
+import { priorityBadgeTone } from '../../ui/status';
+import { AssignPickerModal, PriorityPickerModal, QuickPeekModal } from './BoardQuickModals';
+import { COMPLETED_COLUMN_RE, PRIORITY_BADGES, type CardItem, type ColumnItem } from './types';
 
 interface KanbanViewProps {
-  boardId: string
-  projectId: string
+  boardId: string;
+  projectId: string;
   /** Unfiltered columns (drag math + menus keep working while filters hide cards). */
-  columns: ColumnItem[]
+  columns: ColumnItem[];
   /** Filtered columns (what is rendered). */
-  filteredColumns: ColumnItem[]
-  isAddingColumn: boolean
-  setIsAddingColumn: (v: boolean) => void
-  onCardClick: (cardId: string) => void
+  filteredColumns: ColumnItem[];
+  isAddingColumn: boolean;
+  setIsAddingColumn: (v: boolean) => void;
+  onCardClick: (cardId: string) => void;
 }
 
 /** Priority → Basalt status token for the 4px left-edge bar. */
 function priorityStatusColor(priority?: string | null): string {
   switch (priority) {
     case 'urgent':
-      return 'var(--danger)'
+      return 'var(--danger)';
     case 'high':
-      return 'var(--c2)'
+      return 'var(--c2)';
     case 'medium':
-      return 'var(--c3)'
+      return 'var(--c3)';
     case 'low':
-      return 'var(--c4)'
+      return 'var(--c4)';
     default:
-      return 'var(--c1)'
+      return 'var(--c1)';
   }
 }
 
 /** Card count vs. WIP limit; turns danger when the limit is exceeded. */
 function CountPill({ count, wipLimit }: { count: number; wipLimit?: number | null }) {
-  const over = wipLimit != null && wipLimit > 0 && count > wipLimit
+  const over = wipLimit != null && wipLimit > 0 && count > wipLimit;
   return (
     <Badge
       tone={over ? 'danger' : 'neutral'}
@@ -94,7 +90,7 @@ function CountPill({ count, wipLimit }: { count: number; wipLimit?: number | nul
     >
       {wipLimit != null && wipLimit > 0 ? `${count}/${wipLimit}` : count}
     </Badge>
-  )
+  );
 }
 
 function CardTile({
@@ -104,34 +100,32 @@ function CardTile({
   isOverlay = false,
   focused = false,
 }: {
-  card: CardItem
-  statusColor?: string | null
-  onClick?: () => void
-  isOverlay?: boolean
-  focused?: boolean
+  card: CardItem;
+  statusColor?: string | null;
+  onClick?: () => void;
+  isOverlay?: boolean;
+  focused?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
     data: { type: 'card', card, columnId: card.columnId },
     disabled: isOverlay,
-  })
+  });
 
   const style = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-      : undefined,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.3 : 1,
     touchAction: 'none' as const,
-  }
+  };
 
-  const isOverdue = card.dueDate && card.dueDate < Date.now()
+  const isOverdue = card.dueDate && card.dueDate < Date.now();
   const formattedDueDate = card.dueDate
     ? new Date(card.dueDate).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
       })
-    : null
+    : null;
 
   return (
     <Card
@@ -157,7 +151,7 @@ function CardTile({
           </Badge>
         )}
 
-        {card.tags.map((tag) => (
+        {(card.tags || []).map((tag) => (
           <Badge
             key={tag.id}
             tone="neutral"
@@ -211,16 +205,16 @@ function CardTile({
           )}
         </div>
 
-        {card.assignees.length > 0 && (
+        {(card.assignees || []).length > 0 && (
           <AvatarGroup max={8}>
-            {card.assignees.map((a) => (
+            {(card.assignees || []).map((a) => (
               <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} />
             ))}
           </AvatarGroup>
         )}
       </div>
     </Card>
-  )
+  );
 }
 
 function ColumnComponent({
@@ -235,32 +229,32 @@ function ColumnComponent({
   onRenameColumn,
   onSetWipLimit,
 }: {
-  column: ColumnItem
-  boardId: string
-  projectId: string
-  focusedCardId: string | null
-  autoAdd: boolean
-  onAutoAddConsumed: () => void
-  onCardClick: (cardId: string) => void
-  onDeleteColumn: (columnId: string, cardCount: number) => void
-  onRenameColumn: (columnId: string, currentName: string) => void
-  onSetWipLimit: (columnId: string, wipLimit: number | null) => void
+  column: ColumnItem;
+  boardId: string;
+  projectId: string;
+  focusedCardId: string | null;
+  autoAdd: boolean;
+  onAutoAddConsumed: () => void;
+  onCardClick: (cardId: string) => void;
+  onDeleteColumn: (columnId: string, cardCount: number) => void;
+  onRenameColumn: (columnId: string, currentName: string) => void;
+  onSetWipLimit: (columnId: string, wipLimit: number | null) => void;
 }) {
-  const [isAdding, setIsAdding] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [columnName, setColumnName] = useState(column.name)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isAdding, setIsAdding] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [columnName, setColumnName] = useState(column.name);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // `C` hotkey: open the quick-add form for this column.
   useEffect(() => {
     if (autoAdd) {
-      setIsAdding(true)
-      onAutoAddConsumed()
+      setIsAdding(true);
+      onAutoAddConsumed();
     }
-  }, [autoAdd])
+  }, [autoAdd]);
 
-  const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards])
+  const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards]);
 
   const {
     attributes,
@@ -274,15 +268,13 @@ function ColumnComponent({
   } = useSortable({
     id: column.id,
     data: { type: 'column', column },
-  })
+  });
 
   const style = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-      : undefined,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
   // Collapsed: slender 40px vertical bar (title rotated, count pill, expand).
   if (isCollapsed) {
@@ -294,19 +286,15 @@ function ColumnComponent({
         {...listeners}
         className={`chamfer-lg w-10 h-80 shrink-0 snap-start border bg-[var(--surface2)] flex flex-col items-center gap-3 py-3 transition-all duration-150 cursor-grab active:cursor-grabbing touch-none ${
           isDragging ? 'z-10 relative opacity-50' : ''
-        } ${
-          isOver
-            ? 'border-[var(--accent)] bg-[var(--hi)]'
-            : 'border-[var(--line)]'
-        }`}
+        } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--line)]'}`}
         title={`${column.name} (click to expand)`}
         onDoubleClick={() => setIsCollapsed(false)}
       >
         <button
           type="button"
           onClick={(e) => {
-            e.stopPropagation()
-            setIsCollapsed(false)
+            e.stopPropagation();
+            setIsCollapsed(false);
           }}
           aria-label="Expand column"
           className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
@@ -315,27 +303,27 @@ function ColumnComponent({
         </button>
         <span
           className="flex-1 min-h-0 overflow-hidden text-xs font-semibold text-[var(--text)] whitespace-nowrap cursor-pointer uppercase tracking-wider"
-          style={{ writingMode: 'vertical-rl', fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+          style={{
+            writingMode: 'vertical-rl',
+            fontFamily: 'Archivo, sans-serif',
+            fontVariationSettings: "'wdth' 122, 'wght' 800",
+          }}
           onClick={() => setIsCollapsed(false)}
         >
           {column.name}
         </span>
         <CountPill count={column.cards.length} wipLimit={column.wipLimit} />
       </div>
-    )
+    );
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col h-full min-h-[520px] border transition-all duration-150 ${
+      className={`chamfer-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start self-start bg-[var(--surface2)] p-3 flex flex-col border transition-all duration-150 ${
         isDragging ? 'z-10 relative' : ''
-      } ${
-        isOver
-          ? 'border-[var(--accent)] bg-[var(--hi)]'
-          : 'border-[var(--line)]'
-      }`}
+      } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--line)]'}`}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between px-3 py-1.5 mb-2 relative">
@@ -349,19 +337,19 @@ function ColumnComponent({
               onChange={(e) => setColumnName(e.target.value)}
               onBlur={() => {
                 if (columnName.trim() && columnName.trim() !== column.name) {
-                  onRenameColumn(column.id, columnName.trim())
+                  onRenameColumn(column.id, columnName.trim());
                 } else {
-                  setColumnName(column.name)
+                  setColumnName(column.name);
                 }
-                setIsEditingName(false)
+                setIsEditingName(false);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  e.currentTarget.blur()
+                  e.currentTarget.blur();
                 }
                 if (e.key === 'Escape') {
-                  setColumnName(column.name)
-                  setIsEditingName(false)
+                  setColumnName(column.name);
+                  setIsEditingName(false);
                 }
               }}
             />
@@ -369,7 +357,10 @@ function ColumnComponent({
             <h3
               onDoubleClick={() => setIsEditingName(true)}
               className="text-sm text-[var(--text)] truncate cursor-pointer hover:opacity-80 uppercase tracking-wider"
-              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+              style={{
+                fontFamily: 'Archivo, sans-serif',
+                fontVariationSettings: "'wdth' 122, 'wght' 800",
+              }}
               title="Double-click to rename"
             >
               {column.name}
@@ -414,9 +405,9 @@ function ColumnComponent({
               <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--surface)] border border-[var(--line)] p-1 z-20 text-xs">
                 <button
                   onClick={() => {
-                    setShowMenu(false)
-                    setColumnName(column.name)
-                    setIsEditingName(true)
+                    setShowMenu(false);
+                    setColumnName(column.name);
+                    setIsEditingName(true);
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
                 >
@@ -425,22 +416,20 @@ function ColumnComponent({
                 </button>
                 <button
                   onClick={() => {
-                    setShowMenu(false)
+                    setShowMenu(false);
                     const input = window.prompt(
                       'WIP limit (empty removes the limit):',
-                      column.wipLimit != null && column.wipLimit > 0
-                        ? String(column.wipLimit)
-                        : '',
-                    )
-                    if (input === null) return
-                    const trimmed = input.trim()
+                      column.wipLimit != null && column.wipLimit > 0 ? String(column.wipLimit) : '',
+                    );
+                    if (input === null) return;
+                    const trimmed = input.trim();
                     if (trimmed === '') {
-                      onSetWipLimit(column.id, null)
-                      return
+                      onSetWipLimit(column.id, null);
+                      return;
                     }
-                    const parsed = parseInt(trimmed, 10)
+                    const parsed = parseInt(trimmed, 10);
                     if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 999) {
-                      onSetWipLimit(column.id, parsed)
+                      onSetWipLimit(column.id, parsed);
                     }
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
@@ -450,8 +439,8 @@ function ColumnComponent({
                 </button>
                 <button
                   onClick={() => {
-                    setShowMenu(false)
-                    onDeleteColumn(column.id, column.cards.length)
+                    setShowMenu(false);
+                    onDeleteColumn(column.id, column.cards.length);
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--danger)] hover:bg-[var(--hi)]"
                 >
@@ -465,7 +454,7 @@ function ColumnComponent({
       </div>
 
       {/* Cards Scroll Container */}
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[60px]">
+      <div className="space-y-2 pr-1 min-h-[60px]">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {column.cards.map((card) => (
             <CardTile
@@ -510,7 +499,7 @@ function ColumnComponent({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function KanbanView({
@@ -522,30 +511,32 @@ export function KanbanView({
   setIsAddingColumn,
   onCardClick,
 }: KanbanViewProps) {
-  const moveCardMutation = useMoveCard()
-  const moveColumnMutation = useMoveColumn()
-  const createColumnMutation = useCreateColumn()
-  const updateColumnMutation = useUpdateColumn()
-  const deleteColumnMutation = useDeleteColumn()
+  const moveCardMutation = useMoveCard();
+  const moveColumnMutation = useMoveColumn();
+  const createColumnMutation = useCreateColumn();
+  const updateColumnMutation = useUpdateColumn();
+  const deleteColumnMutation = useDeleteColumn();
 
-  const [activeCard, setActiveCard] = useState<CardItem | null>(null)
-  const [newColumnName, setNewColumnName] = useState('')
+  const [activeCard, setActiveCard] = useState<CardItem | null>(null);
+  const [newColumnName, setNewColumnName] = useState('');
 
   // Keyboard-first navigation state (FEATURE_PLAN 2.4)
-  const [peekCardId, setPeekCardId] = useState<string | null>(null)
-  const [priorityCardId, setPriorityCardId] = useState<string | null>(null)
-  const [assignCardId, setAssignCardId] = useState<string | null>(null)
-  const [quickAddColumnId, setQuickAddColumnId] = useState<string | null>(null)
+  const [peekCardId, setPeekCardId] = useState<string | null>(null);
+  const [priorityCardId, setPriorityCardId] = useState<string | null>(null);
+  const [assignCardId, setAssignCardId] = useState<string | null>(null);
+  const [quickAddColumnId, setQuickAddColumnId] = useState<string | null>(null);
 
-  const anyModalOpen = peekCardId !== null || priorityCardId !== null || assignCardId !== null
+  const anyModalOpen = peekCardId !== null || priorityCardId !== null || assignCardId !== null;
 
   const findCard = (cardId: string): CardItem | undefined =>
     filteredColumns.flatMap((c) => c.cards).find((c) => c.id === cardId) ??
-    columns.flatMap((c) => c.cards).find((c) => c.id === cardId)
+    columns.flatMap((c) => c.cards).find((c) => c.id === cardId);
 
   const columnOfCard = (cardId: string): string | undefined =>
-    (filteredColumns.find((c) => c.cards.some((card) => card.id === cardId)) ??
-      columns.find((c) => c.cards.some((card) => card.id === cardId)))?.name
+    (
+      filteredColumns.find((c) => c.cards.some((card) => card.id === cardId)) ??
+      columns.find((c) => c.cards.some((card) => card.id === cardId))
+    )?.name;
 
   const { focusedCardId, setFocusedCardId } = useBoardKeyboardNav({
     columns: filteredColumns,
@@ -555,12 +546,12 @@ export function KanbanView({
     onQuickAdd: (id) => setQuickAddColumnId(id),
     onPriority: (id) => setPriorityCardId(id),
     onAssign: (id) => setAssignCardId(id),
-  })
+  });
 
   const handleCardClick = (cardId: string) => {
-    setFocusedCardId(cardId)
-    onCardClick(cardId)
-  }
+    setFocusedCardId(cardId);
+    onCardClick(cardId);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -571,12 +562,9 @@ export function KanbanView({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-  )
+  );
 
-  const columnIds = useMemo(
-    () => filteredColumns.map((c) => c.id),
-    [filteredColumns],
-  )
+  const columnIds = useMemo(() => filteredColumns.map((c) => c.id), [filteredColumns]);
 
   const collisionDetectionStrategy: CollisionDetection = (args) => {
     // When reordering columns, only consider columns as drop targets
@@ -584,49 +572,49 @@ export function KanbanView({
     if (args.active.data.current?.type === 'column') {
       const columnContainers = args.droppableContainers.filter(
         (c) => c.data.current?.type === 'column',
-      )
-      const columnArgs = { ...args, droppableContainers: columnContainers }
-      const columnPointer = pointerWithin(columnArgs)
-      return columnPointer.length > 0 ? columnPointer : closestCorners(columnArgs)
+      );
+      const columnArgs = { ...args, droppableContainers: columnContainers };
+      const columnPointer = pointerWithin(columnArgs);
+      return columnPointer.length > 0 ? columnPointer : closestCorners(columnArgs);
     }
 
     // 1. First, check if pointer is within any droppable
-    const pointerCollisions = pointerWithin(args)
+    const pointerCollisions = pointerWithin(args);
     if (pointerCollisions.length > 0) {
       // Prioritize card if pointer is directly over a card
       const cardCollision = pointerCollisions.find(
         (c) => c.data?.droppableContainer?.data?.current?.type === 'card',
-      )
+      );
       if (cardCollision) {
-        return [cardCollision]
+        return [cardCollision];
       }
       // Otherwise prioritize column if pointer is over the column
       const columnCollision = pointerCollisions.find(
         (c) => c.data?.droppableContainer?.data?.current?.type === 'column',
-      )
+      );
       if (columnCollision) {
-        return [columnCollision]
+        return [columnCollision];
       }
-      return pointerCollisions
+      return pointerCollisions;
     }
 
     // 2. Fall back to closestCorners
-    const cornerCollisions = closestCorners(args)
+    const cornerCollisions = closestCorners(args);
     if (cornerCollisions.length > 0) {
       const cardCollision = cornerCollisions.find(
         (c) => c.data?.droppableContainer?.data?.current?.type === 'card',
-      )
+      );
       if (cardCollision) {
-        return [cardCollision]
+        return [cardCollision];
       }
-      return cornerCollisions
+      return cornerCollisions;
     }
 
-    return []
-  }
+    return [];
+  };
 
   const celebrate = (event: DragEndEvent) => {
-    const rect = event.active.rect.current.translated
+    const rect = event.active.rect.current.translated;
     confetti({
       particleCount: 55,
       spread: 60,
@@ -638,135 +626,130 @@ export function KanbanView({
             y: (rect.top + rect.height / 2) / window.innerHeight,
           }
         : { x: 0.5, y: 0.5 },
-    })
-  }
+    });
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    const foundCard = columns
-      .flatMap((c) => c.cards)
-      .find((c) => c.id === active.id)
+    const { active } = event;
+    const foundCard = columns.flatMap((c) => c.cards).find((c) => c.id === active.id);
     if (foundCard) {
-      setActiveCard(foundCard)
+      setActiveCard(foundCard);
     }
-  }
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveCard(null)
-    if (!over) return
+    const { active, over } = event;
+    setActiveCard(null);
+    if (!over) return;
 
-    const activeId = active.id as string
-    const overId = over.id as string
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
     // --- Column reorder: the column itself was dragged ---
     if (active.data.current?.type === 'column') {
-      let overColId: string
+      let overColId: string;
       if (columns.some((c) => c.id === overId)) {
-        overColId = overId
+        overColId = overId;
       } else if (over.data.current?.type === 'card') {
         // Collided with a card; reorder relative to its column
-        overColId = over.data.current.columnId as string
+        overColId = over.data.current.columnId as string;
       } else {
-        return
+        return;
       }
-      if (overColId === activeId) return
+      if (overColId === activeId) return;
 
-      const activeIndex = columns.findIndex((c) => c.id === activeId)
-      const overIndex = columns.findIndex((c) => c.id === overColId)
-      if (activeIndex === -1 || overIndex === -1) return
+      const activeIndex = columns.findIndex((c) => c.id === activeId);
+      const overIndex = columns.findIndex((c) => c.id === overColId);
+      if (activeIndex === -1 || overIndex === -1) return;
 
       // Dragged right -> land after the target column;
       // dragged left -> land before it (i.e. after its predecessor)
-      const afterId =
-        activeIndex < overIndex
-          ? overColId
-          : (columns[overIndex - 1]?.id ?? null)
-      if (afterId === activeId) return
+      const afterId = activeIndex < overIndex ? overColId : (columns[overIndex - 1]?.id ?? null);
+      if (afterId === activeId) return;
 
-      moveColumnMutation.mutate({ boardId, columnId: activeId, afterId })
-      return
+      moveColumnMutation.mutate({ boardId, columnId: activeId, afterId });
+      return;
     }
 
     // 1. Find active card and its current column
-    let sourceCol: ColumnItem | undefined
+    let sourceCol: ColumnItem | undefined;
     for (const col of columns) {
       if (col.cards.some((c) => c.id === activeId)) {
-        sourceCol = col
-        break
+        sourceCol = col;
+        break;
       }
     }
-    if (!sourceCol) return
+    if (!sourceCol) return;
 
     // 2. Find destination column: either over a column directly or over another card
-    let destCol = columns.find((c) => c.id === overId)
-    const isOverColumn = Boolean(destCol)
+    let destCol = columns.find((c) => c.id === overId);
+    const isOverColumn = Boolean(destCol);
 
     if (!destCol) {
       // overId is a card id; find which column contains it
-      destCol = columns.find((c) => c.cards.some((c) => c.id === overId))
+      destCol = columns.find((c) => c.cards.some((c) => c.id === overId));
     }
-    if (!destCol) return
+    if (!destCol) return;
 
     // 3. Compute target otherCards (cards in destination column excluding activeCard)
-    const targetCards = destCol.cards.filter((c) => c.id !== activeId)
-    let afterId: string | null
+    const targetCards = destCol.cards.filter((c) => c.id !== activeId);
+    let afterId: string | null;
 
     if (isOverColumn) {
       // Dropped on the column itself (e.g. empty column or empty bottom area)
       if (targetCards.length === 0) {
-        afterId = null
+        afterId = null;
       } else {
         // Append to the bottom of the column
-        afterId = targetCards[targetCards.length - 1]!.id
+        afterId = targetCards[targetCards.length - 1]!.id;
       }
     } else {
       // Dropped onto a specific card (overId)
-      const overIndex = targetCards.findIndex((c) => c.id === overId)
+      const overIndex = targetCards.findIndex((c) => c.id === overId);
 
       if (sourceCol.id === destCol.id) {
         // Reordering within the SAME column
-        const sourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId)
-        const rawOverIndex = sourceCol.cards.findIndex((c) => c.id === overId)
+        const sourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId);
+        const rawOverIndex = sourceCol.cards.findIndex((c) => c.id === overId);
 
         if (sourceIndex === rawOverIndex) {
-          return
+          return;
         }
 
         if (sourceIndex < rawOverIndex) {
           // Dragged downward past overId -> place AFTER overId
-          afterId = overId
+          afterId = overId;
         } else {
           // Dragged upward before overId -> place BEFORE overId
-          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null
+          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null;
         }
       } else {
         // Dragging into a DIFFERENT column (stage)
-        const overRect = event.over?.rect
-        const activeRect = event.active.rect.current.translated
+        const overRect = event.over?.rect;
+        const activeRect = event.active.rect.current.translated;
 
-        let isBelow = false
+        let isBelow = false;
         if (overRect && activeRect) {
-          const overMidY = overRect.top + overRect.height / 2
-          const activeMidY = activeRect.top + activeRect.height / 2
-          isBelow = activeMidY > overMidY
+          const overMidY = overRect.top + overRect.height / 2;
+          const activeMidY = activeRect.top + activeRect.height / 2;
+          isBelow = activeMidY > overMidY;
         }
 
         if (isBelow) {
-          afterId = overId
+          afterId = overId;
         } else {
-          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null
+          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null;
         }
       }
     }
 
     // 4. Skip mutation if position didn't change in the same column
     if (sourceCol.id === destCol.id) {
-      const currentSourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId)
+      const currentSourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId);
       const currentPredecessorId =
-        currentSourceIndex > 0 ? sourceCol.cards[currentSourceIndex - 1]!.id : null
+        currentSourceIndex > 0 ? sourceCol.cards[currentSourceIndex - 1]!.id : null;
       if (afterId === currentPredecessorId) {
-        return
+        return;
       }
     }
 
@@ -776,13 +759,13 @@ export function KanbanView({
       boardId,
       columnId: destCol.id,
       afterId,
-    })
+    });
 
     // 6. Drop landed in a completion column? Small celebratory burst.
     if (COMPLETED_COLUMN_RE.test(destCol.name)) {
-      celebrate(event)
+      celebrate(event);
     }
-  }
+  };
 
   const handleRenameColumn = (columnId: string, currentName: string) => {
     if (currentName?.trim()) {
@@ -790,32 +773,32 @@ export function KanbanView({
         boardId,
         columnId,
         name: currentName.trim(),
-      })
+      });
     }
-  }
+  };
 
   const handleSetWipLimit = (columnId: string, wipLimit: number | null) => {
-    updateColumnMutation.mutate({ boardId, columnId, wipLimit })
-  }
+    updateColumnMutation.mutate({ boardId, columnId, wipLimit });
+  };
 
   const handleDeleteColumn = (columnId: string, cardCount: number) => {
     if (cardCount > 0) {
-      const otherCols = columns.filter((c) => c.id !== columnId)
+      const otherCols = columns.filter((c) => c.id !== columnId);
       if (otherCols.length === 0) {
-        window.alert('Cannot delete the only column when it has cards.')
-        return
+        window.alert('Cannot delete the only column when it has cards.');
+        return;
       }
-      const destNames = otherCols.map((c, i) => `${i + 1}: ${c.name}`).join('\n')
+      const destNames = otherCols.map((c, i) => `${i + 1}: ${c.name}`).join('\n');
       const choice = window.prompt(
         `This column has ${cardCount} cards. Select a column number to move them to:\n${destNames}`,
         '1',
-      )
-      if (!choice) return
-      const chosenIdx = parseInt(choice, 10) - 1
-      const chosenCol = otherCols[chosenIdx]
+      );
+      if (!choice) return;
+      const chosenIdx = parseInt(choice, 10) - 1;
+      const chosenCol = otherCols[chosenIdx];
       if (!chosenCol) {
-        window.alert('Invalid selection')
-        return
+        window.alert('Invalid selection');
+        return;
       }
       deleteColumnMutation.mutate(
         { boardId, columnId, moveTo: chosenCol.id },
@@ -823,54 +806,51 @@ export function KanbanView({
           onSuccess: () =>
             toast.success(`Column deleted — ${cardCount} cards moved to ${chosenCol.name}`),
         },
-      )
+      );
     } else {
       if (window.confirm('Delete this column?')) {
         deleteColumnMutation.mutate(
           { boardId, columnId },
           { onSuccess: () => toast.success('Column deleted') },
-        )
+        );
       }
     }
-  }
+  };
 
   const handleCreateColumn = async () => {
-    const trimmed = newColumnName.trim()
-    if (!trimmed || createColumnMutation.isPending) return
+    const trimmed = newColumnName.trim();
+    if (!trimmed || createColumnMutation.isPending) return;
     try {
       await createColumnMutation.mutateAsync({
         boardId,
         name: trimmed,
-      })
-      setNewColumnName('')
-      setIsAddingColumn(false)
+      });
+      setNewColumnName('');
+      setIsAddingColumn(false);
     } catch (err: any) {
-      window.alert(err.message || 'Failed to create column')
+      window.alert(err.message || 'Failed to create column');
     }
-  }
+  };
 
-  const peekCard = peekCardId ? findCard(peekCardId) : undefined
-  const priorityCard = priorityCardId ? findCard(priorityCardId) : undefined
-  const assignCard = assignCardId ? findCard(assignCardId) : undefined
+  const peekCard = peekCardId ? findCard(peekCardId) : undefined;
+  const priorityCard = priorityCardId ? findCard(priorityCardId) : undefined;
+  const assignCard = assignCardId ? findCard(assignCardId) : undefined;
 
   const activeCardColumn = activeCard
     ? (columns.find((c) => c.cards.some((cc) => cc.id === activeCard.id))?.color ?? null)
-    : null
+    : null;
 
   return (
     <>
       {/* Columns Container (Horizontal Scroll with mobile snap) */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 flex items-stretch gap-4 snap-x snap-mandatory md:snap-none bg-[var(--bg)]">
+      <div className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-6 flex items-start gap-4 snap-x snap-mandatory md:snap-none bg-[var(--bg)] min-h-0">
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetectionStrategy}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext
-            items={columnIds}
-            strategy={horizontalListSortingStrategy}
-          >
+          <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
             {filteredColumns.map((column) => (
               <ColumnComponent
                 key={column.id}
@@ -889,7 +869,9 @@ export function KanbanView({
           </SortableContext>
 
           <DragOverlay>
-            {activeCard ? <CardTile card={activeCard} statusColor={activeCardColumn} isOverlay /> : null}
+            {activeCard ? (
+              <CardTile card={activeCard} statusColor={activeCardColumn} isOverlay />
+            ) : null}
           </DragOverlay>
         </DndContext>
 
@@ -904,12 +886,12 @@ export function KanbanView({
               onChange={(e) => setNewColumnName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleCreateColumn()
+                  e.preventDefault();
+                  handleCreateColumn();
                 }
                 if (e.key === 'Escape') {
-                  setIsAddingColumn(false)
-                  setNewColumnName('')
+                  setIsAddingColumn(false);
+                  setNewColumnName('');
                 }
               }}
             />
@@ -926,8 +908,8 @@ export function KanbanView({
               <button
                 type="button"
                 onClick={() => {
-                  setIsAddingColumn(false)
-                  setNewColumnName('')
+                  setIsAddingColumn(false);
+                  setNewColumnName('');
                 }}
                 aria-label="Cancel"
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)] transition cursor-pointer"
@@ -972,5 +954,5 @@ export function KanbanView({
         />
       )}
     </>
-  )
+  );
 }

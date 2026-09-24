@@ -1,37 +1,38 @@
-import { Link, useNavigate, useParams } from '@tanstack/react-router'
-import { FileText, Kanban, Plus } from 'lucide-react'
-import { useBoards, useCreateBoard, useProjects, useRecentNotepads } from '../lib/queries'
-import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { FileText, Kanban, Plus } from 'lucide-react';
+import { useBoards, useCreateBoard, useProjects, useRecentNotepads } from '../lib/queries';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 
 export function ProjectHome() {
-  const navigate = useNavigate()
-  const { projectId } = useParams({ strict: false }) as { projectId?: string }
-  const { data: projects = [] } = useProjects()
-  const project = projects.find((p) => p.id === projectId) || projects[0]
-  const currentProjectId = project?.id
-  const { data: boards = [] } = useBoards(currentProjectId)
-  const { data: recentNotepads = [] } = useRecentNotepads(currentProjectId)
-  const createBoardMutation = useCreateBoard()
+  const navigate = useNavigate();
+  const { projectId } = useParams({ strict: false }) as { projectId?: string };
+  const { data: projects = [] } = useProjects();
+  const project = projects.find((p) => p.id === projectId) || projects[0];
+  const currentProjectId = project?.id;
+  const { data: boards = [] } = useBoards(currentProjectId);
+  const { data: recentNotepads = [] } = useRecentNotepads(currentProjectId);
+  const createBoardMutation = useCreateBoard();
 
   const handleCreateBoard = async () => {
-    if (!currentProjectId) return
-    const name = window.prompt('New Board Name:', 'Sprint Board')
-    if (!name?.trim()) return
+    if (!currentProjectId) return;
+    const name = window.prompt('New Board Name:', 'Sprint Board');
+    if (!name?.trim()) return;
     const res = await createBoardMutation.mutateAsync({
       projectId: currentProjectId,
       name: name.trim(),
-    })
+    });
     navigate({
       to: '/p/$projectId/boards/$boardId',
       params: {
         projectId: currentProjectId,
         boardId: res.id,
       },
-    })
-  }
+    });
+  };
 
   return (
+    <div className="flex-1 overflow-y-auto">
     <div className="max-w-4xl mx-auto py-8 px-6 space-y-8">
       {/* Project Banner / Title */}
       <div className="space-y-2 border-b border-[var(--hair)] pb-6">
@@ -122,5 +123,6 @@ export function ProjectHome() {
         </Card>
       </div>
     </div>
-  )
+    </div>
+  );
 }

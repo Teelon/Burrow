@@ -77,6 +77,7 @@ export interface IBoardRepository {
 export interface ICardRepository {
     findById(id: string): Promise<Card | null>;
     findByIdAndWorkspace(id: string, workspaceId: string): Promise<Card | null>;
+    getCardWithDetails(id: string, workspaceId: string): Promise<CardWithDetails | null>;
     create(data: CreateCardData): Promise<Card>;
     update(id: string, data: UpdateCardData): Promise<void>;
     move(id: string, columnId: string, position: string): Promise<void>;
@@ -330,6 +331,35 @@ export interface Card {
     dueDate: number | null;
     createdAt: number;
     projectId: string;
+    title?: string;
+    content?: string;
+    version?: number;
+    workspaceId?: string;
+}
+export interface CardWithDetails extends Card {
+    title: string;
+    content: string;
+    version: number;
+    workspaceId: string;
+    boardName: string;
+    columnName: string;
+    assignees: Array<{
+        userId: string;
+        name: string;
+        image?: string | null;
+    }>;
+    tags: Array<{
+        id: string;
+        name: string;
+        color?: string | null;
+    }>;
+    subtasks: CardSubtask[];
+    lock: {
+        userId: string;
+        clientId: string;
+        name: string;
+        expiresAt: number;
+    } | null;
 }
 export interface CreateCardData {
     id: string;

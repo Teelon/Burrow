@@ -1,20 +1,20 @@
-import { and, eq, sql } from 'drizzle-orm'
-import type { DB } from '../db/client'
-import * as t from '../db/schema'
-import { HttpError } from '../lib/errors'
-import { runBatch } from '../lib/batch'
+import { and, eq, sql } from 'drizzle-orm';
+import type { DB } from '../db/client';
+import * as t from '../db/schema';
+import { HttpError } from '../lib/errors';
+import { runBatch } from '../lib/batch';
 
 export interface ChangeRoleArgs {
-  workspaceId: string
-  actorUserId: string
-  targetUserId: string
-  newRole: 'owner' | 'editor' | 'viewer'
+  workspaceId: string;
+  actorUserId: string;
+  targetUserId: string;
+  newRole: 'owner' | 'editor' | 'viewer';
 }
 
 export interface RemoveMemberArgs {
-  workspaceId: string
-  actorUserId: string
-  targetUserId: string
+  workspaceId: string;
+  actorUserId: string;
+  targetUserId: string;
 }
 
 export async function changeRole(db: DB, args: ChangeRoleArgs): Promise<void> {
@@ -22,14 +22,11 @@ export async function changeRole(db: DB, args: ChangeRoleArgs): Promise<void> {
     .select()
     .from(t.members)
     .where(
-      and(
-        eq(t.members.workspaceId, args.workspaceId),
-        eq(t.members.userId, args.targetUserId),
-      ),
-    )
+      and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.userId, args.targetUserId)),
+    );
 
   if (!targetMember) {
-    throw new HttpError(404, 'not_found', 'Member not found')
+    throw new HttpError(404, 'not_found', 'Member not found');
   }
 
   if (targetMember.role === 'owner' && args.newRole !== 'owner') {
@@ -37,18 +34,13 @@ export async function changeRole(db: DB, args: ChangeRoleArgs): Promise<void> {
     const owners = await db
       .select({ userId: t.members.userId })
       .from(t.members)
-      .where(
-        and(
-          eq(t.members.workspaceId, args.workspaceId),
-          eq(t.members.role, 'owner'),
-        ),
-      )
+      .where(and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.role, 'owner')));
     if (owners.length <= 1) {
       throw new HttpError(
         400,
         'cannot_demote_last_owner',
         'Cannot demote the last owner of the workspace',
-      )
+      );
     }
   }
 
@@ -56,47 +48,33 @@ export async function changeRole(db: DB, args: ChangeRoleArgs): Promise<void> {
     .update(t.members)
     .set({ role: args.newRole })
     .where(
-      and(
-        eq(t.members.workspaceId, args.workspaceId),
-        eq(t.members.userId, args.targetUserId),
-      ),
-    )
+      and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.userId, args.targetUserId)),
+    );
 }
 
-export async function removeMember(
-  db: DB,
-  args: RemoveMemberArgs,
-): Promise<void> {
+export async function removeMember(db: DB, args: RemoveMemberArgs): Promise<void> {
   const [targetMember] = await db
     .select()
     .from(t.members)
     .where(
-      and(
-        eq(t.members.workspaceId, args.workspaceId),
-        eq(t.members.userId, args.targetUserId),
-      ),
-    )
+      and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.userId, args.targetUserId)),
+    );
 
   if (!targetMember) {
-    throw new HttpError(404, 'not_found', 'Member not found')
+    throw new HttpError(404, 'not_found', 'Member not found');
   }
 
   if (targetMember.role === 'owner') {
     const owners = await db
       .select({ userId: t.members.userId })
       .from(t.members)
-      .where(
-        and(
-          eq(t.members.workspaceId, args.workspaceId),
-          eq(t.members.role, 'owner'),
-        ),
-      )
+      .where(and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.role, 'owner')));
     if (owners.length <= 1) {
       throw new HttpError(
         400,
         'cannot_remove_last_owner',
         'Cannot remove the last owner of the workspace',
-      )
+      );
     }
   }
 
@@ -114,11 +92,8 @@ export async function removeMember(
     db
       .delete(t.members)
       .where(
-        and(
-          eq(t.members.workspaceId, args.workspaceId),
-          eq(t.members.userId, args.targetUserId),
-        ),
+        and(eq(t.members.workspaceId, args.workspaceId), eq(t.members.userId, args.targetUserId)),
       ),
     db.delete(t.session).where(eq(t.session.userId, args.targetUserId)),
-  ])
+  ]);
 }

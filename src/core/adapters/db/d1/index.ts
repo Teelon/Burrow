@@ -1,25 +1,25 @@
-import { createStorageFromEnv } from './adapters/storage/factory'
-import { SqliteFtsSearchAdapter } from './adapters/search/sqlite-fts'
-import { SqlLockAdapter } from './adapters/lock/sql-lock'
-import { createAuthProviderWithDB } from './auth'
-import { createWorkspaceRepository } from './repositories/workspace'
-import { createProjectRepository } from './repositories/project'
-import { createBoardRepository } from './repositories/board'
-import { createCardRepository } from './repositories/card'
-import { createNotepadRepository } from './repositories/notepad'
-import { createTagRepository } from './repositories/tag'
-import { createNotificationRepository } from './repositories/notification'
-import { createMemberRepository } from './repositories/member'
-import { createInviteRepository } from './repositories/invite'
-import type { Infrastructure } from '../../../infrastructure/types'
-import type { DB } from './client'
+import { createStorageFromEnv } from './adapters/storage/factory';
+import { SqliteFtsSearchAdapter } from './adapters/search/sqlite-fts';
+import { SqlLockAdapter } from './adapters/lock/sql-lock';
+import { createAuthProviderWithDB } from './auth';
+import { createWorkspaceRepository } from './repositories/workspace';
+import { createProjectRepository } from './repositories/project';
+import { createBoardRepository } from './repositories/board';
+import { createCardRepository } from './repositories/card';
+import { createNotepadRepository } from './repositories/notepad';
+import { createTagRepository } from './repositories/tag';
+import { createNotificationRepository } from './repositories/notification';
+import { createMemberRepository } from './repositories/member';
+import { createInviteRepository } from './repositories/invite';
+import type { Infrastructure } from '../../../infrastructure/types';
+import type { DB } from './client';
 
 interface EnvBindings {
-  FILES?: any
-  LOCAL_STORAGE_PATH?: string
-  BETTER_AUTH_SECRET: string
-  BETTER_AUTH_URL: string
-  BOOTSTRAP_TOKEN: string
+  FILES?: any;
+  LOCAL_STORAGE_PATH?: string;
+  BETTER_AUTH_SECRET: string;
+  BETTER_AUTH_URL: string;
+  BOOTSTRAP_TOKEN: string;
 }
 
 /**
@@ -29,10 +29,10 @@ interface EnvBindings {
  */
 export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure {
   // Create adapters (stateless, can be shared)
-  const search = new SqliteFtsSearchAdapter(db)
-  const locks = new SqlLockAdapter(db)
-  const storage = createStorageFromEnv(env)
-  const auth = createAuthProviderWithDB(db, env)
+  const search = new SqliteFtsSearchAdapter(db);
+  const locks = new SqlLockAdapter(db);
+  const storage = createStorageFromEnv(env);
+  const auth = createAuthProviderWithDB(db, env);
 
   // Create repositories (stateless, can be shared)
   const repositories = {
@@ -45,7 +45,7 @@ export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure
     notifications: createNotificationRepository(db),
     members: createMemberRepository(db),
     invites: createInviteRepository(db),
-  }
+  };
 
   return {
     repositories,
@@ -54,8 +54,8 @@ export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure
     locks,
     auth,
     bootstrapToken: env.BOOTSTRAP_TOKEN,
-  }
+  };
 }
 
 // Re-export constants for services that need them
-export { MAX_NOTEPAD_DEPTH, MAX_CONTENT_BYTES, LOCK_TTL_MS } from './lib/constants'
+export { MAX_NOTEPAD_DEPTH, MAX_CONTENT_BYTES, LOCK_TTL_MS } from './lib/constants';

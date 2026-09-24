@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
+import { expect } from 'vitest';
 
-import invariantSql from '../../scripts/check-invariants.sql?raw'
+import invariantSql from '../../scripts/check-invariants.sql?raw';
 
 /**
  * Run every invariant query (I1–I10) from scripts/check-invariants.sql and
@@ -16,20 +16,16 @@ export async function expectInvariantsHold(db: D1Database): Promise<void> {
     .join('\n')
     .split(';')
     .map((s) => s.trim())
-    .filter((s) => s.length > 0)
+    .filter((s) => s.length > 0);
 
-  expect(statements.length).toBeGreaterThanOrEqual(10)
+  expect(statements.length).toBeGreaterThanOrEqual(10);
 
-  const results = await db.batch<Record<string, unknown>>(
-    statements.map((s) => db.prepare(s)),
-  )
+  const results = await db.batch<Record<string, unknown>>(statements.map((s) => db.prepare(s)));
 
   for (const [i, result] of results.entries()) {
-    const offending = result.results ?? []
+    const offending = result.results ?? [];
     if (offending.length > 0) {
-      throw new Error(
-        `Invariant violated (query ${i + 1}): ${JSON.stringify(offending, null, 2)}`,
-      )
+      throw new Error(`Invariant violated (query ${i + 1}): ${JSON.stringify(offending, null, 2)}`);
     }
   }
 }

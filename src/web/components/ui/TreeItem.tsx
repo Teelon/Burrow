@@ -1,15 +1,18 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface TreeItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  active?: boolean
-  depth?: number
-  diamondColor?: string
+  active?: boolean;
+  depth?: number;
+  diamondColor?: string;
 }
 
 /** Sidebar tree row — angular, 44px touch target, 4px accent bar when active. */
 export const TreeItem = React.forwardRef<HTMLButtonElement, TreeItemProps>(
-  ({ className, active = false, depth = 0, diamondColor, type = 'button', children, ...props }, ref) => (
+  (
+    { className, active = false, depth = 0, diamondColor, type = 'button', children, ...props },
+    ref,
+  ) => (
     <button
       ref={ref}
       type={type}
@@ -37,5 +40,5 @@ export const TreeItem = React.forwardRef<HTMLButtonElement, TreeItemProps>(
       <span className="min-w-0 flex-1 truncate">{children}</span>
     </button>
   ),
-)
-TreeItem.displayName = 'TreeItem'
+);
+TreeItem.displayName = 'TreeItem';

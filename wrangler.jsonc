@@ -6,12 +6,8 @@
   "assets": {
     "directory": "./dist/web",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*"],
   },
-  "d1_databases": [
-    { "binding": "DB", "database_name": "burrow", "migrations_dir": "migrations" }
-  ],
-  "r2_buckets": [
-    { "binding": "FILES", "bucket_name": "burrow-files" }
-  ]
+  "d1_databases": [{ "binding": "DB", "database_name": "burrow", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "burrow-files" }],
 }

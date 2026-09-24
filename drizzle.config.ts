@@ -1,4 +1,4 @@
-import { defineConfig } from 'drizzle-kit'
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   dialect: 'sqlite',
@@ -14,4 +14,4 @@ export default defineConfig({
     '!notepads_fts_docsize',
     '!notepads_fts_config',
   ],
-})
+});

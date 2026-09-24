@@ -1,14 +1,7 @@
-import { useEffect, useState } from 'react'
-import {
-  BlockNoteSchema,
-  defaultBlockSpecs,
-  defaultInlineContentSpecs,
-} from '@blocknote/core'
-import {
-  createReactInlineContentSpec,
-  createReactBlockSpec,
-} from '@blocknote/react'
-import { Calendar, FileText, Kanban, User } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs } from '@blocknote/core';
+import { createReactInlineContentSpec, createReactBlockSpec } from '@blocknote/react';
+import { Calendar, FileText, Kanban, User } from 'lucide-react';
 
 /**
  * Custom inline mention content spec — Basalt angular chips on token surfaces.
@@ -29,7 +22,7 @@ export const Mention = createReactInlineContentSpec(
   },
   {
     render: (props) => {
-      const { kind, label, isoDate } = props.inlineContent.props
+      const { kind, label, isoDate } = props.inlineContent.props;
 
       if (kind === 'date') {
         return (
@@ -37,7 +30,7 @@ export const Mention = createReactInlineContentSpec(
             <Calendar className="w-3 h-3 text-[var(--muted)]" />
             <span>{label || isoDate || 'Date'}</span>
           </span>
-        )
+        );
       }
 
       if (kind === 'user') {
@@ -46,7 +39,7 @@ export const Mention = createReactInlineContentSpec(
             <User className="w-3 h-3 text-[var(--accent)]" />
             <span>@{label || 'Former member'}</span>
           </span>
-        )
+        );
       }
 
       if (kind === 'notepad') {
@@ -55,7 +48,7 @@ export const Mention = createReactInlineContentSpec(
             <FileText className="w-3 h-3 text-purple-500" />
             <span>{label || 'Deleted notepad'}</span>
           </span>
-        )
+        );
       }
 
       if (kind === 'card') {
@@ -64,29 +57,35 @@ export const Mention = createReactInlineContentSpec(
             <Kanban className="w-3 h-3 text-emerald-500" />
             <span>{label || 'Deleted card'}</span>
           </span>
-        )
+        );
       }
 
-      return <span>@{label}</span>
+      return <span>@{label}</span>;
     },
   },
-)
+);
 
 /**
  * Live notepad link preview component — flat Basalt surface, angular.
  */
 function LiveNotepadLink({ notepadId }: { notepadId: string }) {
-  const [data, setData] = useState<{ title: string; icon?: string | null; deleted: boolean } | null>(null)
+  const [data, setData] = useState<{
+    title: string;
+    icon?: string | null;
+    deleted: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetch(`/api/notepads/${notepadId}`)
       .then((res) => {
-        if (!res.ok) throw new Error()
-        return res.json()
+        if (!res.ok) throw new Error();
+        return res.json();
       })
-      .then((json: any) => setData({ title: json.title, icon: json.icon, deleted: !!json.deletedAt }))
-      .catch(() => setData({ title: 'Deleted Notepad', deleted: true }))
-  }, [notepadId])
+      .then((json: any) =>
+        setData({ title: json.title, icon: json.icon, deleted: !!json.deletedAt }),
+      )
+      .catch(() => setData({ title: 'Deleted Notepad', deleted: true }));
+  }, [notepadId]);
 
   if (!data) {
     return (
@@ -94,16 +93,16 @@ function LiveNotepadLink({ notepadId }: { notepadId: string }) {
         <FileText className="w-3.5 h-3.5 text-purple-400" />
         <span>Loading notepad…</span>
       </div>
-    )
+    );
   }
 
   return (
     <div
       onClick={() => {
         if (!data.deleted) {
-          const pid = window.location.pathname.split('/')[2]
+          const pid = window.location.pathname.split('/')[2];
           if (pid) {
-            window.location.href = `/p/${pid}/notepads/${notepadId}`
+            window.location.href = `/p/${pid}/notepads/${notepadId}`;
           }
         }
       }}
@@ -115,9 +114,7 @@ function LiveNotepadLink({ notepadId }: { notepadId: string }) {
     >
       <div className="flex items-center gap-2.5">
         <span className="text-base">{data.icon || '📄'}</span>
-        <span className="font-semibold text-[var(--text)]">
-          {data.title || 'Untitled'}
-        </span>
+        <span className="font-semibold text-[var(--text)]">{data.title || 'Untitled'}</span>
       </div>
       {data.deleted && (
         <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
@@ -125,7 +122,7 @@ function LiveNotepadLink({ notepadId }: { notepadId: string }) {
         </span>
       )}
     </div>
-  )
+  );
 }
 
 /**
@@ -141,43 +138,45 @@ export const NotepadLinkBlock = createReactBlockSpec(
   },
   {
     render: (props) => {
-      const { notepadId } = props.block.props
-      return <LiveNotepadLink notepadId={notepadId} />
+      const { notepadId } = props.block.props;
+      return <LiveNotepadLink notepadId={notepadId} />;
     },
   },
-)
+);
 
 function LiveCardLink({ cardId }: { cardId: string }) {
   const [data, setData] = useState<{
-    title: string
-    boardName: string
-    columnName: string
-    priority?: string | null
-    deleted: boolean
-  } | null>(null)
+    title: string;
+    boardName: string;
+    columnName: string;
+    priority?: string | null;
+    deleted: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetch(`/api/cards/summary?ids=${cardId}`)
       .then((res) => {
-        if (!res.ok) throw new Error()
-        return res.json()
+        if (!res.ok) throw new Error();
+        return res.json();
       })
       .then((list: any[]) => {
         if (list.length > 0) {
-          const item = list[0]
+          const item = list[0];
           setData({
             title: item.title,
             boardName: item.boardName,
             columnName: item.columnName,
             priority: item.priority,
             deleted: false,
-          })
+          });
         } else {
-          setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true })
+          setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true });
         }
       })
-      .catch(() => setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true }))
-  }, [cardId])
+      .catch(() =>
+        setData({ title: 'Deleted Card', boardName: '', columnName: '', deleted: true }),
+      );
+  }, [cardId]);
 
   if (!data) {
     return (
@@ -185,7 +184,7 @@ function LiveCardLink({ cardId }: { cardId: string }) {
         <Kanban className="w-3.5 h-3.5 text-emerald-400" />
         <span>Loading task card…</span>
       </div>
-    )
+    );
   }
 
   return (
@@ -199,9 +198,7 @@ function LiveCardLink({ cardId }: { cardId: string }) {
       <div className="flex items-center gap-2.5">
         <Kanban className="w-4 h-4 text-emerald-500 shrink-0" />
         <div>
-          <div className="font-semibold text-[var(--text)]">
-            {data.title || 'Untitled'}
-          </div>
+          <div className="font-semibold text-[var(--text)]">{data.title || 'Untitled'}</div>
           {!data.deleted && (
             <div className="text-[11px] text-[var(--muted)]">
               {data.boardName} &bull; {data.columnName}
@@ -219,7 +216,7 @@ function LiveCardLink({ cardId }: { cardId: string }) {
         </span>
       ) : null}
     </div>
-  )
+  );
 }
 
 /**
@@ -235,11 +232,11 @@ export const CardLinkBlock = createReactBlockSpec(
   },
   {
     render: (props) => {
-      const { cardId } = props.block.props
-      return <LiveCardLink cardId={cardId} />
+      const { cardId } = props.block.props;
+      return <LiveCardLink cardId={cardId} />;
     },
   },
-)
+);
 
 /**
  * Burrow BlockNote schema combining default blocks with custom mentions and link blocks.
@@ -254,6 +251,6 @@ export const schema = BlockNoteSchema.create({
     ...defaultInlineContentSpecs,
     mention: Mention,
   },
-})
+});
 
-export type BurrowSchema = typeof schema
+export type BurrowSchema = typeof schema;

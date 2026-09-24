@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -10,27 +10,27 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
-} from '@dnd-kit/core'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useUpdateCard } from '../../../lib/queries'
-import { Button } from '../../ui/Button'
-import { Chip } from '../../ui/Chip'
-import { StatusDiamond } from '../../ui/StatusDiamond'
-import { priorityDiamondColor } from '../../ui/status'
-import { type CardItem, type ColumnItem } from './types'
+} from '@dnd-kit/core';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useUpdateCard } from '../../../lib/queries';
+import { Button } from '../../ui/Button';
+import { Chip } from '../../ui/Chip';
+import { StatusDiamond } from '../../ui/StatusDiamond';
+import { priorityDiamondColor } from '../../ui/status';
+import { type CardItem, type ColumnItem } from './types';
 
 interface CalendarViewProps {
-  boardId: string
-  columns: ColumnItem[]
-  onCardClick: (cardId: string) => void
+  boardId: string;
+  columns: ColumnItem[];
+  onCardClick: (cardId: string) => void;
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function dayKey(d: Date): string {
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 function CalendarChip({
@@ -38,16 +38,16 @@ function CalendarChip({
   onClick,
   overlay = false,
 }: {
-  card: CardItem
-  onClick?: () => void
-  overlay?: boolean
+  card: CardItem;
+  onClick?: () => void;
+  overlay?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cal:${card.id}`,
     disabled: overlay,
-  })
+  });
 
-  const overdue = card.dueDate != null && card.dueDate < Date.now()
+  const overdue = card.dueDate != null && card.dueDate < Date.now();
 
   return (
     <Chip
@@ -63,7 +63,7 @@ function CalendarChip({
       <StatusDiamond color={priorityDiamondColor(card.priority)} />
       <span className="truncate">{card.title || 'Untitled'}</span>
     </Chip>
-  )
+  );
 }
 
 function DayCell({
@@ -73,22 +73,20 @@ function DayCell({
   cards,
   onCardClick,
 }: {
-  date: Date
-  inMonth: boolean
-  isToday: boolean
-  cards: CardItem[]
-  onCardClick: (cardId: string) => void
+  date: Date;
+  inMonth: boolean;
+  isToday: boolean;
+  cards: CardItem[];
+  onCardClick: (cardId: string) => void;
 }) {
-  const key = dayKey(date)
-  const { setNodeRef, isOver } = useDroppable({ id: `day:${key}` })
+  const key = dayKey(date);
+  const { setNodeRef, isOver } = useDroppable({ id: `day:${key}` });
 
   return (
     <div
       ref={setNodeRef}
       className={`min-h-28 border p-1.5 transition-colors ${
-        isOver
-          ? 'border-[var(--accent)] bg-[var(--hi)]'
-          : 'border-[var(--line)]'
+        isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--line)]'
       } ${!inMonth ? 'bg-[var(--surface2)]/60 opacity-50' : 'bg-[var(--surface)]/40'}`}
     >
       <div className="mb-1 flex items-center justify-between px-0.5">
@@ -110,7 +108,7 @@ function DayCell({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -119,79 +117,79 @@ function DayCell({
  */
 export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProps) {
   const [monthCursor, setMonthCursor] = useState(() => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), 1)
-  })
-  const [activeCard, setActiveCard] = useState<CardItem | null>(null)
-  const updateCard = useUpdateCard()
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [activeCard, setActiveCard] = useState<CardItem | null>(null);
+  const updateCard = useUpdateCard();
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const allCards = useMemo(() => columns.flatMap((c) => c.cards), [columns])
+  const allCards = useMemo(() => columns.flatMap((c) => c.cards), [columns]);
 
   const { scheduledByDay, unscheduled } = useMemo(() => {
-    const byDay = new Map<string, CardItem[]>()
-    const noDate: CardItem[] = []
+    const byDay = new Map<string, CardItem[]>();
+    const noDate: CardItem[] = [];
     for (const card of allCards) {
       if (card.dueDate == null) {
-        noDate.push(card)
-        continue
+        noDate.push(card);
+        continue;
       }
-      const key = dayKey(new Date(card.dueDate))
-      const list = byDay.get(key)
-      if (list) list.push(card)
-      else byDay.set(key, [card])
+      const key = dayKey(new Date(card.dueDate));
+      const list = byDay.get(key);
+      if (list) list.push(card);
+      else byDay.set(key, [card]);
     }
-    return { scheduledByDay: byDay, unscheduled: noDate }
-  }, [allCards])
+    return { scheduledByDay: byDay, unscheduled: noDate };
+  }, [allCards]);
 
   const days = useMemo(() => {
-    const year = monthCursor.getFullYear()
-    const month = monthCursor.getMonth()
-    const first = new Date(year, month, 1)
-    const gridStart = new Date(year, month, 1 - first.getDay())
+    const year = monthCursor.getFullYear();
+    const month = monthCursor.getMonth();
+    const first = new Date(year, month, 1);
+    const gridStart = new Date(year, month, 1 - first.getDay());
     return Array.from({ length: 42 }, (_, i) => {
-      const d = new Date(gridStart)
-      d.setDate(gridStart.getDate() + i)
-      return d
-    })
-  }, [monthCursor])
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate() + i);
+      return d;
+    });
+  }, [monthCursor]);
 
-  const todayKey = dayKey(new Date())
+  const todayKey = dayKey(new Date());
 
   const shiftMonth = (delta: number) =>
-    setMonthCursor((cur) => new Date(cur.getFullYear(), cur.getMonth() + delta, 1))
+    setMonthCursor((cur) => new Date(cur.getFullYear(), cur.getMonth() + delta, 1));
 
   const handleDragStart = (event: DragStartEvent) => {
-    const raw = String(event.active.id)
-    if (!raw.startsWith('cal:')) return
-    const id = raw.slice(4)
-    setActiveCard(allCards.find((c) => c.id === id) ?? null)
-  }
+    const raw = String(event.active.id);
+    if (!raw.startsWith('cal:')) return;
+    const id = raw.slice(4);
+    setActiveCard(allCards.find((c) => c.id === id) ?? null);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setActiveCard(null)
-    const { active, over } = event
-    if (!over) return
+    setActiveCard(null);
+    const { active, over } = event;
+    if (!over) return;
 
-    const rawActive = String(active.id)
-    const rawOver = String(over.id)
-    if (!rawActive.startsWith('cal:') || !rawOver.startsWith('day:')) return
+    const rawActive = String(active.id);
+    const rawOver = String(over.id);
+    if (!rawActive.startsWith('cal:') || !rawOver.startsWith('day:')) return;
 
-    const cardId = rawActive.slice(4)
-    const key = rawOver.slice(4)
-    const card = allCards.find((c) => c.id === cardId)
-    if (!card) return
+    const cardId = rawActive.slice(4);
+    const key = rawOver.slice(4);
+    const card = allCards.find((c) => c.id === cardId);
+    if (!card) return;
 
     // Same day? nothing to do.
-    if (card.dueDate != null && dayKey(new Date(card.dueDate)) === key) return
+    if (card.dueDate != null && dayKey(new Date(card.dueDate)) === key) return;
 
     // Keep the original time-of-day, move only the date (local time).
-    const parts = key.split('-').map(Number)
-    const [y, m, d] = parts
-    if (!y || !m || !d) return
+    const parts = key.split('-').map(Number);
+    const [y, m, d] = parts;
+    if (!y || !m || !d) return;
 
-    const src = card.dueDate != null ? new Date(card.dueDate) : null
+    const src = card.dueDate != null ? new Date(card.dueDate) : null;
     const next = new Date(
       y,
       m - 1,
@@ -200,14 +198,14 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
       src ? src.getMinutes() : 0,
       src ? src.getSeconds() : 0,
       src ? src.getMilliseconds() : 0,
-    )
-    updateCard.mutate({ cardId, boardId, dueDate: next.getTime() })
-  }
+    );
+    updateCard.mutate({ cardId, boardId, dueDate: next.getTime() });
+  };
 
   const monthLabel = monthCursor.toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
-  })
+  });
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-[var(--bg)] text-[var(--text)]">
@@ -216,7 +214,10 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
         <div className="flex items-center gap-2">
           <h2
             className="text-sm md:text-base text-[var(--text)] uppercase tracking-wider"
-            style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+            style={{
+              fontFamily: 'Archivo, sans-serif',
+              fontVariationSettings: "'wdth' 122, 'wght' 800",
+            }}
           >
             {monthLabel}
           </h2>
@@ -243,8 +244,8 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
           variant="secondary"
           size="sm"
           onClick={() => {
-            const now = new Date()
-            setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1))
+            const now = new Date();
+            setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
           }}
         >
           Today
@@ -266,11 +267,7 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
             </div>
             <div className="flex flex-wrap gap-1.5">
               {unscheduled.map((card) => (
-                <CalendarChip
-                  key={card.id}
-                  card={card}
-                  onClick={() => onCardClick(card.id)}
-                />
+                <CalendarChip key={card.id} card={card} onClick={() => onCardClick(card.id)} />
               ))}
             </div>
           </div>
@@ -291,7 +288,7 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
         {/* Month grid */}
         <div className="grid grid-cols-7 gap-1.5">
           {days.map((date) => {
-            const key = dayKey(date)
+            const key = dayKey(date);
             return (
               <DayCell
                 key={key}
@@ -301,7 +298,7 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
                 cards={scheduledByDay.get(key) ?? []}
                 onCardClick={onCardClick}
               />
-            )
+            );
           })}
         </div>
 
@@ -310,5 +307,5 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
         </DragOverlay>
       </DndContext>
     </div>
-  )
+  );
 }

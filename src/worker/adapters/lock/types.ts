@@ -1,8 +1,8 @@
 export interface LockAcquireResult {
-  acquired: boolean
-  holderUserId?: string
-  holderName?: string
-  expiresAt?: number
+  acquired: boolean;
+  holderUserId?: string;
+  holderName?: string;
+  expiresAt?: number;
 }
 
 export interface ILockAdapter {
@@ -11,11 +11,7 @@ export interface ILockAdapter {
     userId: string,
     clientId: string,
     ttlMs: number,
-  ): Promise<LockAcquireResult>
-  heartbeat(
-    resourceId: string,
-    clientId: string,
-    ttlMs: number,
-  ): Promise<boolean>
-  release(resourceId: string, clientId: string): Promise<void>
+  ): Promise<LockAcquireResult>;
+  heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean>;
+  release(resourceId: string, clientId: string): Promise<void>;
 }

@@ -1,60 +1,56 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { Check, ChevronDown, Plus } from 'lucide-react'
-import { useProjects, useCreateProject } from '../../lib/queries'
-import { Avatar } from '../ui/Avatar'
-import { ModalShell } from '../ui/ModalShell'
-import { Input } from '../ui/Input'
-import { Button } from '../ui/Button'
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Check, ChevronDown, Plus } from 'lucide-react';
+import { useProjects, useCreateProject } from '../../lib/queries';
+import { Avatar } from '../ui/Avatar';
+import { ModalShell } from '../ui/ModalShell';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
 
 interface ProjectSwitcherProps {
-  currentProjectId?: string
+  currentProjectId?: string;
 }
 
 export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
-  const navigate = useNavigate()
-  const { data: projects = [] } = useProjects()
-  const createProject = useCreateProject()
+  const navigate = useNavigate();
+  const { data: projects = [] } = useProjects();
+  const createProject = useCreateProject();
 
-  const [isOpen, setIsOpen] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [newProjectName, setNewProjectName] = useState('')
-  const [newProjectIcon, setNewProjectIcon] = useState('📁')
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectIcon, setNewProjectIcon] = useState('📁');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentProject =
-    projects.find((p) => p.id === currentProjectId) || projects[0]
+  const currentProject = projects.find((p) => p.id === currentProjectId) || projects[0];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false)
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSelect = (projectId: string) => {
-    localStorage.setItem('burrow-last-project', projectId)
-    setIsOpen(false)
-    navigate({ to: `/p/${projectId}` })
-  }
+    localStorage.setItem('burrow-last-project', projectId);
+    setIsOpen(false);
+    navigate({ to: `/p/${projectId}` });
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newProjectName.trim()) return
+    e.preventDefault();
+    if (!newProjectName.trim()) return;
     const res = await createProject.mutateAsync({
       name: newProjectName.trim(),
       icon: newProjectIcon,
-    })
-    setNewProjectName('')
-    setShowCreateModal(false)
-    handleSelect(res.id)
-  }
+    });
+    setNewProjectName('');
+    setShowCreateModal(false);
+    handleSelect(res.id);
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -64,9 +60,7 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
       >
         <div className="flex items-center gap-2 min-w-0">
           <Avatar name={currentProject?.name || 'Select Project'} size="xs" />
-          <span className="truncate text-text">
-            {currentProject?.name || 'Select Project'}
-          </span>
+          <span className="truncate text-text">{currentProject?.name || 'Select Project'}</span>
         </div>
         <ChevronDown className="w-4 h-4 text-muted shrink-0" />
       </button>
@@ -85,13 +79,9 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
               >
                 <div className="flex items-center gap-2 truncate">
                   <span>{p.icon || '📁'}</span>
-                  <span className="truncate text-text">
-                    {p.name}
-                  </span>
+                  <span className="truncate text-text">{p.name}</span>
                 </div>
-                {p.id === currentProject?.id && (
-                  <Check className="w-4 h-4 text-accent shrink-0" />
-                )}
+                {p.id === currentProject?.id && <Check className="w-4 h-4 text-accent shrink-0" />}
               </button>
             ))}
           </div>
@@ -99,8 +89,8 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
           <div className="border-t border-hair mt-1 pt-1">
             <button
               onClick={() => {
-                setIsOpen(false)
-                setShowCreateModal(true)
+                setIsOpen(false);
+                setShowCreateModal(true);
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-text hover:bg-hi text-left transition min-h-[44px] md:min-h-0"
             >
@@ -119,9 +109,7 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">
-              Icon & Name
-            </label>
+            <label className="block text-xs font-medium text-muted mb-1">Icon & Name</label>
             <div className="flex gap-2">
               <Input
                 value={newProjectIcon}
@@ -142,11 +130,7 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setShowCreateModal(false)}
-            >
+            <Button type="button" variant="ghost" onClick={() => setShowCreateModal(false)}>
               Cancel
             </Button>
             <Button
@@ -160,5 +144,5 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
         </form>
       </ModalShell>
     </div>
-  )
+  );
 }

@@ -1,31 +1,31 @@
-import { useState } from 'react'
-import { CalendarDays, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react'
-import { useUpdateCard } from '../../../lib/queries'
-import { Avatar, AvatarGroup } from '../../ui/Avatar'
-import { Badge } from '../../ui/Badge'
-import { StatusDiamond } from '../../ui/StatusDiamond'
-import { PRIORITY_BADGES, PRIORITIES, type ColumnItem, type Priority } from './types'
+import { useState } from 'react';
+import { CalendarDays, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { useUpdateCard } from '../../../lib/queries';
+import { Avatar, AvatarGroup } from '../../ui/Avatar';
+import { Badge } from '../../ui/Badge';
+import { StatusDiamond } from '../../ui/StatusDiamond';
+import { PRIORITY_BADGES, PRIORITIES, type ColumnItem, type Priority } from './types';
 
 interface ListViewProps {
-  boardId: string
-  columns: ColumnItem[]
-  onCardClick: (cardId: string) => void
+  boardId: string;
+  columns: ColumnItem[];
+  onCardClick: (cardId: string) => void;
 }
 
 function toDateInput(ts: number | null | undefined): string {
-  if (!ts) return ''
-  const d = new Date(ts)
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+  if (!ts) return '';
+  const d = new Date(ts);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /** Parse `yyyy-mm-dd` as a local noon timestamp (avoids UTC off-by-one). */
 function parseDateInput(v: string): number | null {
-  const parts = v.split('-').map(Number)
-  const [y, m, d] = parts
-  if (!y || !m || !d || parts.length !== 3) return null
-  return new Date(y, m - 1, d, 12).getTime()
+  const parts = v.split('-').map(Number);
+  const [y, m, d] = parts;
+  if (!y || !m || !d || parts.length !== 3) return null;
+  return new Date(y, m - 1, d, 12).getTime();
 }
 
 /**
@@ -34,10 +34,10 @@ function parseDateInput(v: string): number | null {
  * inline quick-edit for priority and due date.
  */
 export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
-  const updateCard = useUpdateCard()
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const updateCard = useUpdateCard();
 
-  const gridCols = 'grid grid-cols-[minmax(0,1fr)_96px_140px_120px_minmax(0,1fr)] gap-3'
+  const gridCols = 'grid grid-cols-[minmax(0,1fr)_96px_140px_120px_minmax(0,1fr)] gap-3';
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-[var(--bg)] text-[var(--text)]">
@@ -54,7 +54,7 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
 
       <div className="mt-3 space-y-5">
         {columns.map((col) => {
-          const isCollapsed = Boolean(collapsed[col.id])
+          const isCollapsed = Boolean(collapsed[col.id]);
           return (
             <section key={col.id}>
               {/* Group header */}
@@ -69,12 +69,13 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                 ) : (
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
                 )}
-                {col.color && (
-                  <StatusDiamond color={col.color} size={9} />
-                )}
+                {col.color && <StatusDiamond color={col.color} size={9} />}
                 <span
                   className="truncate text-sm text-[var(--text)] uppercase tracking-wider"
-                  style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+                  style={{
+                    fontFamily: 'Archivo, sans-serif',
+                    fontVariationSettings: "'wdth' 122, 'wght' 800",
+                  }}
                 >
                   {col.name}
                 </span>
@@ -96,7 +97,7 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                     <div className="px-3 py-2 text-xs italic text-[var(--muted)]">No cards</div>
                   )}
                   {col.cards.map((card) => {
-                    const overdue = card.dueDate != null && card.dueDate < Date.now()
+                    const overdue = card.dueDate != null && card.dueDate < Date.now();
                     return (
                       <div
                         key={card.id}
@@ -105,8 +106,8 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                         onClick={() => onCardClick(card.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            onCardClick(card.id)
+                            e.preventDefault();
+                            onCardClick(card.id);
                           }
                         }}
                         className={`${gridCols} items-center px-3 py-1.5 min-h-[44px] text-xs cursor-pointer border border-transparent border-l-4 hover:bg-[var(--surface)] hover:border-[var(--line)] transition`}
@@ -135,12 +136,12 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                           value={card.priority ?? ''}
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
-                            const v = e.target.value
+                            const v = e.target.value;
                             updateCard.mutate({
                               cardId: card.id,
                               boardId,
                               priority: v ? (v as Priority) : null,
-                            })
+                            });
                           }}
                           className={`chamfer-sm border border-transparent bg-transparent px-1 py-0.5 min-h-[44px] md:min-h-0 text-[11px] font-semibold outline-none hover:border-[var(--line)] focus:border-[var(--accent)] ${
                             card.priority && PRIORITY_BADGES[card.priority]
@@ -158,7 +159,10 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                         </select>
 
                         {/* Due date (inline quick-edit) */}
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className="flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <CalendarDays
                             className={`h-3.5 w-3.5 shrink-0 ${
                               overdue ? 'text-[var(--danger)]' : 'text-[var(--muted)]'
@@ -168,12 +172,12 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                             type="date"
                             value={toDateInput(card.dueDate)}
                             onChange={(e) => {
-                              const ts = e.target.value ? parseDateInput(e.target.value) : null
+                              const ts = e.target.value ? parseDateInput(e.target.value) : null;
                               updateCard.mutate({
                                 cardId: card.id,
                                 boardId,
                                 dueDate: e.target.value ? ts : null,
-                              })
+                              });
                             }}
                             className={`min-w-0 border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none hover:border-[var(--line)] focus:border-[var(--accent)] ${
                               overdue ? 'text-[var(--danger)] font-medium' : 'text-[var(--text)]'
@@ -211,14 +215,14 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                           )}
                         </div>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               )}
             </section>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

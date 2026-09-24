@@ -1,4 +1,4 @@
-export type SlashContext = 'notepad' | 'card' | 'quickadd'
+export type SlashContext = 'notepad' | 'card' | 'quickadd';
 
 export type SlashActionType =
   | 'basic'
@@ -14,16 +14,16 @@ export type SlashActionType =
   | 'tag'
   | 'move'
   | 'date'
-  | 'mention'
+  | 'mention';
 
 export interface SlashCommand {
-  id: string
-  label: string
-  aliases: string[]
-  group: 'Basic' | 'Lists' | 'Structural' | 'Links & References' | 'Task & Metadata'
-  contexts: SlashContext[]
-  action: SlashActionType
-  icon?: string
+  id: string;
+  label: string;
+  aliases: string[];
+  group: 'Basic' | 'Lists' | 'Structural' | 'Links & References' | 'Task & Metadata';
+  contexts: SlashContext[];
+  action: SlashActionType;
+  icon?: string;
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
@@ -225,19 +225,16 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     action: 'move',
     icon: 'ArrowRight',
   },
-]
+];
 
-export function getSlashCommandsForContext(
-  context: SlashContext,
-  query = '',
-): SlashCommand[] {
-  const q = query.toLowerCase().trim()
+export function getSlashCommandsForContext(context: SlashContext, query = ''): SlashCommand[] {
+  const q = query.toLowerCase().trim();
   return SLASH_COMMANDS.filter((cmd) => {
-    if (!cmd.contexts.includes(context)) return false
-    if (!q) return true
+    if (!cmd.contexts.includes(context)) return false;
+    if (!q) return true;
     return (
       cmd.label.toLowerCase().includes(q) ||
       cmd.aliases.some((alias) => alias.toLowerCase().includes(q))
-    )
-  })
+    );
+  });
 }

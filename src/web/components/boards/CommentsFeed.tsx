@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
-import { MessageSquare, Send, Trash2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react';
+import { MessageSquare, Send, Trash2 } from 'lucide-react';
 import {
   useComments,
   useCreateComment,
@@ -7,43 +7,51 @@ import {
   useMe,
   useMembers,
   type CommentItem,
-} from '../../lib/queries'
-import { Avatar } from '../ui/Avatar'
-import { Badge } from '../ui/Badge'
+} from '../../lib/queries';
+import { Avatar } from '../ui/Avatar';
+import { Badge } from '../ui/Badge';
 
 interface CommentsFeedProps {
-  cardId: string
+  cardId: string;
 }
 
 /** `@[Display Name](userId)` → segments with mention chips. */
 function renderContent(content: string) {
-  const parts: Array<{ text: string; mention?: { label: string } }> = []
-  const re = /@\[([^\]]*)\]\([A-Za-z0-9_-]+\)/g
-  let last = 0
-  let match: RegExpExecArray | null
+  const parts: Array<{ text: string; mention?: { label: string } }> = [];
+  const re = /@\[([^\]]*)\]\([A-Za-z0-9_-]+\)/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
   while ((match = re.exec(content)) !== null) {
-    if (match.index > last) parts.push({ text: content.slice(last, match.index) })
-    parts.push({ text: match[0], mention: { label: match[1] || 'someone' } })
-    last = match.index + match[0].length
+    if (match.index > last) parts.push({ text: content.slice(last, match.index) });
+    parts.push({ text: match[0], mention: { label: match[1] || 'someone' } });
+    last = match.index + match[0].length;
   }
-  if (last < content.length) parts.push({ text: content.slice(last) })
-  return parts
+  if (last < content.length) parts.push({ text: content.slice(last) });
+  return parts;
 }
 
 function timeAgo(ts: number): string {
-  const diff = Date.now() - ts
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const diff = Date.now() - ts;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function CommentRow({ comment, canDelete, onDelete }: { comment: CommentItem; canDelete: boolean; onDelete: () => void }) {
-  const parts = useMemo(() => renderContent(comment.content), [comment.content])
+function CommentRow({
+  comment,
+  canDelete,
+  onDelete,
+}: {
+  comment: CommentItem;
+  canDelete: boolean;
+  onDelete: () => void;
+}) {
+  const parts = useMemo(() => renderContent(comment.content), [comment.content]);
 
   return (
     <div className="group flex items-start gap-2.5 py-2">
@@ -53,7 +61,10 @@ function CommentRow({ comment, canDelete, onDelete }: { comment: CommentItem; ca
           <span className="text-xs font-semibold text-[var(--text)]">
             {comment.name || 'Someone'}
           </span>
-          <span className="text-[10px] text-[var(--muted)]" title={new Date(comment.createdAt).toLocaleString()}>
+          <span
+            className="text-[10px] text-[var(--muted)]"
+            title={new Date(comment.createdAt).toLocaleString()}
+          >
             {timeAgo(comment.createdAt)}
           </span>
           {canDelete && (
@@ -80,29 +91,29 @@ function CommentRow({ comment, canDelete, onDelete }: { comment: CommentItem; ca
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function CommentsFeed({ cardId }: CommentsFeedProps) {
-  const { data: comments = [], isLoading } = useComments(cardId)
-  const { data: me } = useMe()
-  const { data: members = [] } = useMembers()
-  const createComment = useCreateComment()
-  const deleteComment = useDeleteComment()
+  const { data: comments = [], isLoading } = useComments(cardId);
+  const { data: me } = useMe();
+  const { data: members = [] } = useMembers();
+  const createComment = useCreateComment();
+  const deleteComment = useDeleteComment();
 
-  const [draft, setDraft] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [draft, setDraft] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Member picker while typing `@query` right before the caret.
   const mentionQuery = useMemo(() => {
-    const el = textareaRef.current
-    if (!el) return null
-    const before = draft.slice(0, el.selectionStart ?? draft.length)
-    const match = /@([A-Za-z0-9_ ]{0,24})$/.exec(before)
-    return match ? match[1] ?? '' : null
+    const el = textareaRef.current;
+    if (!el) return null;
+    const before = draft.slice(0, el.selectionStart ?? draft.length);
+    const match = /@([A-Za-z0-9_ ]{0,24})$/.exec(before);
+    return match ? (match[1] ?? '') : null;
     // Note: deliberately depends only on `draft`; `el.selectionStart` is read
     // live so caret moves without typing also refresh the query.
-  }, [draft])
+  }, [draft]);
 
   const mentionMatches =
     mentionQuery !== null
@@ -111,52 +122,53 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
             (m.name || m.email || '').toLowerCase().includes(mentionQuery.toLowerCase()),
           )
           .slice(0, 6)
-      : []
+      : [];
 
   const insertMention = (member: { userId: string; name?: string | null; email: string }) => {
-    const el = textareaRef.current
-    if (!el) return
-    const caret = el.selectionStart ?? draft.length
-    const before = draft.slice(0, caret)
-    const after = draft.slice(caret)
-    const match = /@([A-Za-z0-9_ ]{0,24})$/.exec(before)
-    const start = match ? caret - match[0].length : caret
-    const label = member.name || member.email
-    const insert = `@[${label}](${member.userId}) `
-    setDraft(before.slice(0, start) + insert + after)
+    const el = textareaRef.current;
+    if (!el) return;
+    const caret = el.selectionStart ?? draft.length;
+    const before = draft.slice(0, caret);
+    const after = draft.slice(caret);
+    const match = /@([A-Za-z0-9_ ]{0,24})$/.exec(before);
+    const start = match ? caret - match[0].length : caret;
+    const label = member.name || member.email;
+    const insert = `@[${label}](${member.userId}) `;
+    setDraft(before.slice(0, start) + insert + after);
     requestAnimationFrame(() => {
-      el.focus()
-      const pos = start + insert.length
-      el.setSelectionRange(pos, pos)
-    })
-  }
+      el.focus();
+      const pos = start + insert.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
 
   const send = () => {
-    const content = draft.trim()
-    if (!content || createComment.isPending) return
+    const content = draft.trim();
+    if (!content || createComment.isPending) return;
     createComment.mutate(
       { cardId, content },
       {
         onSuccess: () => {
-          setDraft('')
-          textareaRef.current?.focus()
+          setDraft('');
+          textareaRef.current?.focus();
         },
       },
-    )
-  }
+    );
+  };
 
   return (
     <div className="border-t border-[var(--hair)] pt-4">
       <h3
         className="text-xs uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5 mb-1"
-        style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+        style={{
+          fontFamily: 'Archivo, sans-serif',
+          fontVariationSettings: "'wdth' 122, 'wght' 800",
+        }}
       >
         <MessageSquare className="w-3.5 h-3.5" />
         <span>Discussion</span>
         {comments.length > 0 && (
-          <span className="text-[var(--muted)] font-normal">
-            ({comments.length})
-          </span>
+          <span className="text-[var(--muted)] font-normal">({comments.length})</span>
         )}
       </h3>
 
@@ -175,7 +187,7 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
               canDelete={comment.userId === me?.user?.id || me?.role === 'owner'}
               onDelete={() => {
                 if (window.confirm('Delete this comment?')) {
-                  deleteComment.mutate({ cardId, commentId: comment.id })
+                  deleteComment.mutate({ cardId, commentId: comment.id });
                 }
               }}
             />
@@ -209,8 +221,8 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                e.preventDefault()
-                send()
+                e.preventDefault();
+                send();
               }
             }}
             rows={Math.min(4, Math.max(2, draft.split('\n').length))}
@@ -230,5 +242,5 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

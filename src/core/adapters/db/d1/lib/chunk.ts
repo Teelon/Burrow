@@ -4,7 +4,7 @@
  * chunked BEFORE it goes into a db.batch() array. Routes and services must use
  * this helper instead of hand-rolling chunking.
  */
-export const D1_MAX_BOUND_PARAMS = 100
+export const D1_MAX_BOUND_PARAMS = 100;
 
 /**
  * Split `items` into chunks so each chunk's statement stays within the bound
@@ -23,27 +23,27 @@ export function chunkByParamBudget<T>(
   maxParams: number = D1_MAX_BOUND_PARAMS,
 ): T[][] {
   if (!Number.isInteger(paramsPerItem) || paramsPerItem < 1) {
-    throw new Error(`paramsPerItem must be a positive integer, got ${paramsPerItem}`)
+    throw new Error(`paramsPerItem must be a positive integer, got ${paramsPerItem}`);
   }
   if (fixedParams < 0) {
-    throw new Error(`fixedParams must be >= 0, got ${fixedParams}`)
+    throw new Error(`fixedParams must be >= 0, got ${fixedParams}`);
   }
-  const available = maxParams - fixedParams
+  const available = maxParams - fixedParams;
   if (available < paramsPerItem) {
     throw new Error(
       `each item needs ${paramsPerItem} bound parameters but only ${available} are available ` +
         `(max ${maxParams}, fixed ${fixedParams})`,
-    )
+    );
   }
-  const perChunk = Math.floor(available / paramsPerItem)
-  const chunks: T[][] = []
+  const perChunk = Math.floor(available / paramsPerItem);
+  const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += perChunk) {
-    chunks.push(items.slice(i, i + perChunk) as T[])
+    chunks.push(items.slice(i, i + perChunk) as T[]);
   }
-  return chunks
+  return chunks;
 }
 
 /** Chunk a large IN (...) list; `fixedParams` covers the statement's other parameters. */
 export function chunkInList<T>(values: readonly T[], fixedParams = 0): T[][] {
-  return chunkByParamBudget(values, 1, fixedParams)
+  return chunkByParamBudget(values, 1, fixedParams);
 }

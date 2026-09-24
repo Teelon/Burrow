@@ -1,17 +1,17 @@
-import type { R2Bucket } from '@cloudflare/workers-types'
-import { LocalStorageAdapter } from './local'
-import { R2StorageAdapter } from './r2'
-import { S3StorageAdapter } from './s3'
-import type { IStorageAdapter } from './types'
+import type { R2Bucket } from '@cloudflare/workers-types';
+import { LocalStorageAdapter } from './local';
+import { R2StorageAdapter } from './r2';
+import { S3StorageAdapter } from './s3';
+import type { IStorageAdapter } from './types';
 
 export function createStorageFromEnv(
   env: { FILES?: R2Bucket | null } & { LOCAL_STORAGE_PATH?: string },
 ): IStorageAdapter {
   if (env.FILES) {
-    return new R2StorageAdapter(env.FILES)
+    return new R2StorageAdapter(env.FILES);
   }
-  const procEnv = typeof process !== 'undefined' && process.env ? process.env : {}
-  const e = env as Record<string, unknown>
+  const procEnv = typeof process !== 'undefined' && process.env ? process.env : {};
+  const e = env as Record<string, unknown>;
   if (e.S3_ENDPOINT && e.S3_BUCKET) {
     return new S3StorageAdapter({
       endpoint: e.S3_ENDPOINT as string,
@@ -20,11 +20,9 @@ export function createStorageFromEnv(
       accessKey: ((e.S3_ACCESS_KEY as string) ?? procEnv.S3_ACCESS_KEY ?? '') as string,
       secretKey: ((e.S3_SECRET_KEY as string) ?? procEnv.S3_SECRET_KEY ?? '') as string,
       forcePathStyle:
-        (e.S3_FORCE_PATH_STYLE as string) === 'true' ||
-        procEnv.S3_FORCE_PATH_STYLE === 'true',
-    })
+        (e.S3_FORCE_PATH_STYLE as string) === 'true' || procEnv.S3_FORCE_PATH_STYLE === 'true',
+    });
   }
-  const root =
-    env.LOCAL_STORAGE_PATH ?? procEnv.LOCAL_STORAGE_PATH ?? './data/uploads'
-  return new LocalStorageAdapter(root)
+  const root = env.LOCAL_STORAGE_PATH ?? procEnv.LOCAL_STORAGE_PATH ?? './data/uploads';
+  return new LocalStorageAdapter(root);
 }

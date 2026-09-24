@@ -1,10 +1,10 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface ModalShellProps extends React.HTMLAttributes<HTMLDivElement> {
-  open: boolean
-  onClose?: () => void
-  title?: string
+  open: boolean;
+  onClose?: () => void;
+  title?: string;
 }
 
 /** Angular dialog wrapper — flat Basalt surface, no floating shadow. */
@@ -17,15 +17,15 @@ export const ModalShell: React.FC<ModalShellProps> = ({
   ...props
 }) => {
   React.useEffect(() => {
-    if (!open || !onClose) return
+    if (!open || !onClose) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -52,5 +52,5 @@ export const ModalShell: React.FC<ModalShellProps> = ({
         <div className="px-4 py-3">{children}</div>
       </div>
     </div>
-  )
-}
+  );
+};

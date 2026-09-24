@@ -1,11 +1,11 @@
-import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import * as schema from './schema'
-import type { AuthProvider } from '../../../infrastructure/types'
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import * as schema from './schema';
+import type { AuthProvider } from '../../../infrastructure/types';
 
 interface EnvBindings {
-  BETTER_AUTH_SECRET: string
-  BETTER_AUTH_URL: string
+  BETTER_AUTH_SECRET: string;
+  BETTER_AUTH_URL: string;
 }
 
 /**
@@ -15,13 +15,13 @@ interface EnvBindings {
 export function createAuthProvider(_env: EnvBindings): AuthProvider {
   return {
     async getSession(_headers: Headers) {
-      throw new Error('AuthProvider.getSession requires DB - use createAuthProviderWithDB instead')
+      throw new Error('AuthProvider.getSession requires DB - use createAuthProviderWithDB instead');
     },
 
     async handler(_req: Request) {
-      throw new Error('AuthProvider.handler requires DB - use createAuthProviderWithDB instead')
+      throw new Error('AuthProvider.handler requires DB - use createAuthProviderWithDB instead');
     },
-  }
+  };
 }
 
 // Factory that creates the auth provider with a DB instance
@@ -31,12 +31,12 @@ export function createAuthProviderWithDB(db: any, env: EnvBindings): AuthProvide
     'http://127.0.0.1:5173',
     'http://localhost:8787',
     'http://127.0.0.1:8787',
-  ]
+  ];
   if (env.BETTER_AUTH_URL) {
     try {
-      const urlOrigin = new URL(env.BETTER_AUTH_URL).origin
+      const urlOrigin = new URL(env.BETTER_AUTH_URL).origin;
       if (!trustedOrigins.includes(urlOrigin)) {
-        trustedOrigins.push(urlOrigin)
+        trustedOrigins.push(urlOrigin);
       }
     } catch {
       // ignore
@@ -59,18 +59,18 @@ export function createAuthProviderWithDB(db: any, env: EnvBindings): AuthProvide
     emailAndPassword: {
       enabled: true,
     },
-  })
+  });
 
   return {
     async getSession(headers: Headers) {
-      const session = await auth.api.getSession({ headers })
-      if (!session) return null
+      const session = await auth.api.getSession({ headers });
+      if (!session) return null;
       // Return only userId; middleware will resolve workspace/role via member repo
-      return { userId: session.user.id }
+      return { userId: session.user.id };
     },
 
     async handler(req: Request) {
-      return auth.handler(req)
+      return auth.handler(req);
     },
-  }
+  };
 }

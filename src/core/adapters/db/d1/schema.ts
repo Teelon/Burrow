@@ -1,4 +1,11 @@
-import { integer, primaryKey, sqliteTable, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * Burrow Drizzle schema (source of truth) - copied from worker for D1 adapter.
@@ -19,7 +26,7 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
-})
+});
 
 export const session = sqliteTable(
   'session',
@@ -36,7 +43,7 @@ export const session = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
   },
   (t) => [index('session_user_idx').on(t.userId)],
-)
+);
 
 export const account = sqliteTable(
   'account',
@@ -58,7 +65,7 @@ export const account = sqliteTable(
     updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
   },
   (t) => [index('account_user_idx').on(t.userId)],
-)
+);
 
 export const verification = sqliteTable('verification', {
   id: text('id').primaryKey(),
@@ -67,7 +74,7 @@ export const verification = sqliteTable('verification', {
   expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
-})
+});
 
 // ---------------------------------------------------------------------------
 // Workspace / members / invites
@@ -78,7 +85,7 @@ export const workspaces = sqliteTable('workspaces', {
   name: text('name').notNull(),
   createdBy: text('created_by').notNull(),
   createdAt: integer('created_at').notNull(),
-})
+});
 
 export const members = sqliteTable(
   'members',
@@ -91,7 +98,7 @@ export const members = sqliteTable(
     joinedAt: integer('joined_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.workspaceId, t.userId] })],
-)
+);
 
 export const invites = sqliteTable(
   'invites',
@@ -109,7 +116,7 @@ export const invites = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('invites_token_hash_uq').on(t.tokenHash)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Projects
@@ -131,7 +138,7 @@ export const projects = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('projects_ws').on(t.workspaceId, t.position)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Notepads
@@ -165,7 +172,7 @@ export const notepads = sqliteTable(
     index('notepads_tree').on(t.projectId, t.parentId, t.position),
     index('notepads_deleted_idx').on(t.projectId, t.deletedAt),
   ],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Boards, columns, cards
@@ -187,7 +194,7 @@ export const boards = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('boards_project').on(t.projectId, t.position)],
-)
+);
 
 export const boardColumns = sqliteTable(
   'board_columns',
@@ -203,7 +210,7 @@ export const boardColumns = sqliteTable(
     wipLimit: integer('wip_limit'),
   },
   (t) => [index('columns_board').on(t.boardId, t.position)],
-)
+);
 
 export const cards = sqliteTable(
   'cards',
@@ -225,7 +232,7 @@ export const cards = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('cards_column').on(t.columnId, t.position)],
-)
+);
 
 export const cardAssignees = sqliteTable(
   'card_assignees',
@@ -236,7 +243,7 @@ export const cardAssignees = sqliteTable(
     userId: text('user_id').notNull(),
   },
   (t) => [primaryKey({ columns: [t.cardId, t.userId] })],
-)
+);
 
 export const cardSubtasks = sqliteTable(
   'card_subtasks',
@@ -251,7 +258,7 @@ export const cardSubtasks = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('subtasks_card').on(t.cardId, t.position)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Card comments (discussion thread)
@@ -272,7 +279,7 @@ export const cardComments = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   (t) => [index('comments_card').on(t.cardId, t.createdAt)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Tags
@@ -289,7 +296,7 @@ export const tags = sqliteTable(
     color: text('color'),
   },
   (t) => [uniqueIndex('tags_project_name_uq').on(t.projectId, t.name)],
-)
+);
 
 export const notepadTags = sqliteTable(
   'notepad_tags',
@@ -302,7 +309,7 @@ export const notepadTags = sqliteTable(
       .references(() => tags.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.notepadId, t.tagId] })],
-)
+);
 
 // ---------------------------------------------------------------------------
 // References found inside notepad content (backlinks, notification diffing)
@@ -321,7 +328,7 @@ export const notepadLinks = sqliteTable(
     primaryKey({ columns: [t.sourceId, t.targetType, t.targetId] }),
     index('links_target').on(t.targetType, t.targetId),
   ],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Notifications
@@ -341,7 +348,7 @@ export const notifications = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('notifications_user').on(t.userId, t.readAt, t.createdAt)],
-)
+);
 
 // ---------------------------------------------------------------------------
 // Soft edit locks
@@ -354,4 +361,4 @@ export const editLocks = sqliteTable('edit_locks', {
   userId: text('user_id').notNull(),
   clientId: text('client_id').notNull(), // random per editor instance (tab)
   expiresAt: integer('expires_at').notNull(),
-})
+});

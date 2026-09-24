@@ -1,6 +1,6 @@
-import * as chrono from 'chrono-node'
-import type { DefaultReactSuggestionItem } from '@blocknote/react'
-import type { BlockNoteEditor } from '@blocknote/core'
+import * as chrono from 'chrono-node';
+import type { DefaultReactSuggestionItem } from '@blocknote/react';
+import type { BlockNoteEditor } from '@blocknote/core';
 import {
   Calendar,
   CheckSquare,
@@ -10,12 +10,12 @@ import {
   LayoutTemplate,
   Tag,
   User,
-} from 'lucide-react'
-import type { SlashContext } from '../../shared/slash'
+} from 'lucide-react';
+import type { SlashContext } from '../../shared/slash';
 
 export interface SuggestionDialogState {
-  type: 'notepad' | 'task' | 'template' | null
-  blockToReplace?: any
+  type: 'notepad' | 'task' | 'template' | null;
+  blockToReplace?: any;
 }
 
 export function getCustomSlashItems(
@@ -24,7 +24,7 @@ export function getCustomSlashItems(
   projectId: string,
   onOpenDialog: (state: SuggestionDialogState) => void,
 ): DefaultReactSuggestionItem[] {
-  const items: DefaultReactSuggestionItem[] = []
+  const items: DefaultReactSuggestionItem[] = [];
 
   // /notepad
   items.push({
@@ -34,9 +34,9 @@ export function getCustomSlashItems(
     group: 'Burrow References',
     icon: <FileText className="w-4 h-4 text-purple-500" />,
     onItemClick: () => {
-      onOpenDialog({ type: 'notepad' })
+      onOpenDialog({ type: 'notepad' });
     },
-  })
+  });
 
   // /template
   items.push({
@@ -46,9 +46,9 @@ export function getCustomSlashItems(
     group: 'Burrow References',
     icon: <LayoutTemplate className="w-4 h-4 text-primary" />,
     onItemClick: () => {
-      onOpenDialog({ type: 'template' })
+      onOpenDialog({ type: 'template' });
     },
-  })
+  });
 
   // /task
   items.push({
@@ -58,9 +58,9 @@ export function getCustomSlashItems(
     group: 'Burrow References',
     icon: <Kanban className="w-4 h-4 text-emerald-500" />,
     onItemClick: () => {
-      onOpenDialog({ type: 'task' })
+      onOpenDialog({ type: 'task' });
     },
-  })
+  });
 
   // /board
   if (context === 'notepad') {
@@ -72,11 +72,11 @@ export function getCustomSlashItems(
       icon: <Layout className="w-4 h-4 text-blue-500" />,
       onItemClick: async () => {
         try {
-          const res = await fetch(`/api/projects/${projectId}/boards`)
+          const res = await fetch(`/api/projects/${projectId}/boards`);
           if (res.ok) {
-            const boards = (await res.json()) as Array<{ id: string; name: string }>
+            const boards = (await res.json()) as Array<{ id: string; name: string }>;
             if (boards.length > 0) {
-              const b = boards[0]!
+              const b = boards[0]!;
               editor.insertInlineContent([
                 {
                   type: 'mention',
@@ -86,14 +86,14 @@ export function getCustomSlashItems(
                     label: b.name,
                   },
                 },
-              ])
+              ]);
             }
           }
         } catch (err) {
-          console.error('Failed to link board', err)
+          console.error('Failed to link board', err);
         }
       },
-    })
+    });
   }
 
   // /today & /tomorrow
@@ -104,7 +104,7 @@ export function getCustomSlashItems(
     group: 'Dates',
     icon: <Calendar className="w-4 h-4 text-[var(--muted)]" />,
     onItemClick: () => {
-      const now = new Date()
+      const now = new Date();
       editor.insertInlineContent([
         {
           type: 'mention',
@@ -114,9 +114,9 @@ export function getCustomSlashItems(
             isoDate: now.toISOString().slice(0, 10),
           },
         },
-      ])
+      ]);
     },
-  })
+  });
 
   items.push({
     title: 'Tomorrow',
@@ -125,7 +125,7 @@ export function getCustomSlashItems(
     group: 'Dates',
     icon: <Calendar className="w-4 h-4 text-[var(--muted)]" />,
     onItemClick: () => {
-      const tomorrow = new Date(Date.now() + 86400000)
+      const tomorrow = new Date(Date.now() + 86400000);
       editor.insertInlineContent([
         {
           type: 'mention',
@@ -135,11 +135,11 @@ export function getCustomSlashItems(
             isoDate: tomorrow.toISOString().slice(0, 10),
           },
         },
-      ])
+      ]);
     },
-  })
+  });
 
-  return items
+  return items;
 }
 
 /**
@@ -150,17 +150,17 @@ export async function getAtMenuSuggestions(
   projectId: string,
   editor: BlockNoteEditor<any, any, any>,
 ): Promise<DefaultReactSuggestionItem[]> {
-  const items: DefaultReactSuggestionItem[] = []
-  const cleanQ = query.trim()
+  const items: DefaultReactSuggestionItem[] = [];
+  const cleanQ = query.trim();
 
   // 1. Natural date suggestions
-  const parsedDate = chrono.parseDate(cleanQ)
+  const parsedDate = chrono.parseDate(cleanQ);
   if (parsedDate) {
     const formatted = parsedDate.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    })
+    });
     items.push({
       title: formatted,
       subtext: `Natural date: "${cleanQ}"`,
@@ -176,9 +176,9 @@ export async function getAtMenuSuggestions(
               isoDate: parsedDate.toISOString().slice(0, 10),
             },
           },
-        ])
+        ]);
       },
-    })
+    });
   } else if (!cleanQ || 'today'.includes(cleanQ.toLowerCase())) {
     items.push({
       title: 'Today',
@@ -195,20 +195,20 @@ export async function getAtMenuSuggestions(
               isoDate: new Date().toISOString().slice(0, 10),
             },
           },
-        ])
+        ]);
       },
-    })
+    });
   }
 
   // 2. Fetch People
   try {
-    const userRes = await fetch(`/api/suggest?type=user&q=${encodeURIComponent(cleanQ)}`)
+    const userRes = await fetch(`/api/suggest?type=user&q=${encodeURIComponent(cleanQ)}`);
     if (userRes.ok) {
       const users = (await userRes.json()) as Array<{
-        id: string
-        label: string
-        description?: string
-      }>
+        id: string;
+        label: string;
+        description?: string;
+      }>;
       for (const u of users) {
         items.push({
           title: u.label,
@@ -225,26 +225,26 @@ export async function getAtMenuSuggestions(
                   label: u.label,
                 },
               },
-            ])
+            ]);
           },
-        })
+        });
       }
     }
   } catch (err) {
-    console.error('Failed to suggest users', err)
+    console.error('Failed to suggest users', err);
   }
 
   // 3. Fetch Notepads
   try {
     const npRes = await fetch(
       `/api/suggest?type=notepad&projectId=${projectId}&q=${encodeURIComponent(cleanQ)}`,
-    )
+    );
     if (npRes.ok) {
       const notepads = (await npRes.json()) as Array<{
-        id: string
-        label: string
-        icon?: string
-      }>
+        id: string;
+        label: string;
+        icon?: string;
+      }>;
       for (const np of notepads) {
         items.push({
           title: np.label || 'Untitled',
@@ -261,26 +261,26 @@ export async function getAtMenuSuggestions(
                   label: np.label || 'Untitled',
                 },
               },
-            ])
+            ]);
           },
-        })
+        });
       }
     }
   } catch (err) {
-    console.error('Failed to suggest notepads', err)
+    console.error('Failed to suggest notepads', err);
   }
 
   // 4. Fetch Cards
   try {
     const cardRes = await fetch(
       `/api/suggest?type=card&projectId=${projectId}&q=${encodeURIComponent(cleanQ)}`,
-    )
+    );
     if (cardRes.ok) {
       const cards = (await cardRes.json()) as Array<{
-        id: string
-        label: string
-        description?: string
-      }>
+        id: string;
+        label: string;
+        description?: string;
+      }>;
       for (const c of cards) {
         items.push({
           title: c.label || 'Untitled',
@@ -297,16 +297,16 @@ export async function getAtMenuSuggestions(
                   label: c.label || 'Untitled',
                 },
               },
-            ])
+            ]);
           },
-        })
+        });
       }
     }
   } catch (err) {
-    console.error('Failed to suggest cards', err)
+    console.error('Failed to suggest cards', err);
   }
 
-  return items
+  return items;
 }
 
 /**
@@ -319,30 +319,25 @@ export async function getHashMenuSuggestions(
   editor: BlockNoteEditor<any, any, any>,
   onAttachTag?: (tagId: string) => void,
 ): Promise<DefaultReactSuggestionItem[]> {
-  const cleanQ = query.trim()
+  const cleanQ = query.trim();
   try {
     const res = await fetch(
       `/api/suggest?type=tag&projectId=${projectId}&q=${encodeURIComponent(cleanQ)}`,
-    )
-    if (!res.ok) return []
+    );
+    if (!res.ok) return [];
     const tags = (await res.json()) as Array<{
-      id: string
-      label: string
-      color?: string
-    }>
+      id: string;
+      label: string;
+      color?: string;
+    }>;
 
     return tags.map((tag) => ({
       title: tag.label,
       group: 'Tags',
-      icon: (
-        <Tag
-          className="w-4 h-4"
-          style={{ color: tag.color || '#64748b' }}
-        />
-      ),
+      icon: <Tag className="w-4 h-4" style={{ color: tag.color || '#64748b' }} />,
       onItemClick: () => {
         if (onAttachTag) {
-          onAttachTag(tag.id)
+          onAttachTag(tag.id);
         }
         editor.insertInlineContent([
           {
@@ -353,11 +348,11 @@ export async function getHashMenuSuggestions(
               label: `#${tag.label}`,
             },
           },
-        ])
+        ]);
       },
-    }))
+    }));
   } catch (err) {
-    console.error('Failed to suggest tags', err)
-    return []
+    console.error('Failed to suggest tags', err);
+    return [];
   }
 }

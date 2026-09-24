@@ -1,14 +1,18 @@
-import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import type { AuthProvider } from '../../../infrastructure/types'
-import type { PostgresDb } from './index'
-import { schema } from './schema'
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import type { AuthProvider } from '../../../infrastructure/types';
+import type { PostgresDb } from './index';
+import { schema } from './schema';
 
 /**
  * Creates a BetterAuth instance wrapped as AuthProvider for the core app.
  * Uses the PostgreSQL drizzle adapter.
  */
-export function createPostgresAuthProvider(db: PostgresDb, secret: string, url: string): AuthProvider {
+export function createPostgresAuthProvider(
+  db: PostgresDb,
+  secret: string,
+  url: string,
+): AuthProvider {
   const auth = betterAuth({
     database: drizzleAdapter(db, {
       provider: 'pg',
@@ -42,12 +46,12 @@ export function createPostgresAuthProvider(db: PostgresDb, secret: string, url: 
         },
       },
     },
-  })
+  });
 
   return {
     async getSession(headers: Headers) {
-      const session = await auth.api.getSession({ headers })
-      if (!session) return null
+      const session = await auth.api.getSession({ headers });
+      if (!session) return null;
 
       // Get workspace membership for this user
       // For now, return first workspace or null
@@ -56,10 +60,10 @@ export function createPostgresAuthProvider(db: PostgresDb, secret: string, url: 
         userId: session.user.id,
         workspaceId: '', // Will be resolved by the calling code
         role: 'editor',
-      }
+      };
     },
     async handler(req: Request) {
-      return auth.handler(req)
+      return auth.handler(req);
     },
-  }
+  };
 }

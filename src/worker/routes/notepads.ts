@@ -1,12 +1,12 @@
-import { Hono } from 'hono'
-import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
-import { z } from 'zod'
-import { createStorageFromEnv } from '../adapters/storage/factory'
-import type { Env } from '../env'
-import { createDb } from '../db/client'
-import * as t from '../db/schema'
-import { requireRole, requireSession } from '../middleware/session'
-import { zValidator } from '../middleware/validator'
+import { Hono } from 'hono';
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { z } from 'zod';
+import { createStorageFromEnv } from '../adapters/storage/factory';
+import type { Env } from '../env';
+import { createDb } from '../db/client';
+import * as t from '../db/schema';
+import { requireRole, requireSession } from '../middleware/session';
+import { zValidator } from '../middleware/validator';
 import {
   claimLock,
   createNotepad,
@@ -17,47 +17,47 @@ import {
   saveContent,
   setNotepadTags,
   softDeleteNotepad,
-} from '../services/notepads'
-import { HttpError } from '../lib/errors'
+} from '../services/notepads';
+import { HttpError } from '../lib/errors';
 
 const createNotepadSchema = z.object({
   parentId: z.string().optional().nullable(),
   title: z.string().optional(),
-})
+});
 
 const patchNotepadSchema = z.object({
   title: z.string().optional(),
   icon: z.string().optional().nullable(),
   coverKey: z.string().optional().nullable(),
   isFavorite: z.boolean().optional(),
-})
+});
 
 const saveContentSchema = z.object({
   content: z.string(),
   baseVersion: z.number().int().min(1),
   clientId: z.string().optional(),
-})
+});
 
 const moveNotepadSchema = z.object({
   parentId: z.string().optional().nullable(),
   afterId: z.string().optional().nullable(),
-})
+});
 
 const lockSchema = z.object({
   clientId: z.string().min(1),
   takeover: z.boolean().optional(),
-})
+});
 
 const tagsSchema = z.object({
   tagIds: z.array(z.string()),
-})
+});
 
 export const notepadsRoutes = new Hono<Env>()
   // Tree metadata only (excludes cards and deleted)
   .get('/api/projects/:pid/notepads', requireSession, async (c) => {
-    const db = createDb(c.env.DB)
-    const workspaceId = c.get('workspaceId')
-    const projectId = c.req.param('pid')
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const projectId = c.req.param('pid');
 
     const rows = await db
       .select({
@@ -77,9 +77,9 @@ export const notepadsRoutes = new Hono<Env>()
           isNull(t.notepads.deletedAt),
         ),
       )
-      .orderBy(t.notepads.position)
+      .orderBy(t.notepads.position);
 
-    return c.json(rows)
+    return c.json(rows);
   })
   .post(
     '/api/projects/:pid/notepads',
@@ -87,11 +87,11 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', createNotepadSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const userId = c.get('userId')
-      const projectId = c.req.param('pid')
-      const body = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
+      const userId = c.get('userId');
+      const projectId = c.req.param('pid');
+      const body = c.req.valid('json');
 
       const result = await createNotepad(db, {
         workspaceId,
@@ -99,27 +99,22 @@ export const notepadsRoutes = new Hono<Env>()
         parentId: body.parentId,
         title: body.title,
         createdBy: userId,
-      })
+      });
 
-      return c.json(result, 201)
+      return c.json(result, 201);
     },
   )
   .get('/api/notepads/:id', requireSession, async (c) => {
-    const db = createDb(c.env.DB)
-    const workspaceId = c.get('workspaceId')
-    const notepadId = c.req.param('id')
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const notepadId = c.req.param('id');
 
     const [notepad] = await db
       .select()
       .from(t.notepads)
-      .where(
-        and(
-          eq(t.notepads.id, notepadId),
-          eq(t.notepads.workspaceId, workspaceId),
-        ),
-      )
+      .where(and(eq(t.notepads.id, notepadId), eq(t.notepads.workspaceId, workspaceId)));
 
-    if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found')
+    if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found');
 
     // Tags
     const tags = await db
@@ -130,7 +125,7 @@ export const notepadsRoutes = new Hono<Env>()
       })
       .from(t.notepadTags)
       .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
-      .where(eq(t.notepadTags.notepadId, notepadId))
+      .where(eq(t.notepadTags.notepadId, notepadId));
 
     // Backlinks: source notepads linking here (excluding deleted sources)
     const backlinks = await db
@@ -147,34 +142,34 @@ export const notepadsRoutes = new Hono<Env>()
           eq(t.notepadLinks.targetId, notepadId),
           isNull(t.notepads.deletedAt),
         ),
-      )
+      );
 
     // Current lock state
-    const now = Date.now()
+    const now = Date.now();
     const [lockRow] = await db
       .select()
       .from(t.editLocks)
-      .where(eq(t.editLocks.notepadId, notepadId))
+      .where(eq(t.editLocks.notepadId, notepadId));
 
     let lock: {
-      userId: string
-      clientId: string
-      name: string
-      expiresAt: number
-      isMe: boolean
-    } | null = null
+      userId: string;
+      clientId: string;
+      name: string;
+      expiresAt: number;
+      isMe: boolean;
+    } | null = null;
     if (lockRow && lockRow.expiresAt > now) {
       const [holder] = await db
         .select({ name: t.user.name })
         .from(t.user)
-        .where(eq(t.user.id, lockRow.userId))
+        .where(eq(t.user.id, lockRow.userId));
       lock = {
         userId: lockRow.userId,
         clientId: lockRow.clientId,
         name: holder?.name || 'Someone',
         expiresAt: lockRow.expiresAt,
         isMe: lockRow.userId === c.get('userId'),
-      }
+      };
     }
 
     return c.json({
@@ -182,7 +177,7 @@ export const notepadsRoutes = new Hono<Env>()
       tags,
       backlinks,
       lock,
-    })
+    });
   })
   .patch(
     '/api/notepads/:id',
@@ -190,36 +185,28 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', patchNotepadSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
-      const body = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
+      const notepadId = c.req.param('id');
+      const body = c.req.valid('json');
 
       const [notepad] = await db
         .select()
         .from(t.notepads)
-        .where(
-          and(
-            eq(t.notepads.id, notepadId),
-            eq(t.notepads.workspaceId, workspaceId),
-          ),
-        )
-      if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found')
+        .where(and(eq(t.notepads.id, notepadId), eq(t.notepads.workspaceId, workspaceId)));
+      if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found');
 
       const updates: Partial<typeof t.notepads.$inferInsert> = {
         updatedAt: Date.now(),
-      }
-      if (body.title !== undefined) updates.title = body.title.trim() || 'Untitled'
-      if (body.icon !== undefined) updates.icon = body.icon
-      if (body.coverKey !== undefined) updates.coverKey = body.coverKey
-      if (body.isFavorite !== undefined) updates.isFavorite = body.isFavorite
+      };
+      if (body.title !== undefined) updates.title = body.title.trim() || 'Untitled';
+      if (body.icon !== undefined) updates.icon = body.icon;
+      if (body.coverKey !== undefined) updates.coverKey = body.coverKey;
+      if (body.isFavorite !== undefined) updates.isFavorite = body.isFavorite;
 
-      await db
-        .update(t.notepads)
-        .set(updates)
-        .where(eq(t.notepads.id, notepadId))
+      await db.update(t.notepads).set(updates).where(eq(t.notepads.id, notepadId));
 
-      return c.json({ ok: true, notepadId })
+      return c.json({ ok: true, notepadId });
     },
   )
   .put(
@@ -228,22 +215,17 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', saveContentSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const actorId = c.get('userId')
-      const notepadId = c.req.param('id')
-      const { content, baseVersion, clientId } = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
+      const actorId = c.get('userId');
+      const notepadId = c.req.param('id');
+      const { content, baseVersion, clientId } = c.req.valid('json');
 
       const [notepad] = await db
         .select()
         .from(t.notepads)
-        .where(
-          and(
-            eq(t.notepads.id, notepadId),
-            eq(t.notepads.workspaceId, workspaceId),
-          ),
-        )
-      if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found')
+        .where(and(eq(t.notepads.id, notepadId), eq(t.notepads.workspaceId, workspaceId)));
+      if (!notepad) throw new HttpError(404, 'not_found', 'Notepad not found');
 
       try {
         const result = await saveContent(db, {
@@ -252,18 +234,18 @@ export const notepadsRoutes = new Hono<Env>()
           baseVersion,
           actorId,
           clientId,
-        })
-        return c.json(result)
+        });
+        return c.json(result);
       } catch (err: unknown) {
         if (err instanceof HttpError && err.code === 'locked') {
           try {
-            const parsed = JSON.parse(err.message)
-            return c.json({ error: parsed }, 409)
+            const parsed = JSON.parse(err.message);
+            return c.json({ error: parsed }, 409);
           } catch {
-            return c.json({ error: { code: 'locked', message: err.message } }, 409)
+            return c.json({ error: { code: 'locked', message: err.message } }, 409);
           }
         }
-        throw err
+        throw err;
       }
     },
   )
@@ -273,68 +255,53 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', moveNotepadSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
-      const { parentId, afterId } = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
+      const notepadId = c.req.param('id');
+      const { parentId, afterId } = c.req.valid('json');
 
       const result = await moveNotepad(db, {
         workspaceId,
         notepadId,
         parentId,
         afterId,
-      })
+      });
 
-      return c.json(result)
+      return c.json(result);
     },
   )
-  .delete(
-    '/api/notepads/:id',
-    requireSession,
-    requireRole('editor'),
-    async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
+  .delete('/api/notepads/:id', requireSession, requireRole('editor'), async (c) => {
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const notepadId = c.req.param('id');
 
-      await softDeleteNotepad(db, { workspaceId, notepadId })
-      return c.json({ ok: true, deletedId: notepadId })
-    },
-  )
-  .post(
-    '/api/notepads/:id/restore',
-    requireSession,
-    requireRole('editor'),
-    async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
+    await softDeleteNotepad(db, { workspaceId, notepadId });
+    return c.json({ ok: true, deletedId: notepadId });
+  })
+  .post('/api/notepads/:id/restore', requireSession, requireRole('editor'), async (c) => {
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const notepadId = c.req.param('id');
 
-      await restoreNotepad(db, { workspaceId, notepadId })
-      return c.json({ ok: true, restoredId: notepadId })
-    },
-  )
-  .delete(
-    '/api/notepads/:id/permanent',
-    requireSession,
-    requireRole('owner'),
-    async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
+    await restoreNotepad(db, { workspaceId, notepadId });
+    return c.json({ ok: true, restoredId: notepadId });
+  })
+  .delete('/api/notepads/:id/permanent', requireSession, requireRole('owner'), async (c) => {
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const notepadId = c.req.param('id');
 
-      await permanentDeleteNotepad(db, {
-        workspaceId,
-        notepadId,
-        storage: createStorageFromEnv(c.env),
-      })
-      return c.json({ ok: true, permanentlyDeletedId: notepadId })
-    },
-  )
+    await permanentDeleteNotepad(db, {
+      workspaceId,
+      notepadId,
+      storage: createStorageFromEnv(c.env),
+    });
+    return c.json({ ok: true, permanentlyDeletedId: notepadId });
+  })
   .get('/api/projects/:pid/trash', requireSession, async (c) => {
-    const db = createDb(c.env.DB)
-    const workspaceId = c.get('workspaceId')
-    const projectId = c.req.param('pid')
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const projectId = c.req.param('pid');
 
     const notepads = await db
       .select({
@@ -352,7 +319,7 @@ export const notepadsRoutes = new Hono<Env>()
           isNotNull(t.notepads.deletedAt),
         ),
       )
-      .orderBy(desc(t.notepads.deletedAt))
+      .orderBy(desc(t.notepads.deletedAt));
 
     const boards = await db
       .select({
@@ -369,14 +336,14 @@ export const notepadsRoutes = new Hono<Env>()
           isNotNull(t.boards.deletedAt),
         ),
       )
-      .orderBy(desc(t.boards.deletedAt))
+      .orderBy(desc(t.boards.deletedAt));
 
-    return c.json({ notepads, boards })
+    return c.json({ notepads, boards });
   })
   .get('/api/projects/:pid/recent', requireSession, async (c) => {
-    const db = createDb(c.env.DB)
-    const workspaceId = c.get('workspaceId')
-    const projectId = c.req.param('pid')
+    const db = createDb(c.env.DB);
+    const workspaceId = c.get('workspaceId');
+    const projectId = c.req.param('pid');
 
     const recent = await db
       .select({
@@ -395,9 +362,9 @@ export const notepadsRoutes = new Hono<Env>()
         ),
       )
       .orderBy(desc(t.notepads.updatedAt))
-      .limit(10)
+      .limit(10);
 
-    return c.json(recent)
+    return c.json(recent);
   })
   .post(
     '/api/notepads/:id/lock',
@@ -405,10 +372,10 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', lockSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const userId = c.get('userId')
-      const notepadId = c.req.param('id')
-      const { clientId, takeover } = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const userId = c.get('userId');
+      const notepadId = c.req.param('id');
+      const { clientId, takeover } = c.req.valid('json');
 
       try {
         const result = await claimLock(db, {
@@ -416,18 +383,18 @@ export const notepadsRoutes = new Hono<Env>()
           userId,
           clientId,
           takeover,
-        })
-        return c.json(result)
+        });
+        return c.json(result);
       } catch (err: unknown) {
         if (err instanceof HttpError && err.code === 'locked') {
           try {
-            const parsed = JSON.parse(err.message)
-            return c.json({ error: parsed }, 409)
+            const parsed = JSON.parse(err.message);
+            return c.json({ error: parsed }, 409);
           } catch {
-            return c.json({ error: { code: 'locked', message: err.message } }, 409)
+            return c.json({ error: { code: 'locked', message: err.message } }, 409);
           }
         }
-        throw err
+        throw err;
       }
     },
   )
@@ -437,17 +404,17 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', lockSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const userId = c.get('userId')
-      const notepadId = c.req.param('id')
-      const { clientId } = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const userId = c.get('userId');
+      const notepadId = c.req.param('id');
+      const { clientId } = c.req.valid('json');
 
       await releaseLock(db, {
         notepadId,
         userId,
         clientId,
-      })
-      return c.json({ ok: true })
+      });
+      return c.json({ ok: true });
     },
   )
   .put(
@@ -456,12 +423,12 @@ export const notepadsRoutes = new Hono<Env>()
     requireRole('editor'),
     zValidator('json', tagsSchema),
     async (c) => {
-      const db = createDb(c.env.DB)
-      const workspaceId = c.get('workspaceId')
-      const notepadId = c.req.param('id')
-      const { tagIds } = c.req.valid('json')
+      const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
+      const notepadId = c.req.param('id');
+      const { tagIds } = c.req.valid('json');
 
-      await setNotepadTags(db, notepadId, tagIds, workspaceId)
-      return c.json({ ok: true, notepadId, tagIds })
+      await setNotepadTags(db, notepadId, tagIds, workspaceId);
+      return c.json({ ok: true, notepadId, tagIds });
     },
-  )
+  );

@@ -1,55 +1,55 @@
-import { nanoid } from 'nanoid'
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
-import type { BatchItem } from 'drizzle-orm/batch'
-import type { DB } from '../db/client'
-import * as t from '../db/schema'
-import { extractPlainText } from '../../shared/extract'
-import { HttpError } from '../lib/errors'
-import { positionAfterLast, positionBetween } from '../lib/ordering'
-import { chunkByParamBudget, chunkInList } from '../lib/chunk'
-import { runBatch } from '../lib/batch'
-import { ftsInsertNowStmt } from '../lib/search'
+import { nanoid } from 'nanoid';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
+import type { DB } from '../db/client';
+import * as t from '../db/schema';
+import { extractPlainText } from '../../shared/extract';
+import { HttpError } from '../lib/errors';
+import { positionAfterLast, positionBetween } from '../lib/ordering';
+import { chunkByParamBudget, chunkInList } from '../lib/chunk';
+import { runBatch } from '../lib/batch';
+import { ftsInsertNowStmt } from '../lib/search';
 
-export type CardPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type CardPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface CreateCardInput {
-  workspaceId: string
-  actorId: string
-  boardId: string
-  columnId: string
-  title: string
-  priority?: CardPriority | null
-  dueDate?: number | null
-  assigneeIds?: string[]
-  tagIds?: string[]
+  workspaceId: string;
+  actorId: string;
+  boardId: string;
+  columnId: string;
+  title: string;
+  priority?: CardPriority | null;
+  dueDate?: number | null;
+  assigneeIds?: string[];
+  tagIds?: string[];
   /** From the quick-add `/notepad` command. */
-  notepad?: { mode: 'new' } | { mode: 'existing'; id: string }
+  notepad?: { mode: 'new' } | { mode: 'existing'; id: string };
 }
 
 export interface CreatedCard {
-  cardId: string
-  notepadId: string
-  linkedNotepadId: string | null
+  cardId: string;
+  notepadId: string;
+  linkedNotepadId: string | null;
 }
 
 export interface CardPlan {
-  workspaceId: string
-  projectId: string
-  boardId: string
-  columnId: string
-  actorId: string
-  cardId: string
-  notepadId: string
-  title: string
-  content: string
-  plainText: string
-  priority: CardPriority | null
-  dueDate: number | null
-  assigneeIds: string[]
-  tagIds: string[]
-  cardPosition: string
-  linkedNotepad: { id: string; position: string; title: string } | null
-  now: number
+  workspaceId: string;
+  projectId: string;
+  boardId: string;
+  columnId: string;
+  actorId: string;
+  cardId: string;
+  notepadId: string;
+  title: string;
+  content: string;
+  plainText: string;
+  priority: CardPriority | null;
+  dueDate: number | null;
+  assigneeIds: string[];
+  tagIds: string[];
+  cardPosition: string;
+  linkedNotepad: { id: string; position: string; title: string } | null;
+  now: number;
 }
 
 /**
@@ -58,44 +58,46 @@ export interface CardPlan {
  * lands or nothing does.
  */
 export async function createCard(db: DB, input: CreateCardInput): Promise<CreatedCard> {
-  const [board] = await db.select().from(t.boards).where(eq(t.boards.id, input.boardId))
+  const [board] = await db.select().from(t.boards).where(eq(t.boards.id, input.boardId));
   if (!board || board.workspaceId !== input.workspaceId || board.deletedAt !== null) {
-    throw new HttpError(404, 'not_found', 'Board not found')
+    throw new HttpError(404, 'not_found', 'Board not found');
   }
-  const [column] = await db.select().from(t.boardColumns).where(eq(t.boardColumns.id, input.columnId))
+  const [column] = await db
+    .select()
+    .from(t.boardColumns)
+    .where(eq(t.boardColumns.id, input.columnId));
   if (!column || column.boardId !== board.id) {
-    throw new HttpError(404, 'not_found', 'Column not found')
+    throw new HttpError(404, 'not_found', 'Column not found');
   }
 
-  const assigneeIds = [...new Set(input.assigneeIds ?? [])]
+  const assigneeIds = [...new Set(input.assigneeIds ?? [])];
   if (assigneeIds.length > 0) {
     const members = await db
       .select({ userId: t.members.userId })
       .from(t.members)
-      .where(and(eq(t.members.workspaceId, input.workspaceId), inArray(t.members.userId, assigneeIds)))
+      .where(
+        and(eq(t.members.workspaceId, input.workspaceId), inArray(t.members.userId, assigneeIds)),
+      );
     if (members.length !== assigneeIds.length) {
-      throw new HttpError(400, 'invalid_assignees', 'Assignees must be workspace members')
+      throw new HttpError(400, 'invalid_assignees', 'Assignees must be workspace members');
     }
   }
 
-  const tagIds = [...new Set(input.tagIds ?? [])]
+  const tagIds = [...new Set(input.tagIds ?? [])];
   if (tagIds.length > 0) {
     const tags = await db
       .select({ id: t.tags.id })
       .from(t.tags)
-      .where(and(eq(t.tags.projectId, board.projectId), inArray(t.tags.id, tagIds)))
+      .where(and(eq(t.tags.projectId, board.projectId), inArray(t.tags.id, tagIds)));
     if (tags.length !== tagIds.length) {
-      throw new HttpError(400, 'invalid_tags', 'Tags must belong to this project')
+      throw new HttpError(400, 'invalid_tags', 'Tags must belong to this project');
     }
   }
 
-  let linkedNotepad: CardPlan['linkedNotepad'] = null
-  let content = '[]'
+  let linkedNotepad: CardPlan['linkedNotepad'] = null;
+  let content = '[]';
   if (input.notepad?.mode === 'existing') {
-    const [linked] = await db
-      .select()
-      .from(t.notepads)
-      .where(eq(t.notepads.id, input.notepad.id))
+    const [linked] = await db.select().from(t.notepads).where(eq(t.notepads.id, input.notepad.id));
     if (
       !linked ||
       linked.projectId !== board.projectId ||
@@ -103,20 +105,20 @@ export async function createCard(db: DB, input: CreateCardInput): Promise<Create
       linked.kind !== 'notepad' ||
       linked.deletedAt !== null
     ) {
-      throw new HttpError(404, 'not_found', 'Notepad not found')
+      throw new HttpError(404, 'not_found', 'Notepad not found');
     }
-    linkedNotepad = { id: linked.id, position: linked.position, title: linked.title }
-    content = linkBlockBody(linked.id)
+    linkedNotepad = { id: linked.id, position: linked.position, title: linked.title };
+    content = linkBlockBody(linked.id);
   } else if (input.notepad?.mode === 'new') {
     linkedNotepad = {
       id: nanoid(),
       position: await lastRootNotepadPosition(db, board.projectId),
       title: input.title.trim() || 'Untitled',
-    }
-    content = linkBlockBody(linkedNotepad.id)
+    };
+    content = linkBlockBody(linkedNotepad.id);
   }
 
-  const title = input.title.trim() || 'Untitled'
+  const title = input.title.trim() || 'Untitled';
   const plan: CardPlan = {
     workspaceId: input.workspaceId,
     projectId: board.projectId,
@@ -135,20 +137,20 @@ export async function createCard(db: DB, input: CreateCardInput): Promise<Create
     cardPosition: await lastCardPosition(db, column.id),
     linkedNotepad,
     now: Date.now(),
-  }
+  };
 
-  await runBatch(db, cardCreationStatements(db, plan))
+  await runBatch(db, cardCreationStatements(db, plan));
   return {
     cardId: plan.cardId,
     notepadId: plan.notepadId,
     linkedNotepadId: linkedNotepad?.id ?? null,
-  }
+  };
 }
 
 function linkBlockBody(notepadId: string): string {
   return JSON.stringify([
     { id: nanoid(), type: 'notepadLink', props: { notepadId }, content: [], children: [] },
-  ])
+  ]);
 }
 
 async function lastCardPosition(db: DB, columnId: string): Promise<string> {
@@ -158,8 +160,8 @@ async function lastCardPosition(db: DB, columnId: string): Promise<string> {
     .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
     .where(and(eq(t.cards.columnId, columnId), isNull(t.notepads.deletedAt)))
     .orderBy(desc(t.cards.position))
-    .limit(1)
-  return positionAfterLast(last?.position ?? null)
+    .limit(1);
+  return positionAfterLast(last?.position ?? null);
 }
 
 async function lastRootNotepadPosition(db: DB, projectId: string): Promise<string> {
@@ -175,13 +177,13 @@ async function lastRootNotepadPosition(db: DB, projectId: string): Promise<strin
       ),
     )
     .orderBy(desc(t.notepads.position))
-    .limit(1)
-  return positionAfterLast(last?.position ?? null)
+    .limit(1);
+  return positionAfterLast(last?.position ?? null);
 }
 
 /** The exact statements createCard runs. Exported for the atomicity spike. */
 export function cardCreationStatements(db: DB, plan: CardPlan): BatchItem<'sqlite'>[] {
-  const statements: BatchItem<'sqlite'>[] = []
+  const statements: BatchItem<'sqlite'>[] = [];
 
   if (plan.linkedNotepad) {
     statements.push(
@@ -202,7 +204,7 @@ export function cardCreationStatements(db: DB, plan: CardPlan): BatchItem<'sqlit
         updatedAt: plan.now,
       }),
       db.run(ftsInsertNowStmt(plan.linkedNotepad.id, plan.linkedNotepad.title, '')),
-    )
+    );
   }
 
   statements.push(
@@ -233,23 +235,23 @@ export function cardCreationStatements(db: DB, plan: CardPlan): BatchItem<'sqlit
       dueDate: plan.dueDate,
       createdAt: plan.now,
     }),
-  )
+  );
 
   if (plan.assigneeIds.length > 0) {
     for (const chunk of chunkByParamBudget(plan.assigneeIds, 2, 0)) {
-      const values = chunk.map((userId) => ({ cardId: plan.cardId, userId }))
-      statements.push(db.insert(t.cardAssignees).values(values))
+      const values = chunk.map((userId) => ({ cardId: plan.cardId, userId }));
+      statements.push(db.insert(t.cardAssignees).values(values));
     }
   }
 
   if (plan.tagIds.length > 0) {
     for (const chunk of chunkByParamBudget(plan.tagIds, 2, 0)) {
-      const values = chunk.map((tagId) => ({ notepadId: plan.notepadId, tagId }))
-      statements.push(db.insert(t.notepadTags).values(values))
+      const values = chunk.map((tagId) => ({ notepadId: plan.notepadId, tagId }));
+      statements.push(db.insert(t.notepadTags).values(values));
     }
   }
 
-  return statements
+  return statements;
 }
 
 export async function getCard(db: DB, workspaceId: string, cardId: string) {
@@ -277,18 +279,18 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
+    );
 
-  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found');
 
   const [board] = await db
     .select({ name: t.boards.name })
     .from(t.boards)
-    .where(eq(t.boards.id, card.boardId))
+    .where(eq(t.boards.id, card.boardId));
   const [column] = await db
     .select({ name: t.boardColumns.name })
     .from(t.boardColumns)
-    .where(eq(t.boardColumns.id, card.columnId))
+    .where(eq(t.boardColumns.id, card.columnId));
 
   const assignees = await db
     .select({
@@ -298,7 +300,7 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
     })
     .from(t.cardAssignees)
     .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
-    .where(eq(t.cardAssignees.cardId, cardId))
+    .where(eq(t.cardAssignees.cardId, cardId));
 
   const tags = await db
     .select({
@@ -308,26 +310,26 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
     })
     .from(t.notepadTags)
     .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
-    .where(eq(t.notepadTags.notepadId, card.notepadId))
+    .where(eq(t.notepadTags.notepadId, card.notepadId));
 
-  const now = Date.now()
+  const now = Date.now();
   const [lockRow] = await db
     .select()
     .from(t.editLocks)
-    .where(eq(t.editLocks.notepadId, card.notepadId))
+    .where(eq(t.editLocks.notepadId, card.notepadId));
 
-  let lock: { userId: string; clientId: string; name: string; expiresAt: number } | null = null
+  let lock: { userId: string; clientId: string; name: string; expiresAt: number } | null = null;
   if (lockRow && lockRow.expiresAt > now) {
     const [holder] = await db
       .select({ name: t.user.name })
       .from(t.user)
-      .where(eq(t.user.id, lockRow.userId))
+      .where(eq(t.user.id, lockRow.userId));
     lock = {
       userId: lockRow.userId,
       clientId: lockRow.clientId,
       name: holder?.name || 'Someone',
       expiresAt: lockRow.expiresAt,
-    }
+    };
   }
 
   return {
@@ -338,7 +340,7 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
     tags,
     subtasks: await listSubtasks(db, cardId),
     lock,
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -357,9 +359,9 @@ async function requireCardForWorkspace(db: DB, workspaceId: string, cardId: stri
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
-  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
-  return card
+    );
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found');
+  return card;
 }
 
 export async function listSubtasks(db: DB, cardId: string) {
@@ -367,23 +369,18 @@ export async function listSubtasks(db: DB, cardId: string) {
     .select()
     .from(t.cardSubtasks)
     .where(eq(t.cardSubtasks.cardId, cardId))
-    .orderBy(asc(t.cardSubtasks.position))
+    .orderBy(asc(t.cardSubtasks.position));
 }
 
-export async function createSubtask(
-  db: DB,
-  workspaceId: string,
-  cardId: string,
-  title: string,
-) {
-  await requireCardForWorkspace(db, workspaceId, cardId)
+export async function createSubtask(db: DB, workspaceId: string, cardId: string, title: string) {
+  await requireCardForWorkspace(db, workspaceId, cardId);
 
   const [last] = await db
     .select({ position: t.cardSubtasks.position })
     .from(t.cardSubtasks)
     .where(eq(t.cardSubtasks.cardId, cardId))
     .orderBy(desc(t.cardSubtasks.position))
-    .limit(1)
+    .limit(1);
 
   const row = {
     id: nanoid(),
@@ -392,9 +389,9 @@ export async function createSubtask(
     completed: false,
     position: positionAfterLast(last?.position ?? null),
     createdAt: Date.now(),
-  }
-  await db.insert(t.cardSubtasks).values(row)
-  return row
+  };
+  await db.insert(t.cardSubtasks).values(row);
+  return row;
 }
 
 export async function updateSubtask(
@@ -404,17 +401,17 @@ export async function updateSubtask(
   subtaskId: string,
   updates: { title?: string; completed?: boolean; afterId?: string | null },
 ) {
-  await requireCardForWorkspace(db, workspaceId, cardId)
+  await requireCardForWorkspace(db, workspaceId, cardId);
 
   const [subtask] = await db
     .select()
     .from(t.cardSubtasks)
-    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)))
-  if (!subtask) throw new HttpError(404, 'not_found', 'Subtask not found')
+    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)));
+  if (!subtask) throw new HttpError(404, 'not_found', 'Subtask not found');
 
-  const patch: Partial<typeof t.cardSubtasks.$inferInsert> = {}
-  if (updates.title !== undefined) patch.title = updates.title.trim() || 'Untitled'
-  if (updates.completed !== undefined) patch.completed = updates.completed
+  const patch: Partial<typeof t.cardSubtasks.$inferInsert> = {};
+  if (updates.title !== undefined) patch.title = updates.title.trim() || 'Untitled';
+  if (updates.completed !== undefined) patch.completed = updates.completed;
 
   // Optional reorder among siblings (fractional index owned by the server).
   if (updates.afterId !== undefined) {
@@ -422,26 +419,26 @@ export async function updateSubtask(
       .select({ id: t.cardSubtasks.id, position: t.cardSubtasks.position })
       .from(t.cardSubtasks)
       .where(eq(t.cardSubtasks.cardId, cardId))
-      .orderBy(asc(t.cardSubtasks.position))
-    const others = siblings.filter((s) => s.id !== subtaskId)
+      .orderBy(asc(t.cardSubtasks.position));
+    const others = siblings.filter((s) => s.id !== subtaskId);
 
-    let newPosition: string
+    let newPosition: string;
     if (!updates.afterId) {
-      newPosition = positionBetween(null, others[0]?.position ?? null)
+      newPosition = positionBetween(null, others[0]?.position ?? null);
     } else {
-      const idx = others.findIndex((s) => s.id === updates.afterId)
+      const idx = others.findIndex((s) => s.id === updates.afterId);
       if (idx === -1) {
-        throw new HttpError(400, 'invalid_after_id', 'afterId not found in subtask list')
+        throw new HttpError(400, 'invalid_after_id', 'afterId not found in subtask list');
       }
-      newPosition = positionBetween(others[idx]!.position, others[idx + 1]?.position ?? null)
+      newPosition = positionBetween(others[idx]!.position, others[idx + 1]?.position ?? null);
     }
-    patch.position = newPosition
+    patch.position = newPosition;
   }
 
   if (Object.keys(patch).length > 0) {
-    await db.update(t.cardSubtasks).set(patch).where(eq(t.cardSubtasks.id, subtaskId))
+    await db.update(t.cardSubtasks).set(patch).where(eq(t.cardSubtasks.id, subtaskId));
   }
-  return { ok: true, subtaskId }
+  return { ok: true, subtaskId };
 }
 
 export async function deleteSubtask(
@@ -450,15 +447,15 @@ export async function deleteSubtask(
   cardId: string,
   subtaskId: string,
 ) {
-  await requireCardForWorkspace(db, workspaceId, cardId)
+  await requireCardForWorkspace(db, workspaceId, cardId);
   const [row] = await db
     .select({ id: t.cardSubtasks.id })
     .from(t.cardSubtasks)
-    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)))
-  if (!row) throw new HttpError(404, 'not_found', 'Subtask not found')
+    .where(and(eq(t.cardSubtasks.id, subtaskId), eq(t.cardSubtasks.cardId, cardId)));
+  if (!row) throw new HttpError(404, 'not_found', 'Subtask not found');
 
-  await db.delete(t.cardSubtasks).where(eq(t.cardSubtasks.id, subtaskId))
-  return { ok: true, subtaskId }
+  await db.delete(t.cardSubtasks).where(eq(t.cardSubtasks.id, subtaskId));
+  return { ok: true, subtaskId };
 }
 
 // ---------------------------------------------------------------------------
@@ -466,32 +463,32 @@ export async function deleteSubtask(
 // ---------------------------------------------------------------------------
 
 export interface MyTasksFilters {
-  status?: 'all' | 'open' | 'completed'
-  projectId?: string
+  status?: 'all' | 'open' | 'completed';
+  projectId?: string;
 }
 
 export interface MyTaskItem {
-  id: string
-  notepadId: string
-  boardId: string
-  columnId: string
-  projectId: string
-  title: string
-  dueDate: number | null
-  priority: CardPriority | null
-  isCompleted: boolean
-  createdAt: number
-  boardName: string
-  columnName: string
-  projectName: string
-  projectIcon: string | null
-  projectColor: string | null
-  tags: Array<{ id: string; name: string; color: string | null }>
+  id: string;
+  notepadId: string;
+  boardId: string;
+  columnId: string;
+  projectId: string;
+  title: string;
+  dueDate: number | null;
+  priority: CardPriority | null;
+  isCompleted: boolean;
+  createdAt: number;
+  boardName: string;
+  columnName: string;
+  projectName: string;
+  projectIcon: string | null;
+  projectColor: string | null;
+  tags: Array<{ id: string; name: string; color: string | null }>;
 }
 
 /** A column named "Done"/"Completed"/etc. marks its cards as finished. */
 export function isCompletedColumn(columnName: string): boolean {
-  return /done|completed|closed|shipped/i.test(columnName)
+  return /done|completed|closed|shipped/i.test(columnName);
 }
 
 export async function getMyTasks(
@@ -533,22 +530,23 @@ export async function getMyTasks(
         filters.projectId ? eq(t.boards.projectId, filters.projectId) : undefined,
       ),
     )
-    .orderBy(desc(t.cards.dueDate), asc(t.cards.position))
+    .orderBy(desc(t.cards.dueDate), asc(t.cards.position));
 
-  const status = filters.status ?? 'all'
+  const status = filters.status ?? 'all';
   const filtered =
     status === 'all'
       ? rows
       : rows.filter((r) => {
-          const completed = isCompletedColumn(r.columnName)
-          return status === 'completed' ? completed : !completed
-        })
+          const completed = isCompletedColumn(r.columnName);
+          return status === 'completed' ? completed : !completed;
+        });
 
-  if (filtered.length === 0) return []
+  if (filtered.length === 0) return [];
 
   // Tags for the matched card notepads
-  const notepadIds = filtered.map((r) => r.notepadId)
-  const tagRows: Array<{ notepadId: string; tagId: string; name: string; color: string | null }> = []
+  const notepadIds = filtered.map((r) => r.notepadId);
+  const tagRows: Array<{ notepadId: string; tagId: string; name: string; color: string | null }> =
+    [];
   for (const chunk of chunkInList(notepadIds, 0)) {
     const more = await db
       .select({
@@ -559,15 +557,15 @@ export async function getMyTasks(
       })
       .from(t.notepadTags)
       .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
-      .where(inArray(t.notepadTags.notepadId, chunk))
-    tagRows.push(...more)
+      .where(inArray(t.notepadTags.notepadId, chunk));
+    tagRows.push(...more);
   }
 
-  const tagsByNotepad = new Map<string, MyTaskItem['tags']>()
+  const tagsByNotepad = new Map<string, MyTaskItem['tags']>();
   for (const tag of tagRows) {
-    const list = tagsByNotepad.get(tag.notepadId) || []
-    list.push({ id: tag.tagId, name: tag.name, color: tag.color })
-    tagsByNotepad.set(tag.notepadId, list)
+    const list = tagsByNotepad.get(tag.notepadId) || [];
+    list.push({ id: tag.tagId, name: tag.name, color: tag.color });
+    tagsByNotepad.set(tag.notepadId, list);
   }
 
   return filtered.map((r) => ({
@@ -587,7 +585,7 @@ export async function getMyTasks(
     projectIcon: r.projectIcon,
     projectColor: r.projectColor,
     tags: tagsByNotepad.get(r.notepadId) || [],
-  }))
+  }));
 }
 
 export async function moveCard(
@@ -612,62 +610,49 @@ export async function moveCard(
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
-  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+    );
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found');
 
   const [column] = await db
     .select({ id: t.boardColumns.id })
     .from(t.boardColumns)
-    .where(
-      and(
-        eq(t.boardColumns.id, columnId),
-        eq(t.boardColumns.boardId, card.boardId),
-      ),
-    )
-  if (!column) throw new HttpError(404, 'not_found', 'Destination column not found on this board')
+    .where(and(eq(t.boardColumns.id, columnId), eq(t.boardColumns.boardId, card.boardId)));
+  if (!column) throw new HttpError(404, 'not_found', 'Destination column not found on this board');
 
   const columnCards = await db
     .select({ id: t.cards.id, position: t.cards.position })
     .from(t.cards)
     .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-    .where(
-      and(
-        eq(t.cards.columnId, columnId),
-        isNull(t.notepads.deletedAt),
-      ),
-    )
-    .orderBy(asc(t.cards.position))
+    .where(and(eq(t.cards.columnId, columnId), isNull(t.notepads.deletedAt)))
+    .orderBy(asc(t.cards.position));
 
-  const others = columnCards.filter((c) => c.id !== cardId)
+  const others = columnCards.filter((c) => c.id !== cardId);
 
-  let newPosition: string
+  let newPosition: string;
   if (!afterId) {
-    const next = others[0]?.position ?? null
-    newPosition = positionBetween(null, next)
+    const next = others[0]?.position ?? null;
+    newPosition = positionBetween(null, next);
   } else {
-    const afterIndex = others.findIndex((c) => c.id === afterId)
+    const afterIndex = others.findIndex((c) => c.id === afterId);
     if (afterIndex === -1) {
-      throw new HttpError(400, 'invalid_after_id', 'afterId not found in column')
+      throw new HttpError(400, 'invalid_after_id', 'afterId not found in column');
     }
-    const prev = others[afterIndex]!.position
-    const next = others[afterIndex + 1]?.position ?? null
-    newPosition = positionBetween(prev, next)
+    const prev = others[afterIndex]!.position;
+    const next = others[afterIndex + 1]?.position ?? null;
+    newPosition = positionBetween(prev, next);
   }
 
-  await db
-    .update(t.cards)
-    .set({ columnId, position: newPosition })
-    .where(eq(t.cards.id, cardId))
+  await db.update(t.cards).set({ columnId, position: newPosition }).where(eq(t.cards.id, cardId));
 
-  return { columnId, position: newPosition }
+  return { columnId, position: newPosition };
 }
 
 export interface UpdateCardArgs {
-  title?: string
-  priority?: CardPriority | null
-  dueDate?: number | null
-  assigneeIds?: string[]
-  tagIds?: string[]
+  title?: string;
+  priority?: CardPriority | null;
+  dueDate?: number | null;
+  assigneeIds?: string[];
+  tagIds?: string[];
 }
 
 export async function updateCard(
@@ -694,27 +679,24 @@ export async function updateCard(
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
-  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+    );
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found');
 
-  const now = Date.now()
-  const statements: BatchItem<'sqlite'>[] = []
+  const now = Date.now();
+  const statements: BatchItem<'sqlite'>[] = [];
 
   // Assignees validation & update (I10)
   if (updates.assigneeIds !== undefined) {
-    const cleanAssignees = [...new Set(updates.assigneeIds)]
+    const cleanAssignees = [...new Set(updates.assigneeIds)];
     if (cleanAssignees.length > 0) {
       const members = await db
         .select({ userId: t.members.userId })
         .from(t.members)
         .where(
-          and(
-            eq(t.members.workspaceId, workspaceId),
-            inArray(t.members.userId, cleanAssignees),
-          ),
-        )
+          and(eq(t.members.workspaceId, workspaceId), inArray(t.members.userId, cleanAssignees)),
+        );
       if (members.length !== cleanAssignees.length) {
-        throw new HttpError(400, 'invalid_assignees', 'Assignees must be workspace members')
+        throw new HttpError(400, 'invalid_assignees', 'Assignees must be workspace members');
       }
     }
 
@@ -722,17 +704,15 @@ export async function updateCard(
     const existingAssignees = await db
       .select({ userId: t.cardAssignees.userId })
       .from(t.cardAssignees)
-      .where(eq(t.cardAssignees.cardId, cardId))
-    const existingSet = new Set(existingAssignees.map((a) => a.userId))
-    const newlyAdded = cleanAssignees.filter((uid) => !existingSet.has(uid) && uid !== actorId)
+      .where(eq(t.cardAssignees.cardId, cardId));
+    const existingSet = new Set(existingAssignees.map((a) => a.userId));
+    const newlyAdded = cleanAssignees.filter((uid) => !existingSet.has(uid) && uid !== actorId);
 
-    statements.push(
-      db.delete(t.cardAssignees).where(eq(t.cardAssignees.cardId, cardId)),
-    )
+    statements.push(db.delete(t.cardAssignees).where(eq(t.cardAssignees.cardId, cardId)));
     if (cleanAssignees.length > 0) {
       for (const chunk of chunkByParamBudget(cleanAssignees, 2, 0)) {
-        const values = chunk.map((userId) => ({ cardId, userId }))
-        statements.push(db.insert(t.cardAssignees).values(values))
+        const values = chunk.map((userId) => ({ cardId, userId }));
+        statements.push(db.insert(t.cardAssignees).values(values));
       }
     }
 
@@ -747,76 +727,61 @@ export async function updateCard(
           cardId,
           notepadId: card.notepadId,
           createdAt: now,
-        }))
-        statements.push(db.insert(t.notifications).values(notifValues))
+        }));
+        statements.push(db.insert(t.notifications).values(notifValues));
       }
     }
   }
 
   // Tags validation & update (I9)
   if (updates.tagIds !== undefined) {
-    const cleanTags = [...new Set(updates.tagIds)]
+    const cleanTags = [...new Set(updates.tagIds)];
     if (cleanTags.length > 0) {
       const tags = await db
         .select({ id: t.tags.id })
         .from(t.tags)
-        .where(
-          and(
-            eq(t.tags.projectId, card.projectId),
-            inArray(t.tags.id, cleanTags),
-          ),
-        )
+        .where(and(eq(t.tags.projectId, card.projectId), inArray(t.tags.id, cleanTags)));
       if (tags.length !== cleanTags.length) {
-        throw new HttpError(400, 'invalid_tags', 'Tags must belong to this project')
+        throw new HttpError(400, 'invalid_tags', 'Tags must belong to this project');
       }
     }
 
-    statements.push(
-      db.delete(t.notepadTags).where(eq(t.notepadTags.notepadId, card.notepadId)),
-    )
+    statements.push(db.delete(t.notepadTags).where(eq(t.notepadTags.notepadId, card.notepadId)));
     if (cleanTags.length > 0) {
       for (const chunk of chunkByParamBudget(cleanTags, 2, 0)) {
-        const values = chunk.map((tagId) => ({ notepadId: card.notepadId, tagId }))
-        statements.push(db.insert(t.notepadTags).values(values))
+        const values = chunk.map((tagId) => ({ notepadId: card.notepadId, tagId }));
+        statements.push(db.insert(t.notepadTags).values(values));
       }
     }
   }
 
   // Priority and Due Date
-  const cardUpdates: Partial<typeof t.cards.$inferInsert> = {}
-  if (updates.priority !== undefined) cardUpdates.priority = updates.priority ?? null
-  if (updates.dueDate !== undefined) cardUpdates.dueDate = updates.dueDate ?? null
+  const cardUpdates: Partial<typeof t.cards.$inferInsert> = {};
+  if (updates.priority !== undefined) cardUpdates.priority = updates.priority ?? null;
+  if (updates.dueDate !== undefined) cardUpdates.dueDate = updates.dueDate ?? null;
 
   if (Object.keys(cardUpdates).length > 0) {
-    statements.push(
-      db.update(t.cards).set(cardUpdates).where(eq(t.cards.id, cardId)),
-    )
+    statements.push(db.update(t.cards).set(cardUpdates).where(eq(t.cards.id, cardId)));
   }
 
   // Title update on notepad & FTS
   if (updates.title !== undefined) {
-    const newTitle = updates.title.trim() || 'Untitled'
+    const newTitle = updates.title.trim() || 'Untitled';
     statements.push(
       db
         .update(t.notepads)
         .set({ title: newTitle, updatedAt: now })
         .where(eq(t.notepads.id, card.notepadId)),
       db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
-      db.run(
-        ftsInsertNowStmt(
-          card.notepadId,
-          newTitle,
-          extractPlainText(card.currentContent),
-        ),
-      ),
-    )
+      db.run(ftsInsertNowStmt(card.notepadId, newTitle, extractPlainText(card.currentContent))),
+    );
   }
 
   if (statements.length > 0) {
-    await runBatch(db, statements)
+    await runBatch(db, statements);
   }
 
-  return { ok: true, cardId }
+  return { ok: true, cardId };
 }
 
 export async function deleteCard(db: DB, workspaceId: string, cardId: string) {
@@ -833,10 +798,10 @@ export async function deleteCard(db: DB, workspaceId: string, cardId: string) {
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
-  if (!card) throw new HttpError(404, 'not_found', 'Card not found')
+    );
+  if (!card) throw new HttpError(404, 'not_found', 'Card not found');
 
-  const now = Date.now()
+  const now = Date.now();
   // Invariant I5: Card and its notepad always have the same soft-delete state (deleted_at equal)
   await runBatch(db, [
     db
@@ -844,9 +809,9 @@ export async function deleteCard(db: DB, workspaceId: string, cardId: string) {
       .set({ deletedAt: now, updatedAt: now })
       .where(eq(t.notepads.id, card.notepadId)),
     db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
-  ])
+  ]);
 
-  return { ok: true, cardId }
+  return { ok: true, cardId };
 }
 
 export async function restoreCard(db: DB, workspaceId: string, cardId: string) {
@@ -860,18 +825,13 @@ export async function restoreCard(db: DB, workspaceId: string, cardId: string) {
     })
     .from(t.cards)
     .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-    .where(
-      and(
-        eq(t.cards.id, cardId),
-        eq(t.notepads.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(t.cards.id, cardId), eq(t.notepads.workspaceId, workspaceId)));
   if (!card || card.deletedAt === null) {
-    throw new HttpError(404, 'not_found', 'Deleted card not found')
+    throw new HttpError(404, 'not_found', 'Deleted card not found');
   }
 
-  const now = Date.now()
-  const plainText = extractPlainText(card.content)
+  const now = Date.now();
+  const plainText = extractPlainText(card.content);
 
   await runBatch(db, [
     db
@@ -879,9 +839,9 @@ export async function restoreCard(db: DB, workspaceId: string, cardId: string) {
       .set({ deletedAt: null, updatedAt: now })
       .where(eq(t.notepads.id, card.notepadId)),
     db.run(ftsInsertNowStmt(card.notepadId, card.title, plainText)),
-  ])
+  ]);
 
-  return { ok: true, cardId }
+  return { ok: true, cardId };
 }
 
 export async function permanentDeleteCard(db: DB, workspaceId: string, cardId: string) {
@@ -893,32 +853,23 @@ export async function permanentDeleteCard(db: DB, workspaceId: string, cardId: s
     })
     .from(t.cards)
     .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-    .where(
-      and(
-        eq(t.cards.id, cardId),
-        eq(t.notepads.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(t.cards.id, cardId), eq(t.notepads.workspaceId, workspaceId)));
   if (!card || card.deletedAt === null) {
-    throw new HttpError(404, 'not_found', 'Deleted card not found in trash')
+    throw new HttpError(404, 'not_found', 'Deleted card not found in trash');
   }
 
   // Deleting the notepad cascades to cards, cardAssignees, notepadTags
   await runBatch(db, [
     db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${card.notepadId}`),
     db.delete(t.notepads).where(eq(t.notepads.id, card.notepadId)),
-  ])
+  ]);
 
-  return { ok: true, cardId }
+  return { ok: true, cardId };
 }
 
-export async function getCardsSummary(
-  db: DB,
-  workspaceId: string,
-  cardIds: string[],
-) {
-  if (cardIds.length === 0) return []
-  const cappedIds = cardIds.slice(0, 50)
+export async function getCardsSummary(db: DB, workspaceId: string, cardIds: string[]) {
+  if (cardIds.length === 0) return [];
+  const cappedIds = cardIds.slice(0, 50);
 
   const rows = await db
     .select({
@@ -942,11 +893,11 @@ export async function getCardsSummary(
         eq(t.notepads.workspaceId, workspaceId),
         isNull(t.notepads.deletedAt),
       ),
-    )
+    );
 
-  if (rows.length === 0) return []
+  if (rows.length === 0) return [];
 
-  const fetchedCardIds = rows.map((r) => r.id)
+  const fetchedCardIds = rows.map((r) => r.id);
   const assignees = await db
     .select({
       cardId: t.cardAssignees.cardId,
@@ -956,13 +907,13 @@ export async function getCardsSummary(
     })
     .from(t.cardAssignees)
     .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
-    .where(inArray(t.cardAssignees.cardId, fetchedCardIds))
+    .where(inArray(t.cardAssignees.cardId, fetchedCardIds));
 
-  const assigneesByCard = new Map<string, typeof assignees>()
+  const assigneesByCard = new Map<string, typeof assignees>();
   for (const a of assignees) {
-    const list = assigneesByCard.get(a.cardId) || []
-    list.push(a)
-    assigneesByCard.set(a.cardId, list)
+    const list = assigneesByCard.get(a.cardId) || [];
+    list.push(a);
+    assigneesByCard.set(a.cardId, list);
   }
 
   return rows.map((r) => ({
@@ -980,5 +931,5 @@ export async function getCardsSummary(
       name: a.name,
       image: a.image,
     })),
-  }))
+  }));
 }

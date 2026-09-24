@@ -38,6 +38,13 @@
   --border: var(--line);
   --primary: var(--accent);
   --primary-foreground: var(--accent-ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --accent-foreground: var(--accent-ink);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-ink);
+  --card: var(--surface);
+  --card-foreground: var(--text);
 
   color-scheme: light;
 }
@@ -73,6 +80,13 @@
   --border: var(--line);
   --primary: var(--accent);
   --primary-foreground: var(--accent-ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --accent-foreground: var(--accent-ink);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-ink);
+  --card: var(--surface);
+  --card-foreground: var(--text);
 
   color-scheme: dark;
 }
@@ -108,6 +122,13 @@
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 
   --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -135,13 +156,17 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
-  font-variation-settings: 'wdth' 100, 'wght' 400;
+  font-variation-settings:
+    'wdth' 100,
+    'wght' 400;
 }
 
 /* Heading utility — Archivo heavy, wide, compact tracking. */
 @utility font-display {
   font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
-  font-variation-settings: 'wdth' 122, 'wght' 800;
+  font-variation-settings:
+    'wdth' 122,
+    'wght' 800;
   letter-spacing: -0.02em;
 }
 
@@ -158,14 +183,7 @@ body {
 }
 
 @utility chamfer-sm {
-  clip-path: polygon(
-    7px 0,
-    100% 0,
-    100% calc(100% - 7px),
-    calc(100% - 7px) 100%,
-    0 100%,
-    0 7px
-  );
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
 }
 
 @utility clip-hex {
@@ -195,27 +213,234 @@ body {
   }
 }
 
-/* BlockNote overrides — slate surfaces, Archivo, zero radius. */
-.bn-root {
-  --bn-colors-editor-background: var(--surface);
+/* BlockNote overrides — Basalt angular theme, transparent canvas, slate popups, Archivo. */
+.bn-root,
+.bn-root[data-color-scheme='light'] {
+  --bn-colors-editor-background: transparent !important;
+  --bn-colors-editor-text: var(--text);
   --bn-colors-side-menu: var(--muted);
-  --bn-colors-menu-background: var(--surface2);
-  --bn-font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
-  border-radius: 0 !important;
-}
-.bn-root .bn-editor,
-.bn-root .bn-toolbar,
-.bn-root .bn-side-menu,
-.bn-root .bn-menu-dropdown {
-  border-radius: 0 !important;
-}
-.dark .bn-root {
-  --bn-colors-editor-background: var(--surface);
-  --bn-colors-editor-text: var(--ink);
-  --bn-colors-menu-background: var(--surface2);
+  --bn-colors-menu-background: var(--surface);
   --bn-colors-menu-text: var(--text);
+  --bn-colors-tooltip-background: var(--surface2);
+  --bn-colors-tooltip-text: var(--text);
+  --bn-colors-hovered-background: var(--hi);
+  --bn-colors-hovered-text: var(--hi-ink);
+  --bn-colors-selected-background: var(--accent);
+  --bn-colors-selected-text: var(--accent-ink);
   --bn-colors-border: var(--line);
-  --bn-colors-shadow: transparent;
+  --bn-colors-shadow: rgba(0, 0, 0, 0.25);
+  --bn-font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --bn-border-radius: 0px !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+}
+
+.dark .bn-root,
+.bn-root[data-color-scheme='dark'] {
+  --bn-colors-editor-background: transparent !important;
+  --bn-colors-editor-text: var(--ink);
+  --bn-colors-side-menu: var(--muted);
+  --bn-colors-menu-background: var(--surface);
+  --bn-colors-menu-text: var(--text);
+  --bn-colors-tooltip-background: var(--surface2);
+  --bn-colors-tooltip-text: var(--text);
+  --bn-colors-hovered-background: var(--hi);
+  --bn-colors-hovered-text: var(--hi-ink);
+  --bn-colors-selected-background: var(--accent);
+  --bn-colors-selected-text: var(--accent-ink);
+  --bn-colors-border: var(--line);
+  --bn-colors-shadow: rgba(0, 0, 0, 0.6);
+  background-color: transparent !important;
+}
+
+/* Seamless canvas: editor matches host background with zero rectangular banding */
+.bn-root,
+.bn-container,
+.bn-root .bn-editor,
+div[contenteditable='true'].bn-editor {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  color: var(--text) !important;
+  font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Embedded editor in CardPanel / drawers / modals */
+.bn-embedded .bn-editor {
+  padding-inline: 8px !important;
+}
+
+/* Base UI & ShadCN Popups (Block Type Select, Formatting Dropdown, Popovers, Menus) */
+[data-slot='select-content'],
+[data-slot='dropdown-menu-content'],
+[data-slot='popover-content'],
+[data-slot='tooltip-content'],
+.bn-suggestion-menu,
+.bn-menu-dropdown,
+.bn-toolbar,
+.bn-select,
+.bn-color-picker-dropdown,
+[role='listbox'].bg-popover,
+[data-radix-popper-content-wrapper] > div {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  box-shadow:
+    0 16px 36px -4px rgba(0, 0, 0, 0.55),
+    0 4px 8px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Items inside Base UI Select & Dropdown menus */
+[data-slot='select-item'],
+[data-slot='dropdown-menu-item'] {
+  border-radius: 0 !important;
+  color: var(--text) !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+[data-slot='select-item']:hover,
+[data-slot='dropdown-menu-item']:hover,
+[data-slot='select-item'][data-highlighted],
+[data-slot='dropdown-menu-item'][data-highlighted],
+[data-slot='select-item'][aria-selected='true'],
+[data-slot='dropdown-menu-item'][aria-selected='true'] {
+  background-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+
+[data-slot='select-item'][data-highlighted] *,
+[data-slot='dropdown-menu-item'][data-highlighted] *,
+[data-slot='select-item'][aria-selected='true'] *,
+[data-slot='dropdown-menu-item'][aria-selected='true'] * {
+  color: var(--accent-ink) !important;
+}
+
+/* Toolbars & Formatting Dropdowns */
+.bn-toolbar button,
+.bn-toolbar [role='button'] {
+  border-radius: 0 !important;
+  color: var(--muted) !important;
+}
+.bn-toolbar button:hover,
+.bn-toolbar [role='button']:hover {
+  background-color: var(--hi) !important;
+  color: var(--text) !important;
+}
+.bn-toolbar button[data-state='on'],
+.bn-toolbar button[aria-pressed='true'],
+.bn-toolbar [data-state='on'] {
+  background-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+
+/* Tooltips */
+div[role='tooltip'],
+.bn-tooltip {
+  background-color: var(--side) !important;
+  color: var(--side-text) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Side Menu Button */
+.bn-side-menu button {
+  color: var(--muted) !important;
+  border-radius: 0 !important;
+}
+.bn-side-menu button:hover {
+  color: var(--text) !important;
+  background-color: var(--hi) !important;
+}
+
+/* Strict angular styling across BlockNote */
+.bn-root *,
+.bn-suggestion-menu *,
+.bn-menu-dropdown *,
+.bn-toolbar * {
+  border-radius: 0 !important;
+}
+
+/* BlockNote code blocks & quotes */
+.bn-block-content[data-content-type='codeBlock'] {
+  border-radius: 0 !important;
+  border: 1px solid var(--line) !important;
+  background-color: var(--surface2) !important;
+}
+.bn-root [data-content-type='quote'] blockquote {
+  border-left: 2px solid var(--accent) !important;
+  color: var(--muted) !important;
+}
+.bn-root [data-content-type='divider'] hr {
+  border-top: 1px solid var(--line) !important;
+}
+.bn-editor [data-content-type='table'] th,
+.bn-editor [data-content-type='table'] td {
+  border: 1px solid var(--line) !important;
+}
+.bn-editor [data-content-type='table'] th {
+  background-color: var(--surface2) !important;
+}
+.bn-inline-content code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  background-color: var(--surface2) !important;
+  color: var(--accent) !important;
+  padding: 0.15em 0.35em !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--hair) !important;
+  font-size: 0.85em !important;
+}
+
+/* Custom scrollbars for BlockNote menus, dropdowns, and Base UI popups */
+.bn-suggestion-menu,
+[role='listbox'],
+[data-slot='select-content'],
+[data-slot='dropdown-menu-content'],
+[data-slot='popover-content'] {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--line) var(--surface2) !important;
+}
+
+.bn-suggestion-menu::-webkit-scrollbar,
+[role='listbox']::-webkit-scrollbar,
+[data-slot='select-content']::-webkit-scrollbar,
+[data-slot='dropdown-menu-content']::-webkit-scrollbar,
+[data-slot='popover-content']::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.bn-suggestion-menu::-webkit-scrollbar-track,
+[role='listbox']::-webkit-scrollbar-track,
+[data-slot='select-content']::-webkit-scrollbar-track,
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-track,
+[data-slot='popover-content']::-webkit-scrollbar-track {
+  background: var(--surface2) !important;
+}
+
+.bn-suggestion-menu::-webkit-scrollbar-thumb,
+[role='listbox']::-webkit-scrollbar-thumb,
+[data-slot='select-content']::-webkit-scrollbar-thumb,
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb,
+[data-slot='popover-content']::-webkit-scrollbar-thumb {
+  background: var(--line) !important;
+  border-radius: 0 !important;
+}
+
+.bn-suggestion-menu::-webkit-scrollbar-thumb:hover,
+[role='listbox']::-webkit-scrollbar-thumb:hover,
+[data-slot='select-content']::-webkit-scrollbar-thumb:hover,
+[data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb:hover,
+[data-slot='popover-content']::-webkit-scrollbar-thumb:hover {
+  background: var(--muted) !important;
 }
 
 /* Print / PDF export (Epic 3.3): keep only the document content. */

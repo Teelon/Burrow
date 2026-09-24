@@ -1,19 +1,19 @@
-import * as React from 'react'
-import { cn } from '../../lib/utils'
+import * as React from 'react';
+import { cn } from '../../lib/utils';
 
 export interface SegmentOption {
-  value: string
-  label: React.ReactNode
+  value: string;
+  label: React.ReactNode;
 }
 
 export interface SegmentedControlProps {
-  value: string
-  onValueChange: (value: string) => void
-  options: SegmentOption[]
-  size?: 'sm' | 'md'
-  fullWidth?: boolean
-  className?: string
-  ariaLabel?: string
+  value: string;
+  onValueChange: (value: string) => void;
+  options: SegmentOption[];
+  size?: 'sm' | 'md';
+  fullWidth?: boolean;
+  className?: string;
+  ariaLabel?: string;
 }
 
 /** Angular segmented control — selected tab gets sulfur-yellow accent. */
@@ -37,7 +37,7 @@ export function SegmentedControl({
       )}
     >
       {options.map((opt) => {
-        const active = opt.value === value
+        const active = opt.value === value;
         return (
           <button
             key={opt.value}
@@ -56,8 +56,8 @@ export function SegmentedControl({
           >
             {opt.label}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

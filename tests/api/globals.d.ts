@@ -6,12 +6,12 @@
  */
 declare namespace Cloudflare {
   interface Env {
-    DB: D1Database
-    FILES: R2Bucket
-    BETTER_AUTH_SECRET: string
-    BETTER_AUTH_URL: string
-    BOOTSTRAP_TOKEN: string
+    DB: D1Database;
+    FILES: R2Bucket;
+    BETTER_AUTH_SECRET: string;
+    BETTER_AUTH_URL: string;
+    BOOTSTRAP_TOKEN: string;
     /** Migrations read in vitest.config.ts; applied by tests/api/setup.ts. */
-    TEST_MIGRATIONS: import('cloudflare:test').D1Migration[]
+    TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }
