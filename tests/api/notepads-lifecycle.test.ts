@@ -281,7 +281,75 @@ describe('Phase 3: Notepads, Soft Edit Locks & Restore Matrix', () => {
     )
     expect(saveResB.status).toBe(409)
 
-    // User A releases lock
+    // GET /api/notepads/:id returns lock info with clientId and isMe
+    const getResA = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}`,
+      { headers: { Cookie: ownerCookie } },
+      env,
+    )
+    expect(getResA.status).toBe(200)
+    const getJsonA = (await getResA.json()) as { lock: { clientId: string; isMe: boolean } }
+    expect(getJsonA.lock.clientId).toBe('client-A')
+    expect(getJsonA.lock.isMe).toBe(true)
+
+    const getResB = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}`,
+      { headers: { Cookie: editorCookie } },
+      env,
+    )
+    const getJsonB = (await getResB.json()) as { lock: { isMe: boolean } }
+    expect(getJsonB.lock.isMe).toBe(false)
+
+    // User A in a second tab (client-A2) tries to claim without takeover -> 409 with isMe: true
+    const claimResA2 = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-A2' }),
+      },
+      env,
+    )
+    expect(claimResA2.status).toBe(409)
+    const lockErrA2 = (await claimResA2.json()) as {
+      error: { code: string; holder: { isMe: boolean } }
+    }
+    expect(lockErrA2.error.holder.isMe).toBe(true)
+
+    // User B tries to takeover User A's lock -> refused 409 (cannot take over another user's lock)
+    const claimTakeoverB = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: editorCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-B', takeover: true }),
+      },
+      env,
+    )
+    expect(claimTakeoverB.status).toBe(409)
+
+    // User A takes over lock in client-A2 -> succeeds (200)
+    const claimTakeoverA2 = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-A2', takeover: true }),
+      },
+      env,
+    )
+    expect(claimTakeoverA2.status).toBe(200)
+
+    // User A releases lock from client-A2
     const releaseResA = await app.request(
       `http://localhost/api/notepads/${parentNotepadId}/lock`,
       {
@@ -290,7 +358,7 @@ describe('Phase 3: Notepads, Soft Edit Locks & Restore Matrix', () => {
           'Content-Type': 'application/json',
           Cookie: ownerCookie,
         },
-        body: JSON.stringify({ clientId: 'client-A' }),
+        body: JSON.stringify({ clientId: 'client-A2' }),
       },
       env,
     )

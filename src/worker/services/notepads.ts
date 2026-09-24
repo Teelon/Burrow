@@ -540,7 +540,11 @@ export async function saveContent(
       'locked',
       JSON.stringify({
         code: 'locked',
-        holder: { userId: lock.userId, name: holder?.name || 'Someone' },
+        holder: {
+          userId: lock.userId,
+          name: holder?.name || 'Someone',
+          isMe: lock.userId === args.actorId,
+        },
         expiresAt: lock.expiresAt,
       }),
     )
@@ -650,6 +654,7 @@ export interface ClaimLockArgs {
   notepadId: string
   userId: string
   clientId: string
+  takeover?: boolean
 }
 
 export async function claimLock(db: DB, args: ClaimLockArgs) {
@@ -666,20 +671,28 @@ export async function claimLock(db: DB, args: ClaimLockArgs) {
     existingLock.expiresAt > now &&
     (existingLock.userId !== args.userId || existingLock.clientId !== args.clientId)
   ) {
-    const [holder] = await db
-      .select({ name: t.user.name })
-      .from(t.user)
-      .where(eq(t.user.id, existingLock.userId))
+    if (existingLock.userId === args.userId && args.takeover) {
+      // Allowed: same user taking over lock from another tab or window
+    } else {
+      const [holder] = await db
+        .select({ name: t.user.name })
+        .from(t.user)
+        .where(eq(t.user.id, existingLock.userId))
 
-    throw new HttpError(
-      409,
-      'locked',
-      JSON.stringify({
-        code: 'locked',
-        holder: { userId: existingLock.userId, name: holder?.name || 'Someone' },
-        expiresAt: existingLock.expiresAt,
-      }),
-    )
+      throw new HttpError(
+        409,
+        'locked',
+        JSON.stringify({
+          code: 'locked',
+          holder: {
+            userId: existingLock.userId,
+            name: holder?.name || 'Someone',
+            isMe: existingLock.userId === args.userId,
+          },
+          expiresAt: existingLock.expiresAt,
+        }),
+      )
+    }
   }
 
   // Atomic claim / upsert

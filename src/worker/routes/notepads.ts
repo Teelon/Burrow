@@ -44,6 +44,7 @@ const moveNotepadSchema = z.object({
 
 const lockSchema = z.object({
   clientId: z.string().min(1),
+  takeover: z.boolean().optional(),
 })
 
 const tagsSchema = z.object({
@@ -154,7 +155,13 @@ export const notepadsRoutes = new Hono<Env>()
       .from(t.editLocks)
       .where(eq(t.editLocks.notepadId, notepadId))
 
-    let lock: { userId: string; name: string; expiresAt: number } | null = null
+    let lock: {
+      userId: string
+      clientId: string
+      name: string
+      expiresAt: number
+      isMe: boolean
+    } | null = null
     if (lockRow && lockRow.expiresAt > now) {
       const [holder] = await db
         .select({ name: t.user.name })
@@ -162,8 +169,10 @@ export const notepadsRoutes = new Hono<Env>()
         .where(eq(t.user.id, lockRow.userId))
       lock = {
         userId: lockRow.userId,
+        clientId: lockRow.clientId,
         name: holder?.name || 'Someone',
         expiresAt: lockRow.expiresAt,
+        isMe: lockRow.userId === c.get('userId'),
       }
     }
 
@@ -398,13 +407,14 @@ export const notepadsRoutes = new Hono<Env>()
       const db = createDb(c.env.DB)
       const userId = c.get('userId')
       const notepadId = c.req.param('id')
-      const { clientId } = c.req.valid('json')
+      const { clientId, takeover } = c.req.valid('json')
 
       try {
         const result = await claimLock(db, {
           notepadId,
           userId,
           clientId,
+          takeover,
         })
         return c.json(result)
       } catch (err: unknown) {

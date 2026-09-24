@@ -9,11 +9,13 @@ import '@blocknote/shadcn/style.css'
 import { nanoid } from 'nanoid'
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   FileText,
   Lock,
   Star,
+  X,
 } from 'lucide-react'
 import { schema } from './schema'
 import {
@@ -23,6 +25,20 @@ import {
   type SuggestionDialogState,
 } from './suggestionItems'
 import { NotepadPickerModal, TaskPickerModal } from './ReferenceDialogs'
+
+function getTabClientId(): string {
+  if (typeof window === 'undefined') return nanoid()
+  try {
+    let id = window.sessionStorage.getItem('burrow_client_id')
+    if (!id) {
+      id = nanoid()
+      window.sessionStorage.setItem('burrow_client_id', id)
+    }
+    return id
+  } catch {
+    return nanoid()
+  }
+}
 
 interface NotepadEditorProps {
   notepadId: string
@@ -42,7 +58,19 @@ interface NotepadData {
   isFavorite: boolean
   tags: Array<{ id: string; name: string; color?: string | null }>
   backlinks: Array<{ id: string; title: string; icon?: string | null }>
-  lock: { userId: string; name: string; expiresAt: number } | null
+  lock: {
+    userId: string
+    clientId: string
+    name: string
+    expiresAt: number
+    isMe?: boolean
+  } | null
+}
+
+interface LockBannerState {
+  holderName: string
+  isMe?: boolean
+  expiresAt?: number
 }
 
 export function NotepadEditor({
@@ -53,12 +81,16 @@ export function NotepadEditor({
   const [data, setData] = useState<NotepadData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'conflict' | 'error'>('saved')
-  const [lockBanner, setLockBanner] = useState<{ holderName: string } | null>(null)
+  const [lockBanner, setLockBanner] = useState<LockBannerState | null>(null)
+  const [availableBanner, setAvailableBanner] = useState(false)
   const [conflictBanner, setConflictBanner] = useState(false)
   const [showBacklinks, setShowBacklinks] = useState(true)
   const [dialogState, setDialogState] = useState<SuggestionDialogState>({ type: null })
 
-  const clientIdRef = useRef(nanoid())
+  const clientIdRef = useRef(getTabClientId())
+  const hasLockRef = useRef(false)
+  const isFocusedRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const currentVersionRef = useRef(1)
   const isSavingRef = useRef(false)
   const queuedContentRef = useRef<string | null>(null)
@@ -77,9 +109,29 @@ export function NotepadEditor({
       lastSavedContentRef.current = json.content
 
       if (json.lock && json.lock.expiresAt > Date.now()) {
-        setLockBanner({ holderName: json.lock.name })
+        const isCurrentClient = json.lock.clientId === clientIdRef.current
+        if (!isCurrentClient) {
+          hasLockRef.current = false
+          setLockBanner({
+            holderName: json.lock.name,
+            isMe: !!json.lock.isMe,
+            expiresAt: json.lock.expiresAt,
+          })
+          setAvailableBanner(false)
+        } else {
+          // Lock is held by this tab
+          hasLockRef.current = true
+          setLockBanner(null)
+          setAvailableBanner(false)
+        }
       } else {
-        setLockBanner(null)
+        hasLockRef.current = false
+        setLockBanner((prev) => {
+          if (prev) {
+            setAvailableBanner(true)
+          }
+          return null
+        })
       }
     } catch (err) {
       console.error(err)
@@ -92,30 +144,55 @@ export function NotepadEditor({
     loadNotepad()
   }, [loadNotepad])
 
-  // 2. Lock heartbeat
-  const claimLock = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/notepads/${notepadId}/lock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: clientIdRef.current }),
-      })
-      if (res.status === 409) {
-        const err = (await res.json()) as { error?: { holder?: { name?: string } } }
-        setLockBanner({ holderName: err.error?.holder?.name || 'Someone' })
-        return false
+  // Polling when locked by another client/user (every 10 seconds)
+  useEffect(() => {
+    if (!lockBanner) return
+    const pollInterval = window.setInterval(() => {
+      loadNotepad()
+    }, 10_000)
+    return () => window.clearInterval(pollInterval)
+  }, [lockBanner, loadNotepad])
+
+  // 2. Lock claim & release
+  const claimLock = useCallback(
+    async (takeover = false) => {
+      try {
+        const res = await fetch(`/api/notepads/${notepadId}/lock`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: clientIdRef.current,
+            takeover,
+          }),
+        })
+        if (res.status === 409) {
+          const err = (await res.json()) as {
+            error?: { holder?: { name?: string; isMe?: boolean; userId?: string } }
+          }
+          hasLockRef.current = false
+          setLockBanner({
+            holderName: err.error?.holder?.name || 'Someone',
+            isMe: !!err.error?.holder?.isMe,
+          })
+          setAvailableBanner(false)
+          return false
+        }
+        if (res.ok) {
+          hasLockRef.current = true
+          setLockBanner(null)
+          setAvailableBanner(false)
+          return true
+        }
+      } catch (err) {
+        console.warn('Lock claim error', err)
       }
-      if (res.ok) {
-        setLockBanner(null)
-        return true
-      }
-    } catch (err) {
-      console.warn('Lock claim error', err)
-    }
-    return false
-  }, [notepadId])
+      return false
+    },
+    [notepadId],
+  )
 
   const releaseLock = useCallback(() => {
+    hasLockRef.current = false
     fetch(`/api/notepads/${notepadId}/lock`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -123,6 +200,22 @@ export function NotepadEditor({
       keepalive: true,
     }).catch(() => {})
   }, [notepadId])
+
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) return
+    heartbeatIntervalRef.current = window.setInterval(() => {
+      if (isFocusedRef.current) {
+        claimLock()
+      }
+    }, 30_000)
+  }, [claimLock])
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      window.clearInterval(heartbeatIntervalRef.current)
+      heartbeatIntervalRef.current = null
+    }
+  }, [])
 
   // 3. Save function (single-flight, queued)
   const executeSave = useCallback(
@@ -152,9 +245,15 @@ export function NotepadEditor({
         })
 
         if (res.status === 409) {
-          const err = (await res.json()) as { error?: { code?: string; holder?: { name?: string } } }
+          const err = (await res.json()) as {
+            error?: { code?: string; holder?: { name?: string; isMe?: boolean } }
+          }
           if (err.error?.code === 'locked') {
-            setLockBanner({ holderName: err.error.holder?.name || 'Someone' })
+            hasLockRef.current = false
+            setLockBanner({
+              holderName: err.error.holder?.name || 'Someone',
+              isMe: !!err.error.holder?.isMe,
+            })
           } else {
             setConflictBanner(true)
             setSaveStatus('conflict')
@@ -208,28 +307,73 @@ export function NotepadEditor({
   useEffect(() => {
     if (!editor || !isEditable) return
     const unbind = editor.onChange(() => {
+      if (!hasLockRef.current && !lockBanner) {
+        claimLock()
+        startHeartbeat()
+      }
       const json = JSON.stringify(editor.document)
       scheduleSave(json)
     })
     return unbind
-  }, [editor, isEditable, scheduleSave])
+  }, [editor, isEditable, scheduleSave, lockBanner, claimLock, startHeartbeat])
 
-  // Manage heartbeat and lock release
-  useEffect(() => {
-    heartbeatIntervalRef.current = window.setInterval(() => {
+  // Focus & blur management for lock claiming and releasing
+  const handleFocus = useCallback(() => {
+    isFocusedRef.current = true
+    if (!lockBanner) {
       claimLock()
-    }, 30_000)
+      startHeartbeat()
+    }
+  }, [claimLock, lockBanner, startHeartbeat])
 
-    return () => {
-      if (heartbeatIntervalRef.current) window.clearInterval(heartbeatIntervalRef.current)
-      if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current)
-      // Flush any pending save before releasing lock
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLDivElement>) => {
+      if (containerRef.current && containerRef.current.contains(e.relatedTarget as Node)) {
+        return
+      }
+      isFocusedRef.current = false
+      stopHeartbeat()
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
       if (editor) {
         executeSave(JSON.stringify(editor.document))
       }
-      releaseLock()
+      if (hasLockRef.current) {
+        releaseLock()
+      }
+    },
+    [editor, executeSave, releaseLock, stopHeartbeat],
+  )
+
+  // Page unload & unmount lock release
+  useEffect(() => {
+    const handlePageHide = () => {
+      if (hasLockRef.current) {
+        if (editor) {
+          executeSave(JSON.stringify(editor.document))
+        }
+        releaseLock()
+      }
     }
-  }, [claimLock, releaseLock, executeSave, editor])
+
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handlePageHide)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handlePageHide)
+      stopHeartbeat()
+      if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current)
+      if (hasLockRef.current) {
+        if (editor) {
+          executeSave(JSON.stringify(editor.document))
+        }
+        releaseLock()
+      }
+    }
+  }, [editor, executeSave, releaseLock, stopHeartbeat])
 
   const toggleFavorite = async () => {
     if (!data) return
@@ -262,22 +406,72 @@ export function NotepadEditor({
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-6 space-y-6">
+    <div
+      ref={containerRef}
+      onFocusCapture={handleFocus}
+      onBlurCapture={handleBlur}
+      className="max-w-4xl mx-auto py-8 px-6 space-y-6"
+    >
       {/* Top Banner: Read-only Lock */}
       {lockBanner && (
         <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-800 dark:text-amber-200">
           <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4 text-amber-600" />
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              <strong>{lockBanner.holderName}</strong> is currently editing this notepad (read-only).
+              {lockBanner.isMe ? (
+                <>You are currently editing this notepad in another window or tab (read-only).</>
+              ) : (
+                <>
+                  <strong>{lockBanner.holderName}</strong> is currently editing this notepad (read-only).
+                </>
+              )}
             </span>
           </div>
-          <button
-            onClick={claimLock}
-            className="px-2.5 py-1 rounded bg-white dark:bg-neutral-900 border border-amber-300 dark:border-amber-700 text-xs font-medium hover:bg-amber-100/50"
-          >
-            Check Availability
-          </button>
+          <div className="flex items-center gap-2">
+            {lockBanner.isMe && (
+              <button
+                onClick={() => claimLock(true)}
+                className="px-2.5 py-1 rounded bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition"
+              >
+                Edit Here Instead
+              </button>
+            )}
+            <button
+              onClick={() => claimLock(false)}
+              className="px-2.5 py-1 rounded bg-white dark:bg-neutral-900 border border-amber-300 dark:border-amber-700 text-xs font-medium hover:bg-amber-100/50 transition"
+            >
+              Check Availability
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Top Banner: Now Available */}
+      {availableBanner && !lockBanner && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-center justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>This notepad is now available to edit.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const ok = await claimLock(false)
+                if (ok) {
+                  setAvailableBanner(false)
+                }
+              }}
+              className="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition"
+            >
+              Start Editing
+            </button>
+            <button
+              onClick={() => setAvailableBanner(false)}
+              className="p-1 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 

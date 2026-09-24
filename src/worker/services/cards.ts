@@ -316,7 +316,7 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
     .from(t.editLocks)
     .where(eq(t.editLocks.notepadId, card.notepadId))
 
-  let lock: { userId: string; name: string; expiresAt: number } | null = null
+  let lock: { userId: string; clientId: string; name: string; expiresAt: number } | null = null
   if (lockRow && lockRow.expiresAt > now) {
     const [holder] = await db
       .select({ name: t.user.name })
@@ -324,6 +324,7 @@ export async function getCard(db: DB, workspaceId: string, cardId: string) {
       .where(eq(t.user.id, lockRow.userId))
     lock = {
       userId: lockRow.userId,
+      clientId: lockRow.clientId,
       name: holder?.name || 'Someone',
       expiresAt: lockRow.expiresAt,
     }
