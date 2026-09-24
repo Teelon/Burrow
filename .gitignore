@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.deploy-log
+.dev.vars
+*.local
+test-results/
+playwright-report/
+.wrangler/
+.vite/
+coverage/
+.secrets.tmp.json

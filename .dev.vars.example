@@ -1,0 +1,5 @@
+# Copy to .dev.vars (git-ignored) for local development.
+# Never commit real values. Production secrets go through `wrangler secret put`.
+BETTER_AUTH_SECRET=dev-secret-change-me-32-bytes-minimum!!
+BETTER_AUTH_URL=http://127.0.0.1:8787
+BOOTSTRAP_TOKEN=dev-bootstrap-token
