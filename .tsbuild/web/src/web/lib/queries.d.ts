@@ -235,7 +235,9 @@ export declare function useMoveCard(): import("@tanstack/react-query").UseMutati
     boardId: string;
     columnId: string;
     afterId?: string | null;
-}, unknown>;
+}, {
+    prevBoard: any;
+}>;
 export declare function useDeleteCard(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     deletedId: string;

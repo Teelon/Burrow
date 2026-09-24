@@ -1626,7 +1626,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        type: "notepad" | "card" | "user" | "tag";
+                        type: "user" | "notepad" | "card" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1642,7 +1642,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "notepad" | "card" | "user" | "tag";
+                        type: "user" | "notepad" | "card" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1659,7 +1659,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "notepad" | "card" | "user" | "tag";
+                        type: "user" | "notepad" | "card" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1675,7 +1675,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "notepad" | "card" | "user" | "tag";
+                        type: "user" | "notepad" | "card" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1692,7 +1692,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "notepad" | "card" | "user" | "tag";
+                        type: "user" | "notepad" | "card" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1909,12 +1909,12 @@ export declare const api: {
                     query: {
                         q?: string | undefined;
                         projectId?: string | undefined;
-                        scope?: "project" | "all" | undefined;
+                        scope?: "all" | "project" | undefined;
                     };
                 };
                 output: import("zod").ZodSafeParseError<{
                     q: string;
-                    scope: "project" | "all";
+                    scope: "all" | "project";
                     projectId?: string | undefined;
                 }>;
                 outputFormat: "json";
@@ -1924,7 +1924,7 @@ export declare const api: {
                     query: {
                         q?: string | undefined;
                         projectId?: string | undefined;
-                        scope?: "project" | "all" | undefined;
+                        scope?: "all" | "project" | undefined;
                     };
                 };
                 output: {

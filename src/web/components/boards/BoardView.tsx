@@ -3,12 +3,15 @@ import {
   DndContext,
   DragOverlay,
   closestCorners,
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
+  useDroppable,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -91,7 +94,8 @@ function CardTile({
     isDragging,
   } = useSortable({
     id: card.id,
-    data: { type: 'card', card },
+    data: { type: 'card', card, columnId: card.columnId },
+    disabled: isOverlay,
   })
 
   const style = {
@@ -100,6 +104,7 @@ function CardTile({
       : undefined,
     transition,
     opacity: isDragging ? 0.3 : 1,
+    touchAction: 'none' as const,
   }
 
   const isOverdue = card.dueDate && card.dueDate < Date.now()
@@ -204,8 +209,23 @@ function ColumnComponent({
 
   const cardIds = useMemo(() => column.cards.map((c) => c.id), [column.cards])
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: {
+      type: 'column',
+      column,
+    },
+  })
+
   return (
-    <div className="w-72 shrink-0 bg-neutral-100/60 dark:bg-neutral-900/40 rounded-2xl p-3 flex flex-col max-h-full border border-neutral-200/50 dark:border-neutral-800/50">
+    <div
+      ref={setNodeRef}
+      className={`w-72 shrink-0 bg-neutral-100/60 dark:bg-neutral-900/40 rounded-2xl p-3 flex flex-col max-h-full border transition-all duration-150 ${
+        isOver
+          ? 'border-primary/60 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/20'
+          : 'border-neutral-200/50 dark:border-neutral-800/50'
+      }`}
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between px-1 py-1.5 mb-2 relative">
         <div className="flex items-center gap-2">
@@ -259,7 +279,7 @@ function ColumnComponent({
       </div>
 
       {/* Cards Scroll Container */}
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[50px]">
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[60px]">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {column.cards.map((card) => (
             <CardTile
@@ -269,6 +289,17 @@ function ColumnComponent({
             />
           ))}
         </SortableContext>
+        {column.cards.length === 0 && (
+          <div
+            className={`h-24 rounded-xl border border-dashed flex items-center justify-center text-xs font-medium transition-colors select-none ${
+              isOver
+                ? 'border-primary/60 text-primary bg-primary/5'
+                : 'border-neutral-300 dark:border-neutral-700/60 text-neutral-400'
+            }`}
+          >
+            Drop cards here
+          </div>
+        )}
       </div>
 
       {/* Add Card Bottom Button / Form */}
@@ -329,15 +360,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     }),
   )
 
-  if (isLoading || !board) {
-    return (
-      <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
-        Loading board…
-      </div>
-    )
-  }
-
-  const columns: ColumnItem[] = board.columns || []
+  const columns = useMemo<ColumnItem[]>(() => board?.columns || [], [board?.columns])
 
   const filteredColumns = useMemo(() => {
     return columns.map((col) => ({
@@ -361,11 +384,55 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     }))
   }, [columns, filterSearch, filterPriority, filterAssignee, filterTag])
 
+  if (isLoading || !board) {
+    return (
+      <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
+        Loading board…
+      </div>
+    )
+  }
+
   const isFiltered =
     filterSearch.trim() !== '' ||
     filterPriority !== 'all' ||
     filterAssignee !== 'all' ||
     filterTag !== 'all'
+
+  const collisionDetectionStrategy: CollisionDetection = (args) => {
+    // 1. First, check if pointer is within any droppable
+    const pointerCollisions = pointerWithin(args)
+    if (pointerCollisions.length > 0) {
+      // Prioritize card if pointer is directly over a card
+      const cardCollision = pointerCollisions.find(
+        (c) => c.data?.droppableContainer?.data?.current?.type === 'card',
+      )
+      if (cardCollision) {
+        return [cardCollision]
+      }
+      // Otherwise prioritize column if pointer is over the column
+      const columnCollision = pointerCollisions.find(
+        (c) => c.data?.droppableContainer?.data?.current?.type === 'column',
+      )
+      if (columnCollision) {
+        return [columnCollision]
+      }
+      return pointerCollisions
+    }
+
+    // 2. Fall back to closestCorners
+    const cornerCollisions = closestCorners(args)
+    if (cornerCollisions.length > 0) {
+      const cardCollision = cornerCollisions.find(
+        (c) => c.data?.droppableContainer?.data?.current?.type === 'card',
+      )
+      if (cardCollision) {
+        return [cardCollision]
+      }
+      return cornerCollisions
+    }
+
+    return []
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
@@ -385,46 +452,95 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     const activeId = active.id as string
     const overId = over.id as string
 
-    // Find active card and its current column
+    // 1. Find active card and its current column
     let sourceCol: ColumnItem | undefined
-    let activeCardItem: CardItem | undefined
     for (const col of columns) {
-      const card = col.cards.find((c) => c.id === activeId)
-      if (card) {
+      if (col.cards.some((c) => c.id === activeId)) {
         sourceCol = col
-        activeCardItem = card
         break
       }
     }
-    if (!sourceCol || !activeCardItem) return
+    if (!sourceCol) return
 
-    // Find destination column: either over a column directly or over another card
+    // 2. Find destination column: either over a column directly or over another card
     let destCol = columns.find((c) => c.id === overId)
-    let afterId: string | null = null
+    const isOverColumn = Boolean(destCol)
 
     if (!destCol) {
-      // Over another card
-      for (const col of columns) {
-        const idx = col.cards.findIndex((c) => c.id === overId)
-        if (idx !== -1) {
-          destCol = col
-          // Position after previous sibling
-          afterId = idx > 0 ? col.cards[idx - 1]!.id : null
-          break
+      // overId is a card id; find which column contains it
+      destCol = columns.find((c) => c.cards.some((c) => c.id === overId))
+    }
+    if (!destCol) return
+
+    // 3. Compute target otherCards (cards in destination column excluding activeCard)
+    const targetCards = destCol.cards.filter((c) => c.id !== activeId)
+    let afterId: string | null = null
+
+    if (isOverColumn) {
+      // Dropped on the column itself (e.g. empty column or empty bottom area)
+      if (targetCards.length === 0) {
+        afterId = null
+      } else {
+        // Append to the bottom of the column
+        afterId = targetCards[targetCards.length - 1]!.id
+      }
+    } else {
+      // Dropped onto a specific card (overId)
+      const overIndex = targetCards.findIndex((c) => c.id === overId)
+
+      if (sourceCol.id === destCol.id) {
+        // Reordering within the SAME column
+        const sourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId)
+        const rawOverIndex = sourceCol.cards.findIndex((c) => c.id === overId)
+
+        if (sourceIndex === rawOverIndex) {
+          return
+        }
+
+        if (sourceIndex < rawOverIndex) {
+          // Dragged downward past overId -> place AFTER overId
+          afterId = overId
+        } else {
+          // Dragged upward before overId -> place BEFORE overId
+          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null
+        }
+      } else {
+        // Dragging into a DIFFERENT column (stage)
+        const overRect = event.over?.rect
+        const activeRect = event.active.rect.current.translated
+
+        let isBelow = false
+        if (overRect && activeRect) {
+          const overMidY = overRect.top + overRect.height / 2
+          const activeMidY = activeRect.top + activeRect.height / 2
+          isBelow = activeMidY > overMidY
+        }
+
+        if (isBelow) {
+          afterId = overId
+        } else {
+          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null
         }
       }
     }
 
-    if (!destCol) return
-
-    if (sourceCol.id !== destCol.id || activeId !== overId) {
-      moveCardMutation.mutate({
-        cardId: activeId,
-        boardId,
-        columnId: destCol.id,
-        afterId,
-      })
+    // 4. Skip mutation if position didn't change in the same column
+    if (sourceCol.id === destCol.id) {
+      const currentSourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId)
+      const currentPredecessorId =
+        currentSourceIndex > 0 ? sourceCol.cards[currentSourceIndex - 1]!.id : null
+      if (afterId === currentPredecessorId) {
+        return
+      }
     }
+
+    // 5. Execute move mutation
+    moveCardMutation.mutate({
+      cardId: activeId,
+      boardId,
+      columnId: destCol.id,
+      afterId,
+    })
   }
 
   const handleAddColumn = () => {
@@ -632,7 +748,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
       <div className="flex-1 overflow-x-auto p-6 flex items-start gap-4">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetectionStrategy}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >

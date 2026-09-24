@@ -4,6 +4,7 @@ export declare function createAuth(db: DB, env: Env['Bindings']): import("better
     database: (options: import("better-auth").BetterAuthOptions) => import("better-auth").DBAdapter<import("better-auth").BetterAuthOptions>;
     secret: string;
     baseURL: string;
+    trustedOrigins: string[];
     emailAndPassword: {
         enabled: true;
     };

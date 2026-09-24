@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { useMe } from '../lib/queries'
 
 export function Login() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { data: me, isLoading: meLoading } = useMe()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -11,6 +15,13 @@ export function Login() {
   const [inviteToken, setInviteToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Redirect to app if already authenticated
+  useEffect(() => {
+    if (!meLoading && me) {
+      navigate({ to: '/' })
+    }
+  }, [me, meLoading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +54,8 @@ export function Login() {
         throw new Error(data.error?.message || data.message || 'Authentication failed')
       }
 
-      // Successfully signed in / up; navigate to root
+      // Successfully signed in / up; clear query cache and navigate to root
+      queryClient.clear()
       navigate({ to: '/' })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Authentication failed')

@@ -1496,7 +1496,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    type: "notepad" | "card" | "user" | "tag";
+                    type: "user" | "notepad" | "card" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1512,7 +1512,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "notepad" | "card" | "user" | "tag";
+                    type: "user" | "notepad" | "card" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1529,7 +1529,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "notepad" | "card" | "user" | "tag";
+                    type: "user" | "notepad" | "card" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1545,7 +1545,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "notepad" | "card" | "user" | "tag";
+                    type: "user" | "notepad" | "card" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1562,7 +1562,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "notepad" | "card" | "user" | "tag";
+                    type: "user" | "notepad" | "card" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1767,12 +1767,12 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 query: {
                     q?: string | undefined;
                     projectId?: string | undefined;
-                    scope?: "project" | "all" | undefined;
+                    scope?: "all" | "project" | undefined;
                 };
             };
             output: import("zod").ZodSafeParseError<{
                 q: string;
-                scope: "project" | "all";
+                scope: "all" | "project";
                 projectId?: string | undefined;
             }>;
             outputFormat: "json";
@@ -1782,7 +1782,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 query: {
                     q?: string | undefined;
                     projectId?: string | undefined;
-                    scope?: "project" | "all" | undefined;
+                    scope?: "all" | "project" | undefined;
                 };
             };
             output: {

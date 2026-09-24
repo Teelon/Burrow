@@ -16,12 +16,12 @@ export declare const searchRoutes: import("hono/hono-base").HonoBase<Env, {
                 query: {
                     q?: string | undefined;
                     projectId?: string | undefined;
-                    scope?: "project" | "all" | undefined;
+                    scope?: "all" | "project" | undefined;
                 };
             };
             output: z.ZodSafeParseError<{
                 q: string;
-                scope: "project" | "all";
+                scope: "all" | "project";
                 projectId?: string | undefined;
             }>;
             outputFormat: "json";
@@ -31,7 +31,7 @@ export declare const searchRoutes: import("hono/hono-base").HonoBase<Env, {
                 query: {
                     q?: string | undefined;
                     projectId?: string | undefined;
-                    scope?: "project" | "all" | undefined;
+                    scope?: "all" | "project" | undefined;
                 };
             };
             output: {

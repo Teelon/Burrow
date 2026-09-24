@@ -22,7 +22,7 @@ export function useMe() {
       if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`)
       return res.json()
     },
-    staleTime: 60_000,
+    staleTime: 10_000,
   })
 }
 
@@ -502,7 +502,56 @@ export function useMoveCard() {
       }
       return res.json()
     },
-    onSuccess: (_, vars) => {
+    onMutate: async ({ cardId, boardId, columnId, afterId }) => {
+      await queryClient.cancelQueries({ queryKey: ['board', boardId] })
+      const prevBoard = queryClient.getQueryData<any>(['board', boardId])
+      if (prevBoard && prevBoard.columns) {
+        let movedCard: any = null
+        const nextColumns = prevBoard.columns.map((col: any) => {
+          const card = col.cards?.find((c: any) => c.id === cardId)
+          if (card) {
+            movedCard = { ...card, columnId }
+            return {
+              ...col,
+              cards: col.cards.filter((c: any) => c.id !== cardId),
+            }
+          }
+          return col
+        })
+
+        if (movedCard) {
+          const finalColumns = nextColumns.map((col: any) => {
+            if (col.id === columnId) {
+              const cards = [...(col.cards || [])]
+              if (!afterId) {
+                cards.unshift(movedCard)
+              } else {
+                const idx = cards.findIndex((c: any) => c.id === afterId)
+                if (idx === -1) {
+                  cards.push(movedCard)
+                } else {
+                  cards.splice(idx + 1, 0, movedCard)
+                }
+              }
+              return { ...col, cards }
+            }
+            return col
+          })
+
+          queryClient.setQueryData(['board', boardId], {
+            ...prevBoard,
+            columns: finalColumns,
+          })
+        }
+      }
+      return { prevBoard }
+    },
+    onError: (_err, vars, context) => {
+      if (context?.prevBoard) {
+        queryClient.setQueryData(['board', vars.boardId], context.prevBoard)
+      }
+    },
+    onSettled: (_, __, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] })
     },
   })
