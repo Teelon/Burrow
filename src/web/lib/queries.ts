@@ -289,12 +289,15 @@ export function useDeleteBoard() {
       const res = await api.api.boards[':id'].$delete({
         param: { id: boardId },
       });
+      // 404 means already deleted — treat as success
+      if (res.status === 404) return { ok: true, deletedId: boardId };
       if (!res.ok) {
         const err = (await res.json()) as { error?: { message?: string } };
         throw new Error(err.error?.message || 'Failed to delete board');
       }
       return res.json();
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
     },

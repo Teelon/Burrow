@@ -7,7 +7,7 @@ import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { StatusDiamond } from '../ui/StatusDiamond';
 import { Avatar } from '../ui/Avatar';
-import { useBoards, useCreateBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries';
+import { useBoards, useCreateBoard, useDeleteBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries';
 import { NotepadTree } from '../notepads/NotepadTree';
 import { NotificationsBell } from './NotificationsBell';
 
@@ -35,6 +35,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const { data: boards = [] } = useBoards(currentProjectId);
   const { data: projectTags = [] } = useProjectTags(currentProjectId);
   const createBoardMutation = useCreateBoard();
+  const deleteBoardMutation = useDeleteBoard();
   const badgeCount = useMyTasksBadgeCount();
   const queryClient = useQueryClient();
   const createRootNotepad = useMutation({
@@ -202,25 +203,48 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               boards.map((b) => {
                 const isActive = b.id === currentBoardId;
                 return (
-                  <Link
-                    key={b.id}
-                    to="/p/$projectId/boards/$boardId"
-                    params={{
-                      projectId: currentProjectId!,
-                      boardId: b.id,
-                    }}
-                    className={`relative w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition min-h-[44px] md:min-h-0 ${
-                      isActive
-                        ? 'bg-hi text-text font-semibold'
-                        : 'text-muted hover:bg-hi hover:text-text'
-                    }`}
-                  >
-                    {isActive && (
-                      <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
+                  <div key={b.id} className="group relative flex items-center justify-between">
+                    <Link
+                      to="/p/$projectId/boards/$boardId"
+                      params={{
+                        projectId: currentProjectId!,
+                        boardId: b.id,
+                      }}
+                      className={`relative flex-1 flex items-center gap-2 px-3 py-2 text-xs font-medium transition min-h-[44px] md:min-h-0 ${
+                        isActive
+                          ? 'bg-hi text-text font-semibold'
+                          : 'text-muted hover:bg-hi hover:text-text'
+                      }`}
+                    >
+                      {isActive && (
+                        <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
+                      )}
+                      <span className="text-sm leading-none">{b.icon || '📋'}</span>
+                      <span className="truncate">{b.name}</span>
+                    </Link>
+                    {me?.role !== 'viewer' && (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (window.confirm(`Delete board "${b.name}" to trash?`)) {
+                            await deleteBoardMutation.mutateAsync(b.id);
+                            if (b.id === currentBoardId && currentProjectId) {
+                              navigate({
+                                to: '/p/$projectId',
+                                params: { projectId: currentProjectId },
+                              });
+                            }
+                          }
+                        }}
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] transition shrink-0 mr-1 cursor-pointer"
+                        title="Delete board to Trash"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     )}
-                    <span className="text-sm leading-none">{b.icon || '📋'}</span>
-                    <span className="truncate">{b.name}</span>
-                  </Link>
+                  </div>
                 );
               })
             )}

@@ -20,8 +20,10 @@ import {
   MoreHorizontal,
   Printer,
   Star,
+  Trash2,
   X,
 } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { schema } from './schema';
 import {
   getAtMenuSuggestions,
@@ -106,6 +108,7 @@ function NotepadEditorInner({
   hideFavorite = false,
   onReload,
 }: NotepadEditorInnerProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [data, setData] = useState<NotepadData>(initialData);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'conflict' | 'error'>('saved');
@@ -711,6 +714,21 @@ function NotepadEditorInner({
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print / Export as PDF</span>
                 </button>
+                <div className="my-1 border-t border-[var(--line)]" />
+                <button
+                  onClick={async () => {
+                    setShowExportMenu(false);
+                    if (window.confirm(`Delete notepad "${data.title || 'Untitled'}" to trash?`)) {
+                      await fetch(`/api/notepads/${initialData.id}`, { method: 'DELETE' });
+                      queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] });
+                      navigate({ to: '/p/$projectId', params: { projectId: initialData.projectId } });
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete to Trash</span>
+                </button>
               </div>
             )}
           </div>
@@ -912,16 +930,23 @@ export function NotepadEditor({
 }: NotepadEditorProps) {
   const [data, setData] = useState<NotepadData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const loadNotepad = useCallback(async () => {
     try {
+      setError(null);
       const res = await fetch(`/api/notepads/${notepadId}`);
+      if (res.status === 404) {
+        setError('This notepad was not found or has been moved to trash.');
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load notepad');
       const json = (await res.json()) as NotepadData;
       setData(json);
     } catch (err) {
       console.error('Failed to load notepad', err);
+      setError('Unable to load notepad.');
     } finally {
       setLoading(false);
     }
@@ -932,11 +957,23 @@ export function NotepadEditor({
     loadNotepad();
   }, [loadNotepad]);
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <div className="p-8 max-w-3xl mx-auto space-y-4">
         <div className="h-8 w-48 bg-[var(--surface2)] animate-pulse" />
         <div className="h-64 bg-[var(--surface2)] animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="p-12 max-w-xl mx-auto text-center space-y-4">
+        <div className="text-4xl">📄</div>
+        <h2 className="text-lg font-semibold text-[var(--text)]">Notepad Unavailable</h2>
+        <p className="text-xs text-[var(--muted)]">
+          {error || 'This notepad is no longer available.'}
+        </p>
       </div>
     );
   }
@@ -954,3 +991,5 @@ export function NotepadEditor({
     />
   );
 }
+
+export default NotepadEditor;

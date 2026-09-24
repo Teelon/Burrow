@@ -138,7 +138,7 @@ export declare function useUpdateBoard(): import("@tanstack/react-query").UseMut
     icon?: string | null;
 }, unknown>;
 export declare function useDeleteBoard(): import("@tanstack/react-query").UseMutationResult<{
-    ok: true;
+    ok: boolean;
     deletedId: string;
 }, Error, string, unknown>;
 export declare function useCreateColumn(): import("@tanstack/react-query").UseMutationResult<{

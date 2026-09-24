@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from 'lucide-react';
 import {
@@ -98,6 +98,7 @@ interface TreeRowProps {
   activeId: string | null;
   expanded: Record<string, boolean>;
   projection: Projection | null;
+  isDeleting?: boolean;
   onCreateChild: (id: string) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
@@ -111,6 +112,7 @@ function TreeRow({
   activeId,
   expanded,
   projection,
+  isDeleting = false,
   onCreateChild,
   onDelete,
   onToggle,
@@ -136,10 +138,8 @@ function TreeRow({
     <div>
       <div
         ref={setRefs}
-        {...attributes}
-        {...listeners}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        className={`group relative flex items-center justify-between pr-2 text-xs transition select-none cursor-grab active:cursor-grabbing min-h-[44px] md:min-h-0 py-2 md:py-1 ${
+        className={`group relative flex items-center justify-between pr-2 text-xs transition select-none min-h-[44px] md:min-h-0 py-2 md:py-1 ${
           isActive ? 'bg-hi text-text font-medium' : 'text-muted hover:bg-hi hover:text-text'
         } ${mode === 'inside' ? 'bg-accent/10 ring-2 ring-inset ring-accent' : ''} ${
           dimmed ? 'opacity-40' : ''
@@ -158,10 +158,12 @@ function TreeRow({
           to="/p/$projectId/notepads/$notepadId"
           params={{ projectId, notepadId: node.id }}
           className="flex min-w-0 flex-1 items-center gap-1.5 px-3"
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {hasChildren ? (
             <button
               type="button"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -185,6 +187,7 @@ function TreeRow({
         <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -197,17 +200,26 @@ function TreeRow({
           </button>
           <button
             type="button"
+            disabled={isDeleting}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onDelete(node.id);
             }}
             title="Delete to Trash"
-            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)]"
+            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] cursor-pointer disabled:opacity-40"
           >
             <Trash2 className="h-3 w-3" />
           </button>
-          <GripVertical className="h-3 w-3 cursor-grab text-muted" aria-hidden />
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center cursor-grab active:cursor-grabbing text-muted hover:text-text touch-none"
+            title="Drag to reorder"
+          >
+            <GripVertical className="h-3 w-3" aria-hidden />
+          </div>
         </div>
       </div>
 
@@ -223,6 +235,7 @@ function TreeRow({
               activeId={activeId}
               expanded={expanded}
               projection={projection}
+              isDeleting={isDeleting}
               onCreateChild={onCreateChild}
               onDelete={onDelete}
               onToggle={onToggle}
@@ -235,6 +248,7 @@ function TreeRow({
 }
 
 export function NotepadTree({ projectId }: { projectId: string }) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const params = useParams({ strict: false }) as { notepadId?: string };
   const activeNotepadId = params.notepadId;
@@ -267,10 +281,18 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   const deleteNotepad = useMutation({
     mutationFn: async (notepadId: string) => {
       const res = await fetch(`/api/notepads/${notepadId}`, { method: 'DELETE' });
+      // 404 means already deleted — treat as success, not an error
+      if (res.status === 404) return { ok: true, deletedId: notepadId };
       if (!res.ok) throw new Error('Failed to delete notepad');
       return res.json();
     },
-    onSuccess: invalidate,
+    retry: false,
+    onSuccess: (_, deletedId) => {
+      invalidate();
+      if (deletedId === activeNotepadId) {
+        navigate({ to: '/p/$projectId', params: { projectId } });
+      }
+    },
   });
 
   const moveNote = useMoveNotepad(projectId);
@@ -508,6 +530,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
                 activeId={activeNotepadId ?? null}
                 expanded={expanded}
                 projection={projection}
+                isDeleting={deleteNotepad.isPending}
                 onCreateChild={createChild}
                 onDelete={(id) => deleteNotepad.mutate(id)}
                 onToggle={toggleExpand}

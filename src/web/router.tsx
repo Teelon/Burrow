@@ -17,6 +17,22 @@ import { useMe, useProjects } from './lib/queries';
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
+  errorComponent: ({ error, reset }) => (
+    <div className="flex h-screen flex-col items-center justify-center p-8 text-center bg-[var(--bg)] text-[var(--text)]">
+      <div className="text-4xl mb-4">⚠️</div>
+      <h2 className="text-lg font-bold mb-2">Something went wrong</h2>
+      <p className="text-xs text-[var(--muted)] max-w-md mb-6">{error instanceof Error ? error.message : 'An unexpected error occurred.'}</p>
+      <button
+        onClick={() => {
+          reset();
+          window.location.reload();
+        }}
+        className="px-4 py-2 bg-[var(--accent)] text-[var(--accent-ink)] text-xs font-semibold hover:opacity-90 transition cursor-pointer"
+      >
+        Reload Page
+      </button>
+    </div>
+  ),
 });
 
 function IndexRedirect() {
@@ -49,26 +65,12 @@ function IndexRedirect() {
   );
 }
 
-import { lazy, Suspense } from 'react';
-
-const LazyNotepadEditor = lazy(() =>
-  import('./editor/NotepadEditor').then((m) => ({ default: m.NotepadEditor })),
-);
+import { NotepadEditor } from './editor/NotepadEditor';
 
 function NotepadView() {
   const { notepadId } = useParams({ strict: false }) as { notepadId?: string };
-  if (!notepadId) return <div>Select a notepad</div>;
-  return (
-    <Suspense
-      fallback={
-        <div className="p-8 flex items-center justify-center text-sm text-[var(--muted)]">
-          Loading editor…
-        </div>
-      }
-    >
-      <LazyNotepadEditor notepadId={notepadId} />
-    </Suspense>
-  );
+  if (!notepadId) return <div className="p-8 text-sm text-[var(--muted)]">Select a notepad</div>;
+  return <NotepadEditor notepadId={notepadId} />;
 }
 
 import { BoardView } from './components/boards/BoardView';

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Filter, Kanban, List, Plus, Search, X } from 'lucide-react';
-import { useBoard, useMembers, useProjectTags, useUpdateBoard } from '../../lib/queries';
+import { useNavigate } from '@tanstack/react-router';
+import { CalendarDays, Filter, Kanban, List, Plus, Search, Trash2, X } from 'lucide-react';
+import { useBoard, useDeleteBoard, useMembers, useProjectTags, useUpdateBoard } from '../../lib/queries';
 import { CardPanel } from './CardPanel';
 import { KanbanView } from './views/KanbanView';
 import { ListView } from './views/ListView';
@@ -38,8 +39,10 @@ const VIEW_TABS: Array<{ mode: BoardViewMode; label: string; icon: typeof Kanban
 ];
 
 export function BoardView({ boardId, projectId }: BoardViewProps) {
+  const navigate = useNavigate();
   const { data: board, isLoading } = useBoard(boardId);
   const updateBoardMutation = useUpdateBoard();
+  const deleteBoardMutation = useDeleteBoard();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isEditingBoardName, setIsEditingBoardName] = useState(false);
@@ -168,6 +171,20 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
               <span>Add Column</span>
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              if (window.confirm(`Delete board "${board.name}" to trash?`)) {
+                await deleteBoardMutation.mutateAsync(boardId);
+                navigate({ to: '/p/$projectId', params: { projectId } });
+              }
+            }}
+            className="text-[var(--muted)] hover:text-[var(--danger)] cursor-pointer"
+            title="Delete board to Trash"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
