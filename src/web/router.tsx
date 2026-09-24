@@ -1,33 +1,169 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router'
-import { useHealth } from './lib/queries'
+import { useEffect } from 'react'
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  useNavigate,
+  useParams,
+} from '@tanstack/react-router'
+import { AppShell } from './components/layout/AppShell'
+import { Login } from './pages/Login'
+import { InviteAccept } from './pages/InviteAccept'
+import { ProjectHome } from './pages/ProjectHome'
+import { MembersSettings } from './pages/MembersSettings'
+import { useMe, useProjects } from './lib/queries'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
 })
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: HomePage,
-})
+function IndexRedirect() {
+  const navigate = useNavigate()
+  const { data: me, isLoading: meLoading } = useMe()
+  const { data: projects = [], isLoading: projectsLoading } = useProjects()
 
-function HomePage() {
-  const health = useHealth()
+  useEffect(() => {
+    if (meLoading || projectsLoading) return
+    if (!me) {
+      navigate({ to: '/login' })
+      return
+    }
+
+    const savedProjectId = localStorage.getItem('burrow-last-project')
+    const activeProject =
+      projects.find((p) => p.id === savedProjectId) ||
+      (me.lastProjectId && projects.find((p) => p.id === me.lastProjectId)) ||
+      projects[0]
+
+    if (activeProject) {
+      navigate({ to: `/p/${activeProject.id}` })
+    }
+  }, [me, meLoading, projects, projectsLoading, navigate])
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-3xl font-semibold tracking-tight">Burrow</h1>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        Dig in. Nest your notes.
-      </p>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        API health:{' '}
-        {health.isPending ? 'checking…' : health.isError ? 'unreachable' : 'ok'}
+    <div className="flex h-screen items-center justify-center p-8 text-sm text-neutral-400">
+      Loading Burrow…
+    </div>
+  )
+}
+
+function NotepadPlaceholder() {
+  const { notepadId } = useParams({ strict: false }) as { notepadId?: string }
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-4">
+      <h2 className="text-xl font-bold">Notepad</h2>
+      <p className="text-sm text-neutral-500">Notepad ID: {notepadId}</p>
+    </div>
+  )
+}
+
+function BoardPlaceholder() {
+  const { boardId } = useParams({ strict: false }) as { boardId?: string }
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-4">
+      <h2 className="text-xl font-bold">Board</h2>
+      <p className="text-sm text-neutral-500">Board ID: {boardId}</p>
+    </div>
+  )
+}
+
+function TrashPlaceholder() {
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-4">
+      <h2 className="text-xl font-bold">Trash</h2>
+      <p className="text-sm text-neutral-500">Deleted notepads and boards will appear here.</p>
+    </div>
+  )
+}
+
+function SettingsPlaceholder() {
+  const { data: me } = useMe()
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-4">
+      <h2 className="text-xl font-bold">Settings</h2>
+      <p className="text-sm text-neutral-500">
+        Signed in as: {me?.user?.name} ({me?.user?.email}) - Role: {me?.role}
       </p>
     </div>
   )
 }
 
-const routeTree = rootRoute.addChildren([indexRoute])
+// Routes without shell
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: Login,
+})
+
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/invite/$token',
+  component: InviteAccept,
+})
+
+// Routes within app shell
+const shellRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'shell',
+  component: AppShell,
+})
+
+const indexRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/',
+  component: IndexRedirect,
+})
+
+const projectHomeRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/p/$projectId',
+  component: ProjectHome,
+})
+
+const notepadRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/p/$projectId/notepads/$notepadId',
+  component: NotepadPlaceholder,
+})
+
+const boardRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/p/$projectId/boards/$boardId',
+  component: BoardPlaceholder,
+})
+
+const trashRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/p/$projectId/trash',
+  component: TrashPlaceholder,
+})
+
+const settingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings',
+  component: SettingsPlaceholder,
+})
+
+const membersRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/members',
+  component: MembersSettings,
+})
+
+const routeTree = rootRoute.addChildren([
+  loginRoute,
+  inviteRoute,
+  shellRoute.addChildren([
+    indexRoute,
+    projectHomeRoute,
+    notepadRoute,
+    boardRoute,
+    trashRoute,
+    settingsRoute,
+    membersRoute,
+  ]),
+])
 
 export const router = createRouter({ routeTree })
 
