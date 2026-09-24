@@ -250,6 +250,54 @@ describe('Phase 1: Auth, Workspace, Members, Invites & Security', () => {
     expect(reuseRes.status).toBe(403)
   })
 
+  it('can preview invite info via public info endpoint', async () => {
+    // Generate a fresh invite
+    const createRes = await app.request(
+      'http://localhost/api/invites',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({
+          email: 'preview@example.com',
+          role: 'viewer',
+        }),
+      },
+      env,
+    )
+    const { token } = (await createRes.json()) as { token: string }
+
+    // Public lookup without any session cookie
+    const infoRes = await app.request(
+      `http://localhost/api/invites/info/${token}`,
+      { method: 'GET' },
+      env,
+    )
+    expect(infoRes.status).toBe(200)
+    const infoData = (await infoRes.json()) as {
+      valid: boolean
+      token: string
+      email: string
+      role: string
+      workspaceName: string
+    }
+    expect(infoData.valid).toBe(true)
+    expect(infoData.token).toBe(token)
+    expect(infoData.email).toBe('preview@example.com')
+    expect(infoData.role).toBe('viewer')
+    expect(infoData.workspaceName).toBe('My Workspace')
+
+    // Invalid token returns 404
+    const notFoundRes = await app.request(
+      'http://localhost/api/invites/info/nonexistent-token',
+      { method: 'GET' },
+      env,
+    )
+    expect(notFoundRes.status).toBe(404)
+  })
+
   let viewerCookie = ''
 
   it('registers viewer user and tests role enforcement', async () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Trash2, UserPlus } from 'lucide-react'
+import { Copy, Check, Trash2, UserPlus, KeyRound, ExternalLink, X } from 'lucide-react'
 import {
   useMembers,
   useInvites,
@@ -7,6 +7,13 @@ import {
   useRevokeInvite,
   useMe,
 } from '../lib/queries'
+
+interface CreatedInviteInfo {
+  url: string
+  token: string
+  email: string
+  role: string
+}
 
 export function MembersSettings() {
   const { data: me } = useMe()
@@ -17,8 +24,9 @@ export function MembersSettings() {
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('editor')
-  const [createdUrl, setCreatedUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [createdInvite, setCreatedInvite] = useState<CreatedInviteInfo | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedToken, setCopiedToken] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isOwner = me?.role === 'owner'
@@ -29,22 +37,35 @@ export function MembersSettings() {
     setError(null)
 
     try {
-      const res = await createInvite.mutateAsync({
+      const res = (await createInvite.mutateAsync({
         email: inviteEmail.trim(),
         role: inviteRole,
+      })) as { url: string; token: string; email: string; role: string }
+      setCreatedInvite({
+        url: res.url,
+        token: res.token,
+        email: res.email,
+        role: res.role,
       })
-      setCreatedUrl(res.url)
       setInviteEmail('')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create invite')
     }
   }
 
-  const handleCopy = () => {
-    if (createdUrl) {
-      navigator.clipboard.writeText(createdUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+  const handleCopyUrl = () => {
+    if (createdInvite?.url) {
+      navigator.clipboard.writeText(createdInvite.url)
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
+    }
+  }
+
+  const handleCopyToken = () => {
+    if (createdInvite?.token) {
+      navigator.clipboard.writeText(createdInvite.token)
+      setCopiedToken(true)
+      setTimeout(() => setCopiedToken(false), 2000)
     }
   }
 
@@ -141,20 +162,84 @@ export function MembersSettings() {
             </button>
           </form>
 
-          {createdUrl && (
-            <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-700/60 flex items-center justify-between gap-3 text-xs">
-              <span className="truncate font-mono">{createdUrl}</span>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
+          {createdInvite && (
+            <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Invitation created for {createdInvite.email} ({createdInvite.role})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCreatedInvite(null)}
+                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5"
+                  title="Dismiss"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Invite Link */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">
+                    Invite Link (for one-click sign-up)
+                  </span>
+                  <a
+                    href={createdInvite.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                  >
+                    Open link <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                <div className="p-2.5 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-3 text-xs">
+                  <span className="truncate font-mono text-neutral-700 dark:text-neutral-300">
+                    {createdInvite.url}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 text-xs font-medium rounded-md bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition"
+                  >
+                    {copiedUrl ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedUrl ? 'Copied' : 'Copy Link'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Invite Token */}
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+                  <KeyRound className="w-3 h-3 text-neutral-500" /> Invite Token (for manual entry on registration page)
+                </span>
+                <div className="p-2.5 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-3 text-xs">
+                  <code className="font-mono font-semibold text-neutral-900 dark:text-neutral-100 select-all tracking-wider">
+                    {createdInvite.token}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={handleCopyToken}
+                    className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 text-xs font-medium rounded-md bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition"
+                  >
+                    {copiedToken ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedToken ? 'Copied' : 'Copy Token'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                The recipient can click the link to register instantly, or enter this invite token manually if they are on the sign-up page.
+              </p>
             </div>
           )}
         </div>

@@ -49,7 +49,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                     id: string;
                     name: string;
                 } | undefined;
-                role: "owner" | "editor" | "viewer";
+                role: "viewer" | "editor" | "owner";
                 lastProjectId: string | null;
             };
             outputFormat: "json";
@@ -65,7 +65,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
                 name: string;
                 email: string;
                 image: string | null;
-                role: "owner" | "editor" | "viewer";
+                role: "viewer" | "editor" | "owner";
                 joinedAt: number;
             }[];
             outputFormat: "json";
@@ -77,7 +77,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         $patch: {
             input: {
                 json: {
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                 };
             } & {
                 param: {
@@ -95,7 +95,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 json: {
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                 };
             } & {
                 param: {
@@ -105,7 +105,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 userId: string;
-                role: "owner" | "editor" | "viewer";
+                role: "viewer" | "editor" | "owner";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -133,7 +133,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                 };
             };
             output: {
@@ -148,13 +148,13 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                 };
             };
             output: {
                 id: string;
                 email: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
                 token: string;
                 expiresAt: number;
                 url: string;
@@ -170,10 +170,30 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 id: string;
                 email: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
                 expiresAt: number;
                 createdAt: number;
             }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/invites/info/:token": {
+        $get: {
+            input: {
+                param: {
+                    token: string;
+                };
+            };
+            output: {
+                valid: true;
+                token: string;
+                email: string;
+                role: "viewer" | "editor";
+                workspaceName: string;
+                expiresAt: number;
+            };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
         };
@@ -219,7 +239,7 @@ export declare const app: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 workspaceId: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;

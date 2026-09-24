@@ -1,18 +1,31 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { Check } from 'lucide-react'
 import { useMe } from '../lib/queries'
 
 export function Login() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: me, isLoading: meLoading } = useMe()
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [email, setEmail] = useState('')
+
+  const searchParams =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : null
+  const queryInviteToken =
+    searchParams?.get('inviteToken') || searchParams?.get('token') || ''
+  const queryEmail = searchParams?.get('email') || ''
+  const queryMode = searchParams?.get('mode')
+
+  const [isSignUp, setIsSignUp] = useState(
+    () => queryMode === 'signup' || !!queryInviteToken,
+  )
+  const [email, setEmail] = useState(() => queryEmail)
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [bootstrapToken, setBootstrapToken] = useState('')
-  const [inviteToken, setInviteToken] = useState('')
+  const [inviteToken, setInviteToken] = useState(() => queryInviteToken)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -54,6 +67,16 @@ export function Login() {
         throw new Error(data.error?.message || data.message || 'Authentication failed')
       }
 
+      // If user signed in (not signed up) and there was an invite token, accept it
+      const effectiveInviteToken = queryInviteToken || inviteToken.trim()
+      if (!isSignUp && effectiveInviteToken) {
+        await fetch('/api/invites/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: effectiveInviteToken }),
+        }).catch(() => {})
+      }
+
       // Successfully signed in / up; clear query cache and navigate to root
       queryClient.clear()
       navigate({ to: '/' })
@@ -79,6 +102,13 @@ export function Login() {
         {error && (
           <div className="p-3 text-xs rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50">
             {error}
+          </div>
+        )}
+
+        {queryInviteToken && (
+          <div className="p-3 text-xs rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Workspace invitation detected. Complete registration below to join.</span>
           </div>
         )}
 
@@ -129,30 +159,42 @@ export function Login() {
 
           {isSignUp && (
             <>
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Bootstrap Token (First user only)
-                </label>
-                <input
-                  type="text"
-                  value={bootstrapToken}
-                  onChange={(e) => setBootstrapToken(e.target.value)}
-                  placeholder="Required if first signup"
-                  className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+              {!inviteToken.trim() && (
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Bootstrap Token (First user setting up Burrow only)
+                  </label>
+                  <input
+                    type="text"
+                    value={bootstrapToken}
+                    onChange={(e) => setBootstrapToken(e.target.value)}
+                    placeholder="Leave blank unless initial server setup"
+                    className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs"
+                  />
+                </div>
+              )}
 
               <div>
-                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Invite Token (Subsequent users)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                    Invite Token (Teammate invitations)
+                  </label>
+                  {queryInviteToken && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      Pre-filled from link
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={inviteToken}
                   onChange={(e) => setInviteToken(e.target.value)}
-                  placeholder="From teammate invite"
-                  className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Enter invite token"
+                  className="w-full px-3 py-2 text-sm font-mono text-xs border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
+                <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                  If you received an invite link like <code className="font-mono">/invite/TOKEN</code>, the token is the code at the end of the URL.
+                </p>
               </div>
             </>
           )}

@@ -87,6 +87,56 @@ export const invitesRoutes = new Hono<Env>()
 
     return c.json(pending)
   })
+  .get('/api/invites/info/:token', async (c) => {
+    const db = createDb(c.env.DB)
+    const rawToken = c.req.param('token')
+    if (!rawToken) {
+      throw new HttpError(400, 'invalid_token', 'Invite token is required')
+    }
+
+    const tokenHash = await hashToken(rawToken)
+    const now = Date.now()
+
+    const [invite] = await db
+      .select({
+        id: t.invites.id,
+        workspaceId: t.invites.workspaceId,
+        email: t.invites.email,
+        role: t.invites.role,
+        expiresAt: t.invites.expiresAt,
+        acceptedAt: t.invites.acceptedAt,
+      })
+      .from(t.invites)
+      .where(eq(t.invites.tokenHash, tokenHash))
+
+    if (!invite) {
+      throw new HttpError(404, 'invalid_invite', 'Invalid or expired invite')
+    }
+
+    if (invite.acceptedAt !== null) {
+      throw new HttpError(400, 'invite_already_accepted', 'This invite has already been accepted')
+    }
+
+    if (invite.expiresAt <= now) {
+      throw new HttpError(400, 'invite_expired', 'This invite has expired')
+    }
+
+    const [ws] = await db
+      .select({
+        name: t.workspaces.name,
+      })
+      .from(t.workspaces)
+      .where(eq(t.workspaces.id, invite.workspaceId))
+
+    return c.json({
+      valid: true,
+      token: rawToken,
+      email: invite.email,
+      role: invite.role,
+      workspaceName: ws?.name || 'Burrow Workspace',
+      expiresAt: invite.expiresAt,
+    })
+  })
   .delete('/api/invites/:id', requireSession, requireRole('owner'), async (c) => {
     const db = createDb(c.env.DB)
     const workspaceId = c.get('workspaceId')

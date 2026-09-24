@@ -13,7 +13,7 @@ export declare function useMe(): import("@tanstack/react-query").UseQueryResult<
         id: string;
         name: string;
     } | undefined;
-    role: "owner" | "editor" | "viewer";
+    role: "viewer" | "editor" | "owner";
     lastProjectId: string | null;
 } | null, Error>;
 export declare function useProjects(): import("@tanstack/react-query").UseQueryResult<{
@@ -57,20 +57,20 @@ export declare function useMembers(): import("@tanstack/react-query").UseQueryRe
     name: string;
     email: string;
     image: string | null;
-    role: "owner" | "editor" | "viewer";
+    role: "viewer" | "editor" | "owner";
     joinedAt: number;
 }[], Error>;
 export declare function useInvites(): import("@tanstack/react-query").UseQueryResult<{
     id: string;
     email: string;
-    role: "editor" | "viewer";
+    role: "viewer" | "editor";
     expiresAt: number;
     createdAt: number;
 }[], Error>;
 export declare function useCreateInvite(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     email: string;
-    role: "editor" | "viewer";
+    role: "viewer" | "editor";
     token: string;
     expiresAt: number;
     url: string;
@@ -82,6 +82,14 @@ export declare function useRevokeInvite(): import("@tanstack/react-query").UseMu
     ok: true;
     id: string;
 }, Error, string, unknown>;
+export declare function useInviteInfo(token: string | undefined): import("@tanstack/react-query").UseQueryResult<{
+    valid: boolean;
+    token: string;
+    email: string;
+    role: "editor" | "viewer";
+    workspaceName: string;
+    expiresAt: number;
+}, Error>;
 export declare function useBoards(projectId: string | undefined): import("@tanstack/react-query").UseQueryResult<{
     id: string;
     workspaceId: string;

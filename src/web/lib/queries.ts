@@ -159,6 +159,38 @@ export function useRevokeInvite() {
   })
 }
 
+export function useInviteInfo(token: string | undefined) {
+  return useQuery({
+    queryKey: ['invite-info', token],
+    queryFn: async () => {
+      if (!token) throw new Error('Invite token is required')
+      const res = await fetch(`/api/invites/info/${encodeURIComponent(token)}`)
+      const data = (await res.json().catch(() => ({}))) as {
+        valid?: boolean
+        token?: string
+        email?: string
+        role?: 'editor' | 'viewer'
+        workspaceName?: string
+        expiresAt?: number
+        error?: { message?: string }
+      }
+      if (!res.ok) {
+        throw new Error(data.error?.message || 'Invalid or expired invite')
+      }
+      return data as {
+        valid: boolean
+        token: string
+        email: string
+        role: 'editor' | 'viewer'
+        workspaceName: string
+        expiresAt: number
+      }
+    },
+    enabled: !!token,
+    retry: false,
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Boards, Columns, Cards
 // ---------------------------------------------------------------------------

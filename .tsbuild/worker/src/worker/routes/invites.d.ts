@@ -5,7 +5,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                 };
             };
             output: {
@@ -20,13 +20,13 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             input: {
                 json: {
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                 };
             };
             output: {
                 id: string;
                 email: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
                 token: string;
                 expiresAt: number;
                 url: string;
@@ -42,10 +42,30 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             output: {
                 id: string;
                 email: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
                 expiresAt: number;
                 createdAt: number;
             }[];
+            outputFormat: "json";
+            status: import("hono/utils/http-status").ContentfulStatusCode;
+        };
+    };
+} & {
+    "/api/invites/info/:token": {
+        $get: {
+            input: {
+                param: {
+                    token: string;
+                };
+            };
+            output: {
+                valid: true;
+                token: string;
+                email: string;
+                role: "viewer" | "editor";
+                workspaceName: string;
+                expiresAt: number;
+            };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
         };
@@ -91,7 +111,7 @@ export declare const invitesRoutes: import("hono/hono-base").HonoBase<Env, {
             output: {
                 ok: true;
                 workspaceId: string;
-                role: "editor" | "viewer";
+                role: "viewer" | "editor";
             };
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;

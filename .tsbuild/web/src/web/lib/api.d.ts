@@ -57,7 +57,7 @@ export declare const api: {
                         id: string;
                         name: string;
                     } | undefined;
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                     lastProjectId: string | null;
                 };
                 outputFormat: "json";
@@ -75,7 +75,7 @@ export declare const api: {
                     name: string;
                     email: string;
                     image: string | null;
-                    role: "owner" | "editor" | "viewer";
+                    role: "viewer" | "editor" | "owner";
                     joinedAt: number;
                 }[];
                 outputFormat: "json";
@@ -90,7 +90,7 @@ export declare const api: {
                 $patch: {
                     input: {
                         json: {
-                            role: "owner" | "editor" | "viewer";
+                            role: "viewer" | "editor" | "owner";
                         };
                     } & {
                         param: {
@@ -108,7 +108,7 @@ export declare const api: {
                 } | {
                     input: {
                         json: {
-                            role: "owner" | "editor" | "viewer";
+                            role: "viewer" | "editor" | "owner";
                         };
                     } & {
                         param: {
@@ -118,7 +118,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         userId: string;
-                        role: "owner" | "editor" | "viewer";
+                        role: "viewer" | "editor" | "owner";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
@@ -146,7 +146,7 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                 };
                 output: {
@@ -161,13 +161,13 @@ export declare const api: {
                 input: {
                     json: {
                         email: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                 };
                 output: {
                     id: string;
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                     token: string;
                     expiresAt: number;
                     url: string;
@@ -180,7 +180,7 @@ export declare const api: {
                 output: {
                     id: string;
                     email: string;
-                    role: "editor" | "viewer";
+                    role: "viewer" | "editor";
                     expiresAt: number;
                     createdAt: number;
                 }[];
@@ -188,6 +188,32 @@ export declare const api: {
                 status: import("hono/utils/http-status").ContentfulStatusCode;
             };
         }>;
+    };
+} & {
+    api: {
+        invites: {
+            info: {
+                ":token": import("hono/client").ClientRequest<string, "/api/invites/info/:token", {
+                    $get: {
+                        input: {
+                            param: {
+                                token: string;
+                            };
+                        };
+                        output: {
+                            valid: true;
+                            token: string;
+                            email: string;
+                            role: "viewer" | "editor";
+                            workspaceName: string;
+                            expiresAt: number;
+                        };
+                        outputFormat: "json";
+                        status: import("hono/utils/http-status").ContentfulStatusCode;
+                    };
+                }>;
+            };
+        };
     };
 } & {
     api: {
@@ -236,7 +262,7 @@ export declare const api: {
                     output: {
                         ok: true;
                         workspaceId: string;
-                        role: "editor" | "viewer";
+                        role: "viewer" | "editor";
                     };
                     outputFormat: "json";
                     status: import("hono/utils/http-status").ContentfulStatusCode;
