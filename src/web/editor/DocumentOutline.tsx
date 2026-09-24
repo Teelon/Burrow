@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BlockNoteEditor } from '@blocknote/core'
 import { ListTree, X } from 'lucide-react'
+import { Button } from '../components/ui/Button'
+import { StatusDiamond } from '../components/ui/StatusDiamond'
 
 interface HeadingEntry {
   id: string
@@ -118,35 +120,36 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
   return (
     <div className="no-print relative">
       {/* Toggle button */}
-      <button
+      <Button
+        variant="ghost"
         onClick={() => setOpen((v) => !v)}
         title={open ? 'Hide outline' : 'Show outline (table of contents)'}
-        className={`p-1.5 rounded-lg border transition ${
+        className={`p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 border ${
           open
-            ? 'text-primary border-primary/40 bg-primary/10'
-            : 'text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600 dark:hover:text-neutral-300'
+            ? 'text-[var(--accent-ink)] bg-[var(--accent)] border-[var(--accent)]'
+            : 'text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)]'
         }`}
       >
         <ListTree className="w-4 h-4" />
-      </button>
+      </Button>
 
-      {/* Floating outline panel */}
+      {/* Floating outline panel — angular Basalt surface */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 max-h-[70vh] overflow-y-auto bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xl z-30 p-2 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-64 max-h-[70vh] overflow-y-auto bg-[var(--surface)] border border-[var(--line)] z-30 p-2">
           <div className="flex items-center justify-between px-2 py-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
               On this page
             </span>
             <button
               onClick={() => setOpen(false)}
-              className="p-0.5 rounded text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+              className="p-0.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-[var(--muted)] hover:text-[var(--text)]"
             >
               <X className="w-3 h-3" />
             </button>
           </div>
 
           {ordered.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-neutral-400 italic">
+            <div className="px-2 py-3 text-xs text-[var(--muted)] italic">
               No headings yet. Add H1–H3 blocks to build an outline.
             </div>
           ) : (
@@ -155,14 +158,20 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
                 <button
                   key={heading.id}
                   onClick={() => scrollTo(heading)}
-                  className={`w-full text-left px-2 py-1 rounded-md text-xs transition truncate ${
+                  className={`w-full text-left px-2 py-1 min-h-[44px] sm:min-h-0 text-xs transition truncate flex items-center gap-2 ${
                     activeId === heading.id
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      ? 'bg-[var(--accent)] text-[var(--accent-ink)] font-medium'
+                      : 'text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]'
                   }`}
                   style={{ paddingLeft: `${8 + (heading.level - 1) * 12}px` }}
                 >
-                  {heading.text}
+                  <StatusDiamond
+                    color={
+                      activeId === heading.id ? 'var(--accent-ink)' : 'var(--muted)'
+                    }
+                    size={6}
+                  />
+                  <span className="truncate">{heading.text}</span>
                 </button>
               ))}
             </nav>

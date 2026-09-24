@@ -13,7 +13,11 @@ import {
 } from '@dnd-kit/core'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useUpdateCard } from '../../../lib/queries'
-import { PRIORITY_DOTS, type CardItem, type ColumnItem } from './types'
+import { Button } from '../../ui/Button'
+import { Chip } from '../../ui/Chip'
+import { StatusDiamond } from '../../ui/StatusDiamond'
+import { priorityDiamondColor } from '../../ui/status'
+import { type CardItem, type ColumnItem } from './types'
 
 interface CalendarViewProps {
   boardId: string
@@ -46,22 +50,19 @@ function CalendarChip({
   const overdue = card.dueDate != null && card.dueDate < Date.now()
 
   return (
-    <div
+    <Chip
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`flex cursor-grab items-center gap-1 truncate rounded-md border border-neutral-200/80 bg-white px-1.5 py-0.5 text-[11px] text-neutral-700 shadow-xs transition select-none active:cursor-grabbing hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900 dark:text-neutral-300 ${
+      active={overlay}
+      className={`cursor-grab truncate px-2 py-1 text-[11px] normal-case tracking-normal active:cursor-grabbing ${
         isDragging ? 'opacity-30' : ''
-      } ${overlay ? 'rotate-2 scale-105 shadow-lg' : ''} ${overdue ? 'border-rose-300 dark:border-rose-900/60' : ''}`}
+      } ${overlay ? 'rotate-2 scale-105' : ''} ${overdue ? 'border-[var(--danger)]' : ''}`}
     >
-      <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-          card.priority ? PRIORITY_DOTS[card.priority] ?? 'bg-neutral-400' : 'bg-neutral-300'
-        }`}
-      />
+      <StatusDiamond color={priorityDiamondColor(card.priority)} />
       <span className="truncate">{card.title || 'Untitled'}</span>
-    </div>
+    </Chip>
   )
 }
 
@@ -84,20 +85,20 @@ function DayCell({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-28 rounded-lg border p-1.5 transition-colors ${
+      className={`min-h-28 border p-1.5 transition-colors ${
         isOver
-          ? 'border-primary/70 bg-primary/5 ring-2 ring-primary/30'
-          : 'border-neutral-200/70 dark:border-neutral-800/70'
-      } ${!inMonth ? 'bg-neutral-50/60 opacity-50 dark:bg-neutral-950/40' : ''}`}
+          ? 'border-[var(--accent)] bg-[var(--hi)]'
+          : 'border-[var(--line)]'
+      } ${!inMonth ? 'bg-[var(--surface2)]/60 opacity-50' : 'bg-[var(--surface)]/40'}`}
     >
       <div className="mb-1 flex items-center justify-between px-0.5">
         <span
           className={`text-[11px] font-semibold tabular-nums ${
             isToday
-              ? 'flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white'
+              ? 'chamfer-sm flex h-6 min-w-6 items-center justify-center bg-[var(--accent)] text-[var(--accent-ink)] px-1'
               : inMonth
-                ? 'text-neutral-600 dark:text-neutral-300'
-                : 'text-neutral-400'
+                ? 'text-[var(--text)]'
+                : 'text-[var(--muted)]'
           }`}
         >
           {date.getDate()}
@@ -209,11 +210,14 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
   })
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-4">
+    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-[var(--bg)] text-[var(--text)]">
       {/* Month navigation */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+          <h2
+            className="text-sm md:text-base text-[var(--text)] uppercase tracking-wider"
+            style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+          >
             {monthLabel}
           </h2>
           <div className="flex items-center gap-1">
@@ -221,7 +225,7 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
               type="button"
               onClick={() => shiftMonth(-1)}
               aria-label="Previous month"
-              className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -229,22 +233,22 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
               type="button"
               onClick={() => shiftMonth(1)}
               aria-label="Next month"
-              className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => {
             const now = new Date()
             setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1))
           }}
-          className="rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           Today
-        </button>
+        </Button>
       </div>
 
       <DndContext
@@ -255,8 +259,8 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
       >
         {/* Unscheduled tray: cards without a due date (drag onto a day) */}
         {unscheduled.length > 0 && (
-          <div className="mb-3 rounded-xl border border-dashed border-neutral-300 p-2 dark:border-neutral-700">
-            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+          <div className="mb-3 border border-dashed border-[var(--line)] bg-[var(--surface2)] p-2">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
               <CalendarDays className="h-3 w-3" />
               Unscheduled
             </div>
@@ -277,7 +281,7 @@ export function CalendarView({ boardId, columns, onCardClick }: CalendarViewProp
           {WEEKDAYS.map((w) => (
             <div
               key={w}
-              className="px-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400"
+              className="px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]"
             >
               {w}
             </div>

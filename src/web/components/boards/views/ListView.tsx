@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { CalendarDays, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react'
 import { useUpdateCard } from '../../../lib/queries'
+import { Avatar, AvatarGroup } from '../../ui/Avatar'
+import { Badge } from '../../ui/Badge'
+import { StatusDiamond } from '../../ui/StatusDiamond'
 import { PRIORITY_BADGES, PRIORITIES, type ColumnItem, type Priority } from './types'
 
 interface ListViewProps {
@@ -37,10 +40,10 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
   const gridCols = 'grid grid-cols-[minmax(0,1fr)_96px_140px_120px_minmax(0,1fr)] gap-3'
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-4">
+    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-[var(--bg)] text-[var(--text)]">
       {/* Table header */}
       <div
-        className={`${gridCols} sticky top-0 z-10 bg-neutral-50/90 dark:bg-neutral-950/90 backdrop-blur-sm px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 border-b border-neutral-200/70 dark:border-neutral-800/70`}
+        className={`${gridCols} sticky top-0 z-10 bg-[var(--surface2)] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] border-b border-[var(--line)]`}
       >
         <span>Title</span>
         <span>Priority</span>
@@ -58,36 +61,31 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
               <button
                 type="button"
                 onClick={() => setCollapsed((c) => ({ ...c, [col.id]: !c[col.id] }))}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition"
+                className="flex w-full items-center gap-2 px-3 py-2 min-h-[44px] text-left hover:bg-[var(--hi)] transition border-l-4"
+                style={{ borderLeftColor: col.color || 'var(--c1)' }}
               >
                 {isCollapsed ? (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
                 ) : (
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
                 )}
                 {col.color && (
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: col.color }}
-                  />
+                  <StatusDiamond color={col.color} size={9} />
                 )}
-                <span className="truncate text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                <span
+                  className="truncate text-sm text-[var(--text)] uppercase tracking-wider"
+                  style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+                >
                   {col.name}
                 </span>
-                <span className="shrink-0 rounded-full bg-neutral-200/70 px-1.5 text-[11px] font-medium text-neutral-500 dark:bg-neutral-800">
-                  {col.cards.length}
-                </span>
+                <Badge tone="neutral">{col.cards.length}</Badge>
                 {col.wipLimit != null && col.wipLimit > 0 && (
-                  <span
-                    className={`shrink-0 rounded-full border px-1.5 text-[11px] font-medium ${
-                      col.cards.length > col.wipLimit
-                        ? 'border-rose-500/30 bg-rose-500/10 text-rose-500'
-                        : 'border-neutral-200 text-neutral-400 dark:border-neutral-700'
-                    }`}
+                  <Badge
+                    tone={col.cards.length > col.wipLimit ? 'danger' : 'neutral'}
                     title="WIP limit"
                   >
                     WIP {col.wipLimit}
-                  </span>
+                  </Badge>
                 )}
               </button>
 
@@ -95,7 +93,7 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
               {!isCollapsed && (
                 <div className="mt-1 space-y-0.5">
                   {col.cards.length === 0 && (
-                    <div className="px-3 py-2 text-xs italic text-neutral-400">No cards</div>
+                    <div className="px-3 py-2 text-xs italic text-[var(--muted)]">No cards</div>
                   )}
                   {col.cards.map((card) => {
                     const overdue = card.dueDate != null && card.dueDate < Date.now()
@@ -111,16 +109,17 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                             onCardClick(card.id)
                           }
                         }}
-                        className={`${gridCols} items-center rounded-lg px-3 py-1.5 text-xs cursor-pointer hover:bg-white hover:shadow-xs hover:border border-transparent hover:border-neutral-200 dark:hover:bg-neutral-900 dark:hover:border-neutral-800 transition`}
+                        className={`${gridCols} items-center px-3 py-1.5 min-h-[44px] text-xs cursor-pointer border border-transparent border-l-4 hover:bg-[var(--surface)] hover:border-[var(--line)] transition`}
+                        style={{ borderLeftColor: col.color || 'var(--c1)' }}
                       >
                         {/* Title */}
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-neutral-800 dark:text-neutral-200">
+                          <span className="truncate text-[var(--text)]">
                             {card.title || 'Untitled'}
                           </span>
                           {(card.totalSubtasks ?? 0) > 0 && (
                             <span
-                              className="flex shrink-0 items-center gap-1 text-[10px] text-neutral-400"
+                              className="flex shrink-0 items-center gap-1 text-[10px] text-[var(--muted)]"
                               title={`${card.completedSubtasks ?? 0}/${card.totalSubtasks} subtasks`}
                             >
                               <CheckSquare className="h-3 w-3" />
@@ -143,10 +142,10 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                               priority: v ? (v as Priority) : null,
                             })
                           }}
-                          className={`rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] font-semibold outline-none hover:border-neutral-300 focus:border-primary dark:hover:border-neutral-600 ${
+                          className={`chamfer-sm border border-transparent bg-transparent px-1 py-0.5 min-h-[44px] md:min-h-0 text-[11px] font-semibold outline-none hover:border-[var(--line)] focus:border-[var(--accent)] ${
                             card.priority && PRIORITY_BADGES[card.priority]
                               ? PRIORITY_BADGES[card.priority]!.class
-                              : 'text-neutral-400'
+                              : 'text-[var(--muted)]'
                           }`}
                           title="Change priority"
                         >
@@ -162,7 +161,7 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <CalendarDays
                             className={`h-3.5 w-3.5 shrink-0 ${
-                              overdue ? 'text-rose-500' : 'text-neutral-400'
+                              overdue ? 'text-[var(--danger)]' : 'text-[var(--muted)]'
                             }`}
                           />
                           <input
@@ -176,47 +175,37 @@ export function ListView({ boardId, columns, onCardClick }: ListViewProps) {
                                 dueDate: e.target.value ? ts : null,
                               })
                             }}
-                            className={`min-w-0 rounded border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none hover:border-neutral-300 focus:border-primary dark:hover:border-neutral-600 ${
-                              overdue ? 'text-rose-500 font-medium' : 'text-neutral-600 dark:text-neutral-300'
+                            className={`min-w-0 border border-transparent bg-transparent px-1 py-0.5 text-[11px] outline-none hover:border-[var(--line)] focus:border-[var(--accent)] ${
+                              overdue ? 'text-[var(--danger)] font-medium' : 'text-[var(--text)]'
                             }`}
                             title="Change due date"
                           />
                         </div>
 
                         {/* Assignees */}
-                        <div className="flex min-w-0 items-center -space-x-1.5">
-                          {card.assignees.slice(0, 4).map((a) => (
-                            <span
-                              key={a.userId}
-                              title={a.name}
-                              className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-primary/20 text-[9px] font-semibold text-primary dark:border-neutral-900"
-                            >
-                              {a.name?.[0]?.toUpperCase() || 'U'}
-                            </span>
+                        <AvatarGroup max={4} className="min-w-0">
+                          {card.assignees.map((a) => (
+                            <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} />
                           ))}
-                          {card.assignees.length > 4 && (
-                            <span className="pl-2 text-[10px] text-neutral-400">
-                              +{card.assignees.length - 4}
-                            </span>
-                          )}
-                        </div>
+                        </AvatarGroup>
 
                         {/* Tags */}
                         <div className="flex min-w-0 flex-wrap gap-1">
                           {card.tags.slice(0, 3).map((tag) => (
-                            <span
+                            <Badge
                               key={tag.id}
-                              className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                              tone="neutral"
                               style={{
                                 backgroundColor: `${tag.color || '#64748b'}20`,
                                 color: tag.color || '#64748b',
+                                borderColor: `${tag.color || '#64748b'}40`,
                               }}
                             >
                               #{tag.name}
-                            </span>
+                            </Badge>
                           ))}
                           {card.tags.length > 3 && (
-                            <span className="text-[10px] text-neutral-400">
+                            <span className="text-[10px] text-[var(--muted)]">
                               +{card.tags.length - 3}
                             </span>
                           )}

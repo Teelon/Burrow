@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Calendar, User, X } from 'lucide-react'
 import { useMembers, useUpdateCard } from '../../../lib/queries'
+import { Avatar } from '../../ui/Avatar'
+import { Badge } from '../../ui/Badge'
+import { ModalShell } from '../../ui/ModalShell'
+import { priorityBadgeTone } from '../../ui/status'
 import { PRIORITY_BADGES, PRIORITIES, type CardItem, type Priority } from './types'
 
-function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Backdrop({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title?: string }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
-      >
-        {children}
-      </div>
-    </div>
+    <ModalShell open onClose={onClose} title={title} className="max-w-sm">
+      {children}
+    </ModalShell>
   )
 }
 
@@ -38,21 +32,20 @@ function CardHeading({ card, columnName }: { card: CardItem; columnName?: string
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        <div
+          className="text-sm text-[var(--text)]"
+          style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 700" }}
+        >
           {card.title || 'Untitled'}
         </div>
         {columnName && (
-          <div className="mt-0.5 text-[11px] text-neutral-400">in {columnName}</div>
+          <div className="mt-0.5 text-[11px] text-[var(--muted)]">in {columnName}</div>
         )}
       </div>
       {card.priority && PRIORITY_BADGES[card.priority] && (
-        <span
-          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-            PRIORITY_BADGES[card.priority]!.class
-          }`}
-        >
+        <Badge tone={priorityBadgeTone(card.priority)}>
           {PRIORITY_BADGES[card.priority]!.label}
-        </span>
+        </Badge>
       )}
     </div>
   )
@@ -83,27 +76,27 @@ export function QuickPeekModal({
     <Backdrop onClose={onClose}>
       <CardHeading card={card} columnName={columnName} />
 
-      <div className="space-y-2 text-xs text-neutral-600 dark:text-neutral-300">
+      <div className="space-y-2 text-xs text-[var(--text)]">
         <div className="flex items-center gap-2">
-          <Calendar className="h-3.5 w-3.5 text-neutral-400" />
+          <Calendar className="h-3.5 w-3.5 text-[var(--muted)]" />
           {dueLabel ? (
-            <span className={overdue ? 'font-medium text-rose-500' : ''}>{dueLabel}</span>
+            <span className={overdue ? 'font-medium text-[var(--danger)]' : ''}>{dueLabel}</span>
           ) : (
-            <span className="text-neutral-400">No due date</span>
+            <span className="text-[var(--muted)]">No due date</span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          <User className="h-3.5 w-3.5 text-neutral-400" />
+          <User className="h-3.5 w-3.5 text-[var(--muted)]" />
           {card.assignees.length > 0 ? (
             <span className="truncate">{card.assignees.map((a) => a.name).join(', ')}</span>
           ) : (
-            <span className="text-neutral-400">Unassigned</span>
+            <span className="text-[var(--muted)]">Unassigned</span>
           )}
         </div>
 
         {(card.totalSubtasks ?? 0) > 0 && (
-          <div className="text-neutral-500">
+          <div className="text-[var(--muted)]">
             Subtasks: {card.completedSubtasks ?? 0}/{card.totalSubtasks} done
           </div>
         )}
@@ -111,16 +104,17 @@ export function QuickPeekModal({
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
             {card.tags.map((tag) => (
-              <span
+              <Badge
                 key={tag.id}
-                className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                tone="neutral"
                 style={{
                   backgroundColor: `${tag.color || '#64748b'}20`,
                   color: tag.color || '#64748b',
+                  borderColor: `${tag.color || '#64748b'}40`,
                 }}
               >
                 #{tag.name}
-              </span>
+              </Badge>
             ))}
           </div>
         )}
@@ -130,7 +124,7 @@ export function QuickPeekModal({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-2.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          className="px-2.5 py-1 min-h-[44px] text-xs text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
         >
           Close (Esc)
         </button>
@@ -158,18 +152,15 @@ export function PriorityPickerModal({
   }
 
   return (
-    <Backdrop onClose={onClose}>
-      <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-        Set priority
-      </div>
+    <Backdrop onClose={onClose} title="Set priority">
       <div className="grid grid-cols-5 gap-1.5">
         <button
           type="button"
           onClick={() => set(null)}
-          className={`rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
+          className={`chamfer-sm border px-2 py-1.5 min-h-[44px] text-xs font-medium transition ${
             !card.priority
-              ? 'border-primary/60 bg-primary/10 text-primary'
-              : 'border-neutral-200 text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800'
+              ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+              : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]'
           }`}
         >
           None
@@ -179,10 +170,10 @@ export function PriorityPickerModal({
             key={p}
             type="button"
             onClick={() => set(p)}
-            className={`rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition ${
+            className={`chamfer-sm border px-2 py-1.5 min-h-[44px] text-xs font-medium capitalize transition ${
               card.priority === p
-                ? 'border-primary/60 bg-primary/10 text-primary'
-                : 'border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                : 'border-[var(--line)] text-[var(--text)] hover:bg-[var(--hi)]'
             }`}
           >
             {p}
@@ -225,13 +216,10 @@ export function AssignPickerModal({
   }
 
   return (
-    <Backdrop onClose={onClose}>
-      <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-        Assign member
-      </div>
+    <Backdrop onClose={onClose} title="Assign member">
       <div className="max-h-64 space-y-1 overflow-y-auto">
         {members.length === 0 && (
-          <div className="px-1 py-2 text-xs italic text-neutral-400">No members</div>
+          <div className="px-1 py-2 text-xs italic text-[var(--muted)]">No members</div>
         )}
         {members.map((m) => {
           const assigned = currentIds.includes(m.userId)
@@ -241,15 +229,13 @@ export function AssignPickerModal({
               type="button"
               disabled={saving}
               onClick={() => toggle(m.userId)}
-              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
+              className={`flex w-full items-center gap-2 px-2 py-1.5 min-h-[44px] text-left text-xs transition ${
                 assigned
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                  ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                  : 'text-[var(--text)] hover:bg-[var(--hi)]'
               }`}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-semibold">
-                {m.name?.[0]?.toUpperCase() || 'U'}
-              </span>
+              <Avatar name={m.name || m.email} size="xs" />
               <span className="min-w-0 flex-1 truncate">{m.name || m.email}</span>
               {assigned && <X className="h-3 w-3 opacity-60" aria-hidden />}
             </button>

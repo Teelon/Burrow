@@ -1,6 +1,6 @@
 import { BlockNoteSchema } from '@blocknote/core';
 /**
- * Custom inline mention content spec.
+ * Custom inline mention content spec — Basalt angular chips on token surfaces.
  */
 export declare const Mention: import("@blocknote/core").InlineContentSpec<{
     readonly type: "mention";

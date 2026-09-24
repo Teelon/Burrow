@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { FileText, Kanban, Search, X } from 'lucide-react'
+import { FileText, Search } from 'lucide-react'
 import { useBoards, useCreateCard } from '../lib/queries'
+import { ModalShell } from '../components/ui/ModalShell'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
 
 interface NotepadPickerModalProps {
   projectId: string
@@ -59,96 +64,69 @@ export function NotepadPickerModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <FileText className="w-4 h-4 text-purple-500" />
-            <span>Link Notepad</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <ModalShell open onClose={onClose} title="Link Notepad" className="sm:max-w-md">
+      {/* Tab Switcher — geometric segmented control */}
 
-        {/* Tab Switcher */}
-        <div className="grid grid-cols-2 p-1.5 bg-neutral-100 dark:bg-neutral-800 m-4 rounded-xl text-xs font-medium">
-          <button
-            onClick={() => setTab('new')}
-            className={`py-1.5 rounded-lg transition ${
-              tab === 'new'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900'
-            }`}
-          >
-            Create New
-          </button>
-          <button
-            onClick={() => setTab('existing')}
-            className={`py-1.5 rounded-lg transition ${
-              tab === 'existing'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900'
-            }`}
-          >
-            Existing Notepad
-          </button>
+        {/* Tab Switcher — geometric segmented control */}
+        <div className="m-4">
+          <SegmentedControl
+            value={tab}
+            onValueChange={(v) => setTab(v as 'new' | 'existing')}
+            options={[
+              { value: 'new', label: 'Create New' },
+              { value: 'existing', label: 'Existing Notepad' },
+            ]}
+            fullWidth
+          />
         </div>
 
         {/* Tab Body */}
-        <div className="p-4 pt-0">
+        <div className="pt-3">
           {tab === 'new' ? (
             <form onSubmit={handleCreateNew} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-500 mb-1">
+                <label className="block text-xs font-medium text-[var(--muted)] mb-1">
                   Notepad Title
                 </label>
-                <input
+                <Input
                   type="text"
                   autoFocus
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g., Project Specifications"
-                  className="w-full p-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full p-2.5 text-base sm:text-xs"
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-3 py-1.5 text-xs rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                >
+                <Button type="button" variant="ghost" onClick={onClose} className="px-3 py-1.5 text-xs min-h-[44px] sm:min-h-0">
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={!newTitle.trim() || isSubmitting}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs font-semibold min-h-[44px] sm:min-h-0"
                 >
                   {isSubmitting ? 'Creating…' : 'Create & Link'}
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
             <div className="space-y-3">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-3" />
-                <input
+                <Search className="w-3.5 h-3.5 text-[var(--muted)] absolute left-3 top-3" />
+                <Input
                   type="text"
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="Search notepads…"
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-base sm:text-xs"
                 />
               </div>
               <div className="max-h-48 overflow-y-auto space-y-1">
                 {results.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-neutral-400 italic">
+                  <div className="p-4 text-center text-xs text-[var(--muted)] italic">
                     {searchQuery ? 'No matching notepads' : 'Type to search'}
                   </div>
                 ) : (
@@ -159,7 +137,7 @@ export function NotepadPickerModal({
                         onSelectNotepad(r.id)
                         onClose()
                       }}
-                      className="w-full p-2 text-left text-xs rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2 transition"
+                      className="w-full p-2 min-h-[44px] sm:min-h-0 text-left text-xs text-[var(--text)] hover:bg-[var(--hi)] flex items-center gap-2 transition"
                     >
                       <FileText className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                       <span className="truncate">{r.label || 'Untitled'}</span>
@@ -170,8 +148,7 @@ export function NotepadPickerModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -229,31 +206,16 @@ export function TaskPickerModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Kanban className="w-4 h-4 text-emerald-500" />
-            <span>Create & Link Task Card</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+    <ModalShell open onClose={onClose} title="Create & Link Task Card" className="sm:max-w-md">
+        <form onSubmit={handleSubmit} className="pt-3 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1">
               Select Board
             </label>
-            <select
+            <Select
               value={selectedBoardId}
               onChange={(e) => handleBoardChange(e.target.value)}
-              className="w-full p-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none"
+              className="w-full p-2 text-base sm:text-xs min-h-[44px] sm:min-h-0"
             >
               <option value="" disabled>
                 Select a board…
@@ -263,17 +225,17 @@ export function TaskPickerModal({
                   {b.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1">
               Column
             </label>
-            <select
+            <Select
               value={selectedColId}
               onChange={(e) => setSelectedColId(e.target.value)}
-              className="w-full p-2 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none"
+              className="w-full p-2 text-base sm:text-xs min-h-[44px] sm:min-h-0"
             >
               {columns.length === 0 ? (
                 <option value="">Select board first</option>
@@ -284,41 +246,37 @@ export function TaskPickerModal({
                   </option>
                 ))
               )}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1">
               Task Title
             </label>
-            <input
+            <Input
               type="text"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Fix login bug"
-              className="w-full p-2.5 text-xs rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none"
+              className="w-full p-2.5 text-base sm:text-xs"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-xs rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            >
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--hair)]">
+            <Button type="button" variant="ghost" onClick={onClose} className="px-3 py-1.5 text-xs min-h-[44px] sm:min-h-0">
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={!title.trim() || isSubmitting}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-semibold min-h-[44px] sm:min-h-0"
             >
               {isSubmitting ? 'Creating…' : 'Create & Insert Link'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

@@ -11,7 +11,7 @@ import {
 import { Calendar, FileText, Kanban, User } from 'lucide-react'
 
 /**
- * Custom inline mention content spec.
+ * Custom inline mention content spec — Basalt angular chips on token surfaces.
  */
 export const Mention = createReactInlineContentSpec(
   {
@@ -33,8 +33,8 @@ export const Mention = createReactInlineContentSpec(
 
       if (kind === 'date') {
         return (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 select-none">
-            <Calendar className="w-3 h-3 text-neutral-500" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] select-none">
+            <Calendar className="w-3 h-3 text-[var(--muted)]" />
             <span>{label || isoDate || 'Date'}</span>
           </span>
         )
@@ -42,8 +42,8 @@ export const Mention = createReactInlineContentSpec(
 
       if (kind === 'user') {
         return (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 select-none">
-            <User className="w-3 h-3 text-blue-500" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-2 border-l-[var(--accent)] select-none">
+            <User className="w-3 h-3 text-[var(--accent)]" />
             <span>@{label || 'Former member'}</span>
           </span>
         )
@@ -51,7 +51,7 @@ export const Mention = createReactInlineContentSpec(
 
       if (kind === 'notepad') {
         return (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 select-none cursor-pointer hover:underline">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] select-none cursor-pointer hover:underline">
             <FileText className="w-3 h-3 text-purple-500" />
             <span>{label || 'Deleted notepad'}</span>
           </span>
@@ -60,7 +60,7 @@ export const Mention = createReactInlineContentSpec(
 
       if (kind === 'card') {
         return (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 select-none cursor-pointer hover:underline">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-2 border-l-[var(--c2)] select-none cursor-pointer hover:underline">
             <Kanban className="w-3 h-3 text-emerald-500" />
             <span>{label || 'Deleted card'}</span>
           </span>
@@ -73,7 +73,7 @@ export const Mention = createReactInlineContentSpec(
 )
 
 /**
- * Live notepad link preview component
+ * Live notepad link preview component — flat Basalt surface, angular.
  */
 function LiveNotepadLink({ notepadId }: { notepadId: string }) {
   const [data, setData] = useState<{ title: string; icon?: string | null; deleted: boolean } | null>(null)
@@ -90,7 +90,7 @@ function LiveNotepadLink({ notepadId }: { notepadId: string }) {
 
   if (!data) {
     return (
-      <div className="my-2 p-2.5 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 flex items-center gap-2 text-xs text-neutral-400">
+      <div className="my-2 p-2.5 border border-[var(--line)] bg-[var(--surface2)] flex items-center gap-2 text-xs text-[var(--muted)]">
         <FileText className="w-3.5 h-3.5 text-purple-400" />
         <span>Loading notepad…</span>
       </div>
@@ -107,20 +107,20 @@ function LiveNotepadLink({ notepadId }: { notepadId: string }) {
           }
         }
       }}
-      className={`my-2 p-3 border rounded-xl flex items-center justify-between gap-3 text-sm transition cursor-pointer select-none ${
+      className={`my-2 p-3 border border-l-4 flex items-center justify-between gap-3 text-sm transition cursor-pointer select-none ${
         data.deleted
-          ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/30 text-neutral-400 opacity-70'
-          : 'border-purple-200/80 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/20 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xs'
+          ? 'border-[var(--line)] bg-[var(--surface2)] text-[var(--muted)] opacity-70'
+          : 'border-[var(--line)] border-l-[var(--accent)] bg-[var(--surface2)] hover:bg-[var(--hi)]'
       }`}
     >
       <div className="flex items-center gap-2.5">
         <span className="text-base">{data.icon || '📄'}</span>
-        <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+        <span className="font-semibold text-[var(--text)]">
           {data.title || 'Untitled'}
         </span>
       </div>
       {data.deleted && (
-        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500">
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
           Deleted
         </span>
       )}
@@ -181,7 +181,7 @@ function LiveCardLink({ cardId }: { cardId: string }) {
 
   if (!data) {
     return (
-      <div className="my-2 p-2.5 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 flex items-center gap-2 text-xs text-neutral-400">
+      <div className="my-2 p-2.5 border border-[var(--line)] bg-[var(--surface2)] flex items-center gap-2 text-xs text-[var(--muted)]">
         <Kanban className="w-3.5 h-3.5 text-emerald-400" />
         <span>Loading task card…</span>
       </div>
@@ -190,31 +190,31 @@ function LiveCardLink({ cardId }: { cardId: string }) {
 
   return (
     <div
-      className={`my-2 p-3 border rounded-xl flex items-center justify-between gap-3 text-sm transition select-none ${
+      className={`my-2 p-3 border border-l-4 flex items-center justify-between gap-3 text-sm transition select-none ${
         data.deleted
-          ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/30 text-neutral-400 opacity-70'
-          : 'border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/20 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-xs'
+          ? 'border-[var(--line)] bg-[var(--surface2)] text-[var(--muted)] opacity-70'
+          : 'border-[var(--line)] border-l-[var(--c2)] bg-[var(--surface2)] hover:bg-[var(--hi)]'
       }`}
     >
       <div className="flex items-center gap-2.5">
         <Kanban className="w-4 h-4 text-emerald-500 shrink-0" />
         <div>
-          <div className="font-semibold text-neutral-800 dark:text-neutral-200">
+          <div className="font-semibold text-[var(--text)]">
             {data.title || 'Untitled'}
           </div>
           {!data.deleted && (
-            <div className="text-[11px] text-neutral-400">
+            <div className="text-[11px] text-[var(--muted)]">
               {data.boardName} &bull; {data.columnName}
             </div>
           )}
         </div>
       </div>
       {data.deleted ? (
-        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500">
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
           Deleted
         </span>
       ) : data.priority ? (
-        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+        <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 bg-[var(--surface)] border border-[var(--line)] border-l-2 border-l-[var(--c2)] text-[var(--text)]">
           {data.priority}
         </span>
       ) : null}

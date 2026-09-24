@@ -2,48 +2,220 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ */
+/* Basalt Design System — Layer 1: Token Engine (Tailwind v4 CSS-first) */
+/* Dark is the primary identity. Light is a supporting mode.           */
+/* ------------------------------------------------------------------ */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.2 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --border: oklch(0.91 0 0);
-  --accent: oklch(0.96 0 0);
-  --primary: oklch(0.45 0.1 75);
+  /* Basalt light tokens */
+  --bg: #e4e9ee;
+  --side: #d5dce4;
+  --side-text: #1b2733;
+  --surface: #f6f9fb;
+  --surface2: #d6dde5;
+  --text: #1b2733;
+  --muted: #556677;
+  --line: #b9c4cf;
+  --hair: #c3ccd6;
+  --accent: #e0be0a;
+  --accent-ink: #1b2733;
+  --hi: #c5d0db;
+  --hi-ink: #1b2733;
+  --danger: #c0392b;
+  --danger-ink: #ffffff;
+  --ink: #1b2733;
+  --ink-muted: #556677;
+  --c1: #556677;
+  --c2: #b06a1e;
+  --c3: #1f7a99;
+  --c4: #2e7d46;
+
+  /* Legacy shadcn aliases → Basalt values */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --border: var(--line);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+
   color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.18 0 0);
-  --foreground: oklch(0.93 0 0);
-  --muted: oklch(0.24 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --border: oklch(0.3 0 0);
-  --accent: oklch(0.27 0 0);
-  --primary: oklch(0.7 0.12 75);
+  /* Basalt dark tokens (primary visual identity) */
+  --bg: #22303f;
+  --side: #1a2531;
+  --side-text: #e6edf3;
+  --surface: #2d3e51;
+  --surface2: #1e2a37;
+  --text: #e6edf3;
+  --muted: #93a4b5;
+  --line: #3a4c60;
+  --hair: #33455a;
+  --accent: #f2d22e;
+  --accent-ink: #1b2733;
+  --hi: #34485e;
+  --hi-ink: #e6edf3;
+  --danger: #ff7a7a;
+  --danger-ink: #1b2733;
+  --ink: #e6edf3;
+  --ink-muted: #a6b6c5;
+  --c1: #93a4b5;
+  --c2: #e59a52;
+  --c3: #5db3ce;
+  --c4: #6cc48c;
+
+  /* Legacy shadcn aliases → Basalt values */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --border: var(--line);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+
   color-scheme: dark;
 }
 
 @theme inline {
+  /* Basalt names */
+  --color-bg: var(--bg);
+  --color-side: var(--side);
+  --color-side-text: var(--side-text);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-hair: var(--hair);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-hi: var(--hi);
+  --color-hi-ink: var(--hi-ink);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-c1: var(--c1);
+  --color-c2: var(--c2);
+  --color-c3: var(--c3);
+  --color-c4: var(--c4);
+
+  /* Legacy shadcn aliases */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --color-accent: var(--accent);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Zero border-radius reset — Basalt is angular, not rounded. */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+
+/* Spinner escape hatch — the zero-radius reset turns round spinners square. */
+.keep-round {
+  border-radius: 9999px !important;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg);
+  color: var(--text);
   font-family:
+    'Archivo',
     ui-sans-serif,
     system-ui,
     -apple-system,
     'Segoe UI',
     Roboto,
     sans-serif;
+  font-variation-settings: 'wdth' 100, 'wght' 400;
+}
+
+/* Heading utility — Archivo heavy, wide, compact tracking. */
+@utility font-display {
+  font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  font-variation-settings: 'wdth' 122, 'wght' 800;
+  letter-spacing: -0.02em;
+}
+
+/* Layer 2: geometric shape utilities */
+@utility chamfer-lg {
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+}
+
+@utility chamfer-sm {
+  clip-path: polygon(
+    7px 0,
+    100% 0,
+    100% calc(100% - 7px),
+    calc(100% - 7px) 100%,
+    0 100%,
+    0 7px
+  );
+}
+
+@utility clip-hex {
+  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+}
+
+@utility shape-diamond {
+  display: inline-block;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mobile: 16px minimum on form controls to prevent iOS auto-zoom. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* BlockNote overrides — slate surfaces, Archivo, zero radius. */
+.bn-root {
+  --bn-colors-editor-background: var(--surface);
+  --bn-colors-side-menu: var(--muted);
+  --bn-colors-menu-background: var(--surface2);
+  --bn-font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  border-radius: 0 !important;
+}
+.bn-root .bn-editor,
+.bn-root .bn-toolbar,
+.bn-root .bn-side-menu,
+.bn-root .bn-menu-dropdown {
+  border-radius: 0 !important;
+}
+.dark .bn-root {
+  --bn-colors-editor-background: var(--surface);
+  --bn-colors-editor-text: var(--ink);
+  --bn-colors-menu-background: var(--surface2);
+  --bn-colors-menu-text: var(--text);
+  --bn-colors-border: var(--line);
+  --bn-colors-shadow: transparent;
 }
 
 /* Print / PDF export (Epic 3.3): keep only the document content. */
@@ -74,5 +246,9 @@ body {
 
   * {
     box-shadow: none !important;
+    clip-path: none !important;
+    background-color: #fff !important;
+    color: #000 !important;
+    border-color: #ccc !important;
   }
 }

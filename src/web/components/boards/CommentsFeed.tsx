@@ -8,6 +8,8 @@ import {
   useMembers,
   type CommentItem,
 } from '../../lib/queries'
+import { Avatar } from '../ui/Avatar'
+import { Badge } from '../ui/Badge'
 
 interface CommentsFeedProps {
   cardId: string
@@ -45,40 +47,32 @@ function CommentRow({ comment, canDelete, onDelete }: { comment: CommentItem; ca
 
   return (
     <div className="group flex items-start gap-2.5 py-2">
-      <span className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5">
-        {comment.image ? (
-          <img src={comment.image} alt="" className="w-7 h-7 rounded-full object-cover" />
-        ) : (
-          (comment.name?.[0]?.toUpperCase() || 'U')
-        )}
-      </span>
+      <Avatar name={comment.name || 'Someone'} src={comment.image} size="sm" className="mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+          <span className="text-xs font-semibold text-[var(--text)]">
             {comment.name || 'Someone'}
           </span>
-          <span className="text-[10px] text-neutral-400" title={new Date(comment.createdAt).toLocaleString()}>
+          <span className="text-[10px] text-[var(--muted)]" title={new Date(comment.createdAt).toLocaleString()}>
             {timeAgo(comment.createdAt)}
           </span>
           {canDelete && (
             <button
               onClick={onDelete}
               title="Delete comment"
-              className="p-0.5 rounded text-neutral-300 dark:text-neutral-600 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition ml-auto"
+              aria-label="Delete comment"
+              className="p-0.5 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center text-[var(--muted)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition ml-auto"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-        <div className="text-xs text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap break-words leading-relaxed mt-0.5">
+        <div className="text-xs text-[var(--text)] whitespace-pre-wrap break-words leading-relaxed mt-0.5">
           {parts.map((part, i) =>
             part.mention ? (
-              <span
-                key={i}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-              >
+              <Badge key={i} tone="neutral">
                 @{part.mention.label}
-              </span>
+              </Badge>
             ) : (
               <span key={i}>{part.text}</span>
             ),
@@ -152,25 +146,28 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
   }
 
   return (
-    <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 pt-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5 mb-1">
+    <div className="border-t border-[var(--hair)] pt-4">
+      <h3
+        className="text-xs uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5 mb-1"
+        style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
+      >
         <MessageSquare className="w-3.5 h-3.5" />
         <span>Discussion</span>
         {comments.length > 0 && (
-          <span className="text-neutral-300 dark:text-neutral-600 font-normal">
+          <span className="text-[var(--muted)] font-normal">
             ({comments.length})
           </span>
         )}
       </h3>
 
       {isLoading ? (
-        <div className="py-3 text-xs text-neutral-400">Loading comments…</div>
+        <div className="py-3 text-xs text-[var(--muted)]">Loading comments…</div>
       ) : comments.length === 0 ? (
-        <div className="py-3 text-xs text-neutral-400 italic">
+        <div className="py-3 text-xs text-[var(--muted)] italic">
           No comments yet. Start the discussion — use @ to mention teammates.
         </div>
       ) : (
-        <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+        <div className="divide-y divide-[var(--hair)]">
           {comments.map((comment) => (
             <CommentRow
               key={comment.id}
@@ -189,24 +186,23 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
       {/* Composer */}
       <div className="relative mt-2">
         {mentionMatches.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-1 w-64 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-1 z-20">
+          <div className="absolute bottom-full left-0 mb-1 w-64 bg-[var(--surface)] border border-[var(--line)] p-1 z-20">
             {mentionMatches.map((m) => (
               <button
                 key={m.userId}
                 type="button"
                 onClick={() => insertMention(m)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
+                className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] text-xs text-[var(--text)] hover:bg-[var(--hi)] text-left"
               >
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
-                  {m.name?.[0]?.toUpperCase() || 'U'}
-                </span>
+                <Avatar name={m.name || m.email} size="xs" />
                 <span className="truncate">{m.name || m.email}</span>
               </button>
             ))}
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-neutral-50/80 dark:bg-neutral-900/50 border border-neutral-200/70 dark:border-neutral-800/70 rounded-xl p-2 focus-within:border-primary/50 transition">
+        {/* Composer stays a multi-line textarea (token classes); Input fits single-line only. */}
+        <div className="flex items-end gap-2 bg-[var(--surface)] border border-[var(--line)] focus-within:border-[var(--accent)] p-2 transition">
           <textarea
             ref={textareaRef}
             value={draft}
@@ -219,14 +215,15 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
             }}
             rows={Math.min(4, Math.max(2, draft.split('\n').length))}
             placeholder="Write a comment… (@mention · ⌘↵ to send)"
-            className="flex-1 min-w-0 resize-none bg-transparent text-xs text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 focus:outline-none leading-relaxed"
+            className="flex-1 min-w-0 resize-none bg-transparent text-xs text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none leading-relaxed text-[16px] md:text-xs"
           />
           <button
             type="button"
             onClick={send}
             disabled={!draft.trim() || createComment.isPending}
             title="Send (⌘+Enter)"
-            className="p-1.5 rounded-lg text-primary hover:bg-primary/10 disabled:opacity-40 disabled:hover:bg-transparent transition shrink-0"
+            aria-label="Send comment"
+            className="chamfer-sm p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--accent)] hover:bg-[var(--hi)] disabled:opacity-40 transition shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>

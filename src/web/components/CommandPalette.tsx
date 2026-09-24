@@ -10,6 +10,11 @@ import {
   Users,
 } from 'lucide-react'
 import { useBoards, useProjects, useRecentNotepads, useSearch } from '../lib/queries'
+import { ModalShell } from './ui/ModalShell'
+import { SegmentedControl } from './ui/SegmentedControl'
+
+const ITEM_CLASSES =
+  'flex flex-col gap-0.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]'
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
@@ -57,60 +62,46 @@ export function CommandPalette() {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-neutral-950/40 backdrop-blur-xs">
-      {/* Backdrop click to close */}
-      <div className="fixed inset-0" onClick={() => setOpen(false)} />
-
-      <div className="relative w-full max-w-xl mx-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in-0 zoom-in-95 duration-100">
-        <Command
-          className="w-full flex flex-col"
-          shouldFilter={false} // We handle search via FTS API
-        >
+    <ModalShell
+      open={open}
+      onClose={() => setOpen(false)}
+      title="Search and commands"
+      className="w-full self-start mt-[8dvh] sm:max-w-xl"
+    >
+      <Command
+        className="w-full flex flex-col"
+        shouldFilter={false} // We handle search via FTS API
+      >
           {/* Header & Search Input */}
-          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-neutral-200/80 dark:border-neutral-800">
-            <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-[var(--hair)]">
+            <Search className="w-4 h-4 text-[var(--muted)] shrink-0" />
             <Command.Input
               value={query}
               onValueChange={setQuery}
               placeholder="Search notepads, cards, or type a command…"
-              className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 outline-none"
+              className="flex-1 bg-transparent text-base sm:text-sm text-[var(--text)] placeholder:text-[var(--muted)] outline-none"
               autoFocus
             />
-            {/* Scope Toggle */}
-            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg text-[11px] font-medium shrink-0">
-              <button
-                type="button"
-                onClick={() => setScope('project')}
-                className={`px-2 py-0.5 rounded-md transition ${
-                  scope === 'project'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                    : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                }`}
-              >
-                Project
-              </button>
-              <button
-                type="button"
-                onClick={() => setScope('all')}
-                className={`px-2 py-0.5 rounded-md transition ${
-                  scope === 'all'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                    : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                }`}
-              >
-                All
-              </button>
-            </div>
+            {/* Scope Toggle — geometric segmented control */}
+            <SegmentedControl
+              value={scope}
+              onValueChange={(v) => setScope(v as 'project' | 'all')}
+              options={[
+                { value: 'project', label: 'Project' },
+                { value: 'all', label: 'All' },
+              ]}
+              size="sm"
+            />
           </div>
 
           {/* Results List */}
           <Command.List className="max-h-80 overflow-y-auto p-2 space-y-1">
             {isSearching && (
-              <div className="p-4 text-center text-xs text-neutral-400">Searching…</div>
+              <div className="p-4 text-center text-xs text-[var(--muted)]">Searching…</div>
             )}
 
             {query.trim().length > 0 && !isSearching && searchResults.length === 0 && (
-              <Command.Empty className="p-6 text-center text-xs text-neutral-400">
+              <Command.Empty className="p-6 text-center text-xs text-[var(--muted)]">
                 No matching results found for "{query}".
               </Command.Empty>
             )}
@@ -119,7 +110,7 @@ export function CommandPalette() {
             {query.trim().length > 0 && searchResults.length > 0 && (
               <Command.Group
                 heading="Search Results"
-                className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 px-2 py-1 uppercase tracking-wider"
+                className="text-[11px] font-semibold text-[var(--muted)] px-2 py-1 uppercase tracking-wider"
               >
                 {searchResults.map((item) => (
                   <Command.Item
@@ -140,20 +131,20 @@ export function CommandPalette() {
                         }
                       })
                     }
-                    className="flex flex-col gap-0.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                    className={ITEM_CLASSES}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-sm">
                         {item.icon || (item.kind === 'notepad' ? '📄' : '📋')}
                       </span>
                       <span className="font-semibold">{item.title || 'Untitled'}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 ml-auto">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[var(--surface2)] border border-[var(--line)] text-[var(--muted)] ml-auto">
                         {item.projectName}
                       </span>
                     </div>
                     {item.snippet && (
                       <div
-                        className="text-[11px] text-neutral-400 pl-6 line-clamp-1"
+                        className="text-[11px] text-[var(--muted)] pl-6 line-clamp-1"
                         dangerouslySetInnerHTML={{ __html: item.snippet }}
                       />
                     )}
@@ -168,7 +159,7 @@ export function CommandPalette() {
                 {recentNotepads.length > 0 && (
                   <Command.Group
                     heading="Recent Notepads"
-                    className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 px-2 py-1 uppercase tracking-wider"
+                    className="text-[11px] font-semibold text-[var(--muted)] px-2 py-1 uppercase tracking-wider"
                   >
                     {recentNotepads.slice(0, 4).map((np) => (
                       <Command.Item
@@ -182,7 +173,7 @@ export function CommandPalette() {
                             })
                           })
                         }
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                        className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                       >
                         <span className="text-sm">{np.icon || '📄'}</span>
                         <span className="font-medium truncate">{np.title || 'Untitled'}</span>
@@ -193,7 +184,7 @@ export function CommandPalette() {
 
                 <Command.Group
                   heading="Navigation"
-                  className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 px-2 py-1 uppercase tracking-wider mt-2"
+                  className="text-[11px] font-semibold text-[var(--muted)] px-2 py-1 uppercase tracking-wider mt-2"
                 >
                   {currentProjectId && (
                     <Command.Item
@@ -205,7 +196,7 @@ export function CommandPalette() {
                           })
                         })
                       }
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                      className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                     >
                       <Home className="w-4 h-4 text-purple-500" />
                       <span>Project Overview</span>
@@ -224,7 +215,7 @@ export function CommandPalette() {
                           })
                         })
                       }
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                      className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                     >
                       <Kanban className="w-4 h-4 text-emerald-500" />
                       <span>Board: {b.name}</span>
@@ -241,7 +232,7 @@ export function CommandPalette() {
                           })
                         })
                       }
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                      className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                     >
                       <Trash2 className="w-4 h-4 text-rose-500" />
                       <span>Trash</span>
@@ -254,7 +245,7 @@ export function CommandPalette() {
                         navigate({ to: '/settings/members' })
                       })
                     }
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                    className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                   >
                     <Users className="w-4 h-4 text-blue-500" />
                     <span>Members & Invites</span>
@@ -266,9 +257,9 @@ export function CommandPalette() {
                         navigate({ to: '/settings' })
                       })
                     }
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 cursor-pointer select-none"
+                    className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-[var(--text)] cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
                   >
-                    <Settings className="w-4 h-4 text-neutral-500" />
+                    <Settings className="w-4 h-4 text-[var(--muted)]" />
                     <span>Settings</span>
                   </Command.Item>
                 </Command.Group>
@@ -277,22 +268,21 @@ export function CommandPalette() {
           </Command.List>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400">
+          <div className="px-4 py-2 border-t border-[var(--hair)] flex items-center justify-between text-[11px] text-[var(--muted)]">
             <div>
-              Use <kbd className="px-1 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded">↑</kbd>{' '}
-              <kbd className="px-1 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded">↓</kbd> to
-              navigate, <kbd className="px-1 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded">↵</kbd>{' '}
+              Use <kbd className="px-1 py-0.5 bg-[var(--surface2)] border border-[var(--line)]">↑</kbd>{' '}
+              <kbd className="px-1 py-0.5 bg-[var(--surface2)] border border-[var(--line)]">↓</kbd> to
+              navigate, <kbd className="px-1 py-0.5 bg-[var(--surface2)] border border-[var(--line)]">↵</kbd>{' '}
               to select
             </div>
             <div className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded font-mono">
+              <kbd className="px-1.5 py-0.5 bg-[var(--surface2)] border border-[var(--line)] font-mono">
                 ESC
               </kbd>{' '}
               to close
             </div>
           </div>
         </Command>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

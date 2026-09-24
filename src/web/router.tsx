@@ -43,7 +43,7 @@ function IndexRedirect() {
   }, [me, meLoading, projects, projectsLoading, navigate])
 
   return (
-    <div className="flex h-screen items-center justify-center p-8 text-sm text-neutral-400">
+    <div className="flex h-screen items-center justify-center p-8 text-sm text-[var(--muted)]">
       Loading Burrow…
     </div>
   )
@@ -61,7 +61,7 @@ function NotepadView() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
+        <div className="p-8 flex items-center justify-center text-sm text-[var(--muted)]">
           Loading editor…
         </div>
       }
@@ -79,7 +79,7 @@ function BoardWrapper() {
     boardId?: string
   }
   if (!projectId || !boardId) {
-    return <div className="p-8 text-sm text-neutral-400">Board not found</div>
+    return <div className="p-8 text-sm text-[var(--muted)]">Board not found</div>
   }
   return <BoardView boardId={boardId} projectId={projectId} />
 }
@@ -90,7 +90,7 @@ function SettingsPlaceholder() {
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-4">
       <h2 className="text-xl font-bold">Settings</h2>
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-[var(--muted)]">
         Signed in as: {me?.user?.name} ({me?.user?.email}) - Role: {me?.role}
       </p>
     </div>

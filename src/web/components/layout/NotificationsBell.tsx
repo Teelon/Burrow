@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Bell, Check } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMarkNotificationsRead, useNotifications } from '../../lib/queries'
+import { Avatar } from '../ui/Avatar'
+import { StatusDiamond } from '../ui/StatusDiamond'
 
 interface NotificationItem {
   id: string
@@ -65,26 +67,26 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition"
+        className="relative flex h-11 w-11 md:h-8 md:w-8 items-center justify-center text-muted hover:text-text hover:bg-hi transition"
         title="Notifications"
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-950" />
+          <span className="absolute top-2 right-2 md:top-1.5 md:right-1.5 h-2 w-2 rotate-45 bg-accent" />
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-80 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-2 z-50 text-xs animate-in fade-in select-none">
-          <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-neutral-100 dark:border-neutral-800">
-            <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+        <div className="absolute right-0 top-full mt-1.5 w-80 bg-surface border border-line p-2 z-50 text-xs select-none">
+          <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-hair">
+            <span className="font-semibold text-text">
               Notifications {unreadCount > 0 && `(${unreadCount})`}
             </span>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                className="text-[11px] text-accent hover:underline flex items-center gap-1 font-medium min-h-[44px] md:min-h-0"
               >
                 <Check className="w-3 h-3" />
                 <span>Mark all read</span>
@@ -94,7 +96,7 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
 
           <div className="max-h-72 overflow-y-auto py-1 space-y-1">
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-neutral-400 italic">
+              <div className="p-6 text-center text-muted italic">
                 No notifications yet
               </div>
             ) : (
@@ -102,24 +104,33 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
                 <div
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
-                  className={`p-2.5 rounded-xl cursor-pointer transition flex items-start gap-2.5 ${
+                  className={`relative p-2.5 cursor-pointer transition flex items-start gap-2.5 min-h-[44px] ${
                     !n.readAt
-                      ? 'bg-primary/5 hover:bg-primary/10 text-neutral-900 dark:text-neutral-100'
-                      : 'hover:bg-neutral-100 dark:hover:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400'
+                      ? 'bg-accent/10 hover:bg-accent/20 text-text'
+                      : 'hover:bg-hi text-muted'
                   }`}
                 >
-                  <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5">
-                    {n.actor.name?.[0]?.toUpperCase() || 'U'}
-                  </div>
+                  {!n.readAt && (
+                    <span
+                      aria-hidden
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-accent"
+                    />
+                  )}
+                  <Avatar
+                    name={n.actor.name}
+                    src={n.actor.image}
+                    size="xs"
+                    className="mt-0.5"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="leading-tight">
                       <strong>{n.actor.name}</strong>{' '}
                       {n.type === 'mention' ? 'mentioned you in' : 'assigned you to'}{' '}
-                      <span className="font-medium text-neutral-900 dark:text-neutral-200">
+                      <span className="font-medium text-text">
                         {n.targetTitle || 'a task'}
                       </span>
                     </div>
-                    <div className="text-[10px] text-neutral-400 mt-1">
+                    <div className="text-[10px] text-muted mt-1">
                       {new Date(n.createdAt).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -129,7 +140,7 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
                     </div>
                   </div>
                   {!n.readAt && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
+                    <StatusDiamond color="var(--accent)" size={6} className="mt-1.5" />
                   )}
                 </div>
               ))

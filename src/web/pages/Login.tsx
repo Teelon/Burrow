@@ -3,6 +3,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { useMe } from '../lib/queries'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Badge } from '../components/ui/Badge'
 
 export function Login() {
   const navigate = useNavigate()
@@ -88,26 +91,26 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-neutral-50 dark:bg-neutral-950">
-      <div className="w-full max-w-sm border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 p-8 shadow-xl space-y-6">
+    <div className="flex min-h-screen items-center justify-center p-6 bg-[var(--bg)]">
+      <div className="w-full max-w-sm border border-[var(--line)] chamfer-lg bg-[var(--surface)] p-8 space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
             Burrow
           </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-[var(--muted)]">
             {isSignUp ? 'Create your account' : 'Sign in to your workspace'}
           </p>
         </div>
 
         {error && (
-          <div className="p-3 text-xs rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50">
+          <div className="p-3 text-xs bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-4 border-l-[var(--danger)]">
             {error}
           </div>
         )}
 
         {queryInviteToken && (
-          <div className="p-3 text-xs rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="p-3 text-xs bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-4 border-l-[var(--c4)] flex items-center gap-2">
+            <Check className="w-4 h-4 text-[var(--c4)] shrink-0" />
             <span>Workspace invitation detected. Complete registration below to join.</span>
           </div>
         )}
@@ -115,45 +118,45 @@ export function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Name
               </label>
-              <input
+              <Input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ada Lovelace"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+            <label className="block text-xs font-medium text-[var(--text)] mb-1">
               Email
             </label>
-            <input
+            <Input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 text-base sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+            <label className="block text-xs font-medium text-[var(--text)] mb-1">
               Password
             </label>
-            <input
+            <Input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 text-base sm:text-sm"
             />
           </div>
 
@@ -161,51 +164,50 @@ export function Login() {
             <>
               {!inviteToken.trim() && (
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                  <label className="block text-xs font-medium text-[var(--text)] mb-1">
                     Bootstrap Token (First user setting up Burrow only)
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={bootstrapToken}
                     onChange={(e) => setBootstrapToken(e.target.value)}
                     placeholder="Leave blank unless initial server setup"
-                    className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs"
+                    className="w-full px-3 py-2 text-base sm:text-sm font-mono text-xs"
                   />
                 </div>
               )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                  <label className="block text-xs font-medium text-[var(--text)]">
                     Invite Token (Teammate invitations)
                   </label>
                   {queryInviteToken && (
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      Pre-filled from link
-                    </span>
+                    <Badge>Pre-filled from link</Badge>
                   )}
                 </div>
-                <input
+                <Input
                   type="text"
                   value={inviteToken}
                   onChange={(e) => setInviteToken(e.target.value)}
                   placeholder="Enter invite token"
-                  className="w-full px-3 py-2 text-sm font-mono text-xs border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 text-base sm:text-sm font-mono text-xs"
                 />
-                <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                <p className="mt-1 text-[11px] text-[var(--muted)]">
                   If you received an invite link like <code className="font-mono">/invite/TOKEN</code>, the token is the code at the end of the URL.
                 </p>
               </div>
             </>
           )}
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={loading}
-            className="w-full py-2 px-4 text-sm font-medium rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 disabled:opacity-50 transition shadow-sm"
+            className="w-full py-2 px-4 text-sm font-medium min-h-[44px]"
           >
             {loading ? 'Please wait…' : isSignUp ? 'Sign up' : 'Sign in'}
-          </button>
+          </Button>
         </form>
 
         <div className="text-center pt-2">
@@ -215,7 +217,7 @@ export function Login() {
               setIsSignUp(!isSignUp)
               setError(null)
             }}
-            className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition"
+            className="text-xs text-[var(--muted)] hover:text-[var(--text)] transition min-h-[44px]"
           >
             {isSignUp
               ? 'Already have an account? Sign in'

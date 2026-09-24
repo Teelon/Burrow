@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Copy, Check, KeyRound, AlertCircle, UserPlus, LogIn, ArrowRight } from 'lucide-react'
 import { useMe, useInviteInfo } from '../lib/queries'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
 
 export function InviteAccept() {
   const { token } = useParams({ strict: false }) as { token?: string }
@@ -151,9 +154,9 @@ export function InviteAccept() {
 
   if (meLoading || inviteLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 bg-neutral-50 dark:bg-neutral-950">
-        <div className="flex items-center gap-2 text-sm text-neutral-500">
-          <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div className="flex min-h-screen items-center justify-center p-6 bg-[var(--bg)]">
+        <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+          <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent animate-spin keep-round" />
           <span>Loading invitation details…</span>
         </div>
       </div>
@@ -163,25 +166,25 @@ export function InviteAccept() {
   // Invalid or expired invite
   if (inviteError || !inviteInfo) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 bg-neutral-50 dark:bg-neutral-950">
-        <div className="w-full max-w-md border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 p-8 shadow-xl text-center space-y-5">
-          <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center p-6 bg-[var(--bg)]">
+        <div className="w-full max-w-md border border-[var(--line)] chamfer-lg bg-[var(--surface)] p-8 text-center space-y-5">
+          <div className="mx-auto w-12 h-12 bg-[var(--surface2)] border border-[var(--line)] border-l-4 border-l-[var(--danger)] text-[var(--danger)] flex items-center justify-center">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+            <h1 className="text-xl font-bold text-[var(--text)]">
               Invalid or Expired Invitation
             </h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <p className="text-xs text-[var(--muted)] leading-relaxed">
               {inviteError instanceof Error
                 ? inviteError.message
                 : 'This invitation link is not valid or has expired. Please ask your workspace owner to send you a new invite.'}
             </p>
           </div>
           {token && (
-            <div className="p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs">
-              <span className="text-neutral-500 block mb-1">Provided token:</span>
-              <code className="font-mono text-neutral-800 dark:text-neutral-200 break-all select-all">
+            <div className="p-3 bg-[var(--surface2)] border border-[var(--line)] text-xs">
+              <span className="text-[var(--muted)] block mb-1">Provided token:</span>
+              <code className="font-mono text-[var(--text)] break-all select-all">
                 {token}
               </code>
             </div>
@@ -189,7 +192,7 @@ export function InviteAccept() {
           <div className="pt-2">
             <Link
               to="/login"
-              className="inline-block w-full py-2 px-4 text-sm font-medium rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 transition"
+              className="inline-block w-full py-2 px-4 min-h-[44px] text-sm font-medium bg-[var(--accent)] text-[var(--accent-ink)] hover:brightness-110 transition"
             >
               Go to Login
             </Link>
@@ -202,59 +205,60 @@ export function InviteAccept() {
   // User already authenticated
   if (me) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 bg-neutral-50 dark:bg-neutral-950">
-        <div className="w-full max-w-md border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 p-8 shadow-xl space-y-6">
+      <div className="flex min-h-screen items-center justify-center p-6 bg-[var(--bg)]">
+        <div className="w-full max-w-md border border-[var(--line)] chamfer-lg bg-[var(--surface)] p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary mb-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[var(--accent)] text-[var(--accent-ink)] mb-1">
               Workspace Invitation
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
               Join {inviteInfo.workspaceName}
             </h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs text-[var(--muted)]">
               You've been invited to join as an{' '}
-              <strong className="capitalize text-neutral-800 dark:text-neutral-200">
+              <strong className="capitalize text-[var(--text)]">
                 {inviteInfo.role}
               </strong>
               .
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
+          <div className="p-4 bg-[var(--surface2)] border border-[var(--line)] space-y-2 text-xs">
+            <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Signed in as:</span>
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+              <span className="font-semibold text-[var(--text)]">
                 {me.user?.email}
               </span>
             </div>
-            <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
+            <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Invited email:</span>
-              <span className="font-medium text-neutral-700 dark:text-neutral-300">
+              <span className="font-medium text-[var(--text)]">
                 {inviteInfo.email}
               </span>
             </div>
-            <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
+            <div className="flex items-center justify-between text-[var(--muted)]">
               <span>Assigned role:</span>
-              <span className="capitalize font-medium text-neutral-700 dark:text-neutral-300">
+              <span className="capitalize font-medium text-[var(--text)]">
                 {inviteInfo.role}
               </span>
             </div>
           </div>
 
           {actionError && (
-            <div className="p-3 text-xs rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50">
+            <div className="p-3 text-xs bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-4 border-l-[var(--danger)]">
               {actionError}
             </div>
           )}
 
           <div className="space-y-3 pt-2">
-            <button
+            <Button
+              variant="primary"
               onClick={handleAcceptLoggedIn}
               disabled={loading}
-              className="w-full py-2.5 px-4 text-sm font-medium rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 disabled:opacity-50 transition shadow-sm"
+              className="w-full py-2.5 px-4 text-sm font-medium min-h-[44px]"
             >
               {loading ? 'Joining workspace…' : `Accept & Join ${inviteInfo.workspaceName}`}
-            </button>
+            </Button>
 
             <button
               type="button"
@@ -263,7 +267,7 @@ export function InviteAccept() {
                 queryClient.clear()
                 window.location.reload()
               }}
-              className="w-full text-center text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition"
+              className="w-full text-center text-xs text-[var(--muted)] hover:text-[var(--text)] transition min-h-[44px]"
             >
               Sign out to use a different account
             </button>
@@ -275,18 +279,18 @@ export function InviteAccept() {
 
   // User is not logged in: Full signup / signin form right on the page!
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-neutral-50 dark:bg-neutral-950">
-      <div className="w-full max-w-md border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 p-8 shadow-xl space-y-6">
+    <div className="flex min-h-screen items-center justify-center p-6 bg-[var(--bg)]">
+      <div className="w-full max-w-md border border-[var(--line)] chamfer-lg bg-[var(--surface)] p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary mb-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[var(--accent)] text-[var(--accent-ink)] mb-1">
             Workspace Invitation
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
             Join {inviteInfo.workspaceName}
           </h1>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-[var(--muted)]">
             You've been invited to join as an{' '}
-            <strong className="capitalize text-neutral-800 dark:text-neutral-200">
+            <strong className="capitalize text-[var(--text)]">
               {inviteInfo.role}
             </strong>
             .
@@ -294,21 +298,21 @@ export function InviteAccept() {
         </div>
 
         {/* Invite Token Info Box */}
-        <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+        <div className="p-3 bg-[var(--surface2)] border border-[var(--line)] space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
             <span className="flex items-center gap-1 font-medium">
-              <KeyRound className="w-3.5 h-3.5 text-neutral-500" />
+              <KeyRound className="w-3.5 h-3.5 text-[var(--muted)]" />
               Invite Token
             </span>
             <button
               type="button"
               onClick={handleCopyToken}
-              className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+              className="flex items-center gap-1 text-[11px] text-[var(--accent)] hover:underline min-h-[44px] sm:min-h-0"
             >
               {copiedToken ? (
                 <>
-                  <Check className="w-3 h-3 text-emerald-500" />
-                  <span className="text-emerald-500 font-medium">Copied</span>
+                  <Check className="w-3 h-3 text-[var(--c4)]" />
+                  <span className="text-[var(--c4)] font-medium">Copied</span>
                 </>
               ) : (
                 <>
@@ -318,47 +322,27 @@ export function InviteAccept() {
               )}
             </button>
           </div>
-          <div className="font-mono text-xs font-medium text-neutral-800 dark:text-neutral-200 truncate select-all">
+          <div className="font-mono text-xs font-medium text-[var(--text)] truncate select-all">
             {token}
           </div>
         </div>
 
         {/* Tab Toggle: Create Account vs Sign In */}
-        <div className="flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-1 text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signup')
-              setActionError(null)
-            }}
-            className={`flex-1 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition ${
-              mode === 'signup'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Create Account
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signin')
-              setActionError(null)
-            }}
-            className={`flex-1 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition ${
-              mode === 'signin'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100'
-            }`}
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            Sign In
-          </button>
-        </div>
+        <SegmentedControl
+          value={mode}
+          onValueChange={(v) => {
+            setMode(v as 'signup' | 'signin')
+            setActionError(null)
+          }}
+          options={[
+            { value: 'signup', label: (<span className="inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" />Create Account</span>) },
+            { value: 'signin', label: (<span className="inline-flex items-center gap-1.5"><LogIn className="w-3.5 h-3.5" />Sign In</span>) },
+          ]}
+          fullWidth
+        />
 
         {actionError && (
-          <div className="p-3 text-xs rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50">
+          <div className="p-3 text-xs bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)] border-l-4 border-l-[var(--danger)]">
             {actionError}
           </div>
         )}
@@ -366,100 +350,102 @@ export function InviteAccept() {
         {mode === 'signup' ? (
           <form onSubmit={handleSignUpAndJoin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Full Name
               </label>
-              <input
+              <Input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ada Lovelace"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Email
               </label>
-              <input
+              <Input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Password
               </label>
-              <input
+              <Input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={loading}
-              className="w-full py-2 px-4 text-sm font-medium rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 disabled:opacity-50 transition shadow-sm"
+              className="w-full py-2 px-4 text-sm font-medium min-h-[44px]"
             >
               {loading ? 'Creating account…' : `Create Account & Join`}
-            </button>
+            </Button>
           </form>
         ) : (
           <form onSubmit={handleSignInAndJoin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Email
               </label>
-              <input
+              <Input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
                 Password
               </label>
-              <input
+              <Input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-sm border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-base sm:text-sm"
               />
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={loading}
-              className="w-full py-2 px-4 text-sm font-medium rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 hover:opacity-90 disabled:opacity-50 transition shadow-sm"
+              className="w-full py-2 px-4 text-sm font-medium min-h-[44px]"
             >
               {loading ? 'Signing in…' : `Sign In & Join`}
-            </button>
+            </Button>
           </form>
         )}
 
-        <div className="pt-2 text-center border-t border-neutral-200 dark:border-neutral-800">
+        <div className="pt-2 text-center border-t border-[var(--hair)]">
           <Link
             to="/login"
             search={{ inviteToken: token, email: inviteInfo.email, mode: 'signup' }}
-            className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition"
+            className="inline-flex items-center gap-1 text-xs text-[var(--muted)] hover:text-[var(--text)] transition min-h-[44px]"
           >
             Prefer standard login page? Open here <ArrowRight className="w-3 h-3" />
           </Link>

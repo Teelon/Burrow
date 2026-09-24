@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronDown,
   ChevronRight,
-  FileText,
   GripVertical,
   Plus,
   Trash2,
@@ -26,6 +25,7 @@ import {
 } from '@dnd-kit/core'
 import { useMoveNotepad } from '../../lib/queries'
 import type { NotepadNode } from '../../lib/queries'
+import { StatusDiamond } from '../ui/StatusDiamond'
 
 export type { NotepadNode } from '../../lib/queries'
 
@@ -145,26 +145,32 @@ function TreeRow({
         {...attributes}
         {...listeners}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        className={`group relative flex items-center justify-between rounded-lg py-1 pr-2 text-xs transition select-none cursor-grab active:cursor-grabbing ${
+        className={`group relative flex items-center justify-between pr-2 text-xs transition select-none cursor-grab active:cursor-grabbing min-h-[44px] md:min-h-0 py-2 md:py-1 ${
           isActive
-            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium'
-            : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60'
-        } ${mode === 'inside' ? 'bg-primary/10 ring-2 ring-inset ring-primary/60' : ''} ${
+            ? 'bg-hi text-text font-medium'
+            : 'text-muted hover:bg-hi hover:text-text'
+        } ${mode === 'inside' ? 'bg-accent/10 ring-2 ring-inset ring-accent' : ''} ${
           dimmed ? 'opacity-40' : ''
         }`}
       >
-        {/* Insertion indicators */}
+        {isActive && (
+          <span
+            aria-hidden
+            className="absolute left-0 top-0 bottom-0 w-1 bg-accent"
+          />
+        )}
+        {/* Primary insertion indicators (Basalt accent, no rounded pills) */}
         {mode === 'before' && (
-          <span className="pointer-events-none absolute -top-px inset-x-1 z-10 h-0.5 rounded bg-primary" />
+          <span className="pointer-events-none absolute -top-px inset-x-1 z-10 h-0.5 bg-accent" />
         )}
         {mode === 'after' && (
-          <span className="pointer-events-none absolute -bottom-px inset-x-1 z-10 h-0.5 rounded bg-primary" />
+          <span className="pointer-events-none absolute -bottom-px inset-x-1 z-10 h-0.5 bg-accent" />
         )}
 
         <Link
           to="/p/$projectId/notepads/$notepadId"
           params={{ projectId, notepadId: node.id }}
-          className="flex min-w-0 flex-1 items-center gap-1.5"
+          className="flex min-w-0 flex-1 items-center gap-1.5 px-3"
         >
           {hasChildren ? (
             <button
@@ -174,17 +180,17 @@ function TreeRow({
                 e.stopPropagation()
                 onToggle(node.id)
               }}
-              className="shrink-0 rounded p-0.5 hover:bg-neutral-300 dark:hover:bg-neutral-700"
+              className="flex shrink-0 h-11 w-11 md:h-6 md:w-6 items-center justify-center hover:bg-hi"
               aria-label={isExpanded ? 'Collapse' : 'Expand'}
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3 text-neutral-400" />
+                <ChevronDown className="h-3 w-3 text-muted" />
               ) : (
-                <ChevronRight className="h-3 w-3 text-neutral-400" />
+                <ChevronRight className="h-3 w-3 text-muted" />
               )}
             </button>
           ) : (
-            <FileText className="h-3 w-3 shrink-0 text-neutral-400" />
+            <StatusDiamond color="var(--muted)" size={8} className="mx-2" />
           )}
           <span className="truncate">{node.title || 'Untitled'}</span>
         </Link>
@@ -198,7 +204,7 @@ function TreeRow({
               onCreateChild(node.id)
             }}
             title="Add child notepad"
-            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-text"
           >
             <Plus className="h-3 w-3" />
           </button>
@@ -210,12 +216,12 @@ function TreeRow({
               onDelete(node.id)
             }}
             title="Delete to Trash"
-            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-500 dark:hover:bg-neutral-800"
+            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)]"
           >
             <Trash2 className="h-3 w-3" />
           </button>
           <GripVertical
-            className="h-3 w-3 cursor-grab text-neutral-300 dark:text-neutral-600"
+            className="h-3 w-3 cursor-grab text-muted"
             aria-hidden
           />
         </div>
@@ -497,21 +503,6 @@ export function NotepadTree({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-1">
-      {/* Header: label + new root notepad */}
-      <div className="flex items-center justify-between px-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-          Pages
-        </span>
-        <button
-          type="button"
-          onClick={() => createNotepad.mutate({ title: 'Untitled' })}
-          className="rounded p-1 text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-800"
-          title="New root notepad"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -523,7 +514,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
       >
         <RootList>
           {roots.length === 0 ? (
-            <div className="px-2 py-1 text-xs italic text-neutral-400">No notepads yet</div>
+            <div className="px-2 py-1 text-xs italic text-muted">No notepads yet</div>
           ) : (
             roots.map((root) => (
               <TreeRow
@@ -545,8 +536,8 @@ export function NotepadTree({ projectId }: { projectId: string }) {
 
         <DragOverlay dropAnimation={null}>
           {draggedNode ? (
-            <div className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 shadow-lg dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-              <GripVertical className="h-3 w-3 text-neutral-400" />
+            <div className="flex items-center gap-1.5 border border-line bg-surface px-3 py-2 text-xs text-text">
+              <GripVertical className="h-3 w-3 text-muted" />
               <span className="max-w-40 truncate">{draggedNode.title || 'Untitled'}</span>
             </div>
           ) : null}

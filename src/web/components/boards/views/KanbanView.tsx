@@ -42,6 +42,13 @@ import {
 } from '../../../lib/queries'
 import { QuickAddCard } from '../QuickAddCard'
 import { useBoardKeyboardNav } from '../useBoardKeyboardNav'
+import { Avatar, AvatarGroup } from '../../ui/Avatar'
+import { Badge } from '../../ui/Badge'
+import { Button } from '../../ui/Button'
+import { Card } from '../../ui/Card'
+import { Input } from '../../ui/Input'
+import { StatusDiamond } from '../../ui/StatusDiamond'
+import { priorityBadgeTone } from '../../ui/status'
 import {
   AssignPickerModal,
   PriorityPickerModal,
@@ -61,30 +68,44 @@ interface KanbanViewProps {
   onCardClick: (cardId: string) => void
 }
 
-/** Card count vs. WIP limit; turns rose when the limit is exceeded. */
+/** Priority → Basalt status token for the 4px left-edge bar. */
+function priorityStatusColor(priority?: string | null): string {
+  switch (priority) {
+    case 'urgent':
+      return 'var(--danger)'
+    case 'high':
+      return 'var(--c2)'
+    case 'medium':
+      return 'var(--c3)'
+    case 'low':
+      return 'var(--c4)'
+    default:
+      return 'var(--c1)'
+  }
+}
+
+/** Card count vs. WIP limit; turns danger when the limit is exceeded. */
 function CountPill({ count, wipLimit }: { count: number; wipLimit?: number | null }) {
   const over = wipLimit != null && wipLimit > 0 && count > wipLimit
   return (
-    <span
-      className={`shrink-0 rounded-full px-1.5 py-0.2 text-xs font-medium ${
-        over
-          ? 'border border-rose-500/30 bg-rose-500/10 text-rose-500'
-          : 'bg-neutral-200/70 text-neutral-500 dark:bg-neutral-800'
-      }`}
+    <Badge
+      tone={over ? 'danger' : 'neutral'}
       title={wipLimit != null && wipLimit > 0 ? `${count} of ${wipLimit} WIP limit` : undefined}
     >
       {wipLimit != null && wipLimit > 0 ? `${count}/${wipLimit}` : count}
-    </span>
+    </Badge>
   )
 }
 
 function CardTile({
   card,
+  statusColor,
   onClick,
   isOverlay = false,
   focused = false,
 }: {
   card: CardItem
+  statusColor?: string | null
   onClick?: () => void
   isOverlay?: boolean
   focused?: boolean
@@ -113,53 +134,51 @@ function CardTile({
     : null
 
   return (
-    <div
+    <Card
       ref={setNodeRef}
+      statusColor={statusColor || priorityStatusColor(card.priority)}
       style={style}
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`p-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 shadow-xs hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-700 transition cursor-grab active:cursor-grabbing space-y-2 select-none ${
-        isOverlay ? 'shadow-xl rotate-1 scale-105' : ''
-      } ${focused && !isOverlay ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+      className={`p-3 pl-4 cursor-grab active:cursor-grabbing space-y-2 select-none ${
+        isOverlay ? 'rotate-1 scale-105' : ''
+      } ${focused && !isOverlay ? 'outline-2 outline-[var(--accent)] outline-offset-2' : ''}`}
     >
-      <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug">
+      <div className="text-sm font-medium text-[var(--text)] leading-snug">
         {card.title || 'Untitled'}
       </div>
 
       {/* Meta tags & priority */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {card.priority && PRIORITY_BADGES[card.priority] && (
-          <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-              PRIORITY_BADGES[card.priority]!.class
-            }`}
-          >
+          <Badge tone={priorityBadgeTone(card.priority)}>
             {PRIORITY_BADGES[card.priority]!.label}
-          </span>
+          </Badge>
         )}
 
         {card.tags.map((tag) => (
-          <span
+          <Badge
             key={tag.id}
-            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+            tone="neutral"
             style={{
               backgroundColor: `${tag.color || '#64748b'}20`,
               color: tag.color || '#64748b',
+              borderColor: `${tag.color || '#64748b'}40`,
             }}
           >
             #{tag.name}
-          </span>
+          </Badge>
         ))}
       </div>
 
       {/* Footer: Due date, subtask progress & Assignees */}
-      <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/40 text-[11px] text-neutral-400">
+      <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--hair)] text-[11px] text-[var(--muted)]">
         <div className="flex items-center gap-2.5 min-w-0">
           {formattedDueDate ? (
             <div
               className={`flex items-center gap-1 ${
-                isOverdue ? 'text-rose-500 font-medium' : ''
+                isOverdue ? 'text-[var(--danger)] font-medium' : ''
               }`}
             >
               <Calendar className="w-3 h-3" />
@@ -178,13 +197,9 @@ function CardTile({
               <span className="tabular-nums">
                 {card.completedSubtasks ?? 0}/{card.totalSubtasks}
               </span>
-              <span className="w-8 h-1 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden inline-block">
+              <span className="w-8 h-1 bg-[var(--surface2)] overflow-hidden inline-block">
                 <span
-                  className={`block h-full rounded-full ${
-                    (card.completedSubtasks ?? 0) === card.totalSubtasks
-                      ? 'bg-emerald-500'
-                      : 'bg-primary'
-                  }`}
+                  className="block h-full bg-[var(--accent)]"
                   style={{
                     width: `${Math.round(
                       ((card.completedSubtasks ?? 0) / (card.totalSubtasks || 1)) * 100,
@@ -197,20 +212,14 @@ function CardTile({
         </div>
 
         {card.assignees.length > 0 && (
-          <div className="flex items-center -space-x-1.5">
+          <AvatarGroup max={8}>
             {card.assignees.map((a) => (
-              <span
-                key={a.userId}
-                title={a.name}
-                className="w-5 h-5 rounded-full bg-primary/20 text-primary border border-white dark:border-neutral-900 flex items-center justify-center text-[9px] font-semibold"
-              >
-                {a.name?.[0]?.toUpperCase() || 'U'}
-              </span>
+              <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} />
             ))}
-          </div>
+          </AvatarGroup>
         )}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -283,12 +292,12 @@ function ColumnComponent({
         style={style}
         {...attributes}
         {...listeners}
-        className={`w-10 h-80 shrink-0 rounded-2xl border bg-neutral-100/60 dark:bg-neutral-900/40 flex flex-col items-center gap-3 py-3 transition-all duration-150 cursor-grab active:cursor-grabbing touch-none ${
-          isDragging ? 'z-10 shadow-xl relative opacity-50' : ''
+        className={`chamfer-lg w-10 h-80 shrink-0 snap-start border bg-[var(--surface2)] flex flex-col items-center gap-3 py-3 transition-all duration-150 cursor-grab active:cursor-grabbing touch-none ${
+          isDragging ? 'z-10 relative opacity-50' : ''
         } ${
           isOver
-            ? 'border-primary/60 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/20'
-            : 'border-neutral-200/50 dark:border-neutral-800/50'
+            ? 'border-[var(--accent)] bg-[var(--hi)]'
+            : 'border-[var(--line)]'
         }`}
         title={`${column.name} (click to expand)`}
         onDoubleClick={() => setIsCollapsed(false)}
@@ -300,13 +309,13 @@ function ColumnComponent({
             setIsCollapsed(false)
           }}
           aria-label="Expand column"
-          className="p-1 rounded-lg text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 hover:text-neutral-700 dark:hover:text-neutral-200"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
         <span
-          className="flex-1 min-h-0 overflow-hidden text-xs font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap cursor-pointer"
-          style={{ writingMode: 'vertical-rl' }}
+          className="flex-1 min-h-0 overflow-hidden text-xs font-semibold text-[var(--text)] whitespace-nowrap cursor-pointer uppercase tracking-wider"
+          style={{ writingMode: 'vertical-rl', fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
           onClick={() => setIsCollapsed(false)}
         >
           {column.name}
@@ -320,27 +329,22 @@ function ColumnComponent({
     <div
       ref={setNodeRef}
       style={style}
-      className={`w-72 shrink-0 bg-neutral-100/60 dark:bg-neutral-900/40 rounded-2xl p-3 flex flex-col max-h-full border transition-all duration-150 ${
-        isDragging ? 'z-10 shadow-xl relative' : ''
+      className={`chamfer-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col max-h-full border transition-all duration-150 ${
+        isDragging ? 'z-10 relative' : ''
       } ${
         isOver
-          ? 'border-primary/60 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/20'
-          : 'border-neutral-200/50 dark:border-neutral-800/50'
+          ? 'border-[var(--accent)] bg-[var(--hi)]'
+          : 'border-[var(--line)]'
       }`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-1 py-1.5 mb-2 relative">
+      <div className="flex items-center justify-between px-3 py-1.5 mb-2 relative">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {column.color && (
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: column.color }}
-            />
-          )}
+          <StatusDiamond color={column.color || 'var(--c1)'} size={9} />
           {isEditingName ? (
-            <input
-              type="text"
+            <Input
               autoFocus
+              type="text"
               value={columnName}
               onChange={(e) => setColumnName(e.target.value)}
               onBlur={() => {
@@ -360,12 +364,12 @@ function ColumnComponent({
                   setIsEditingName(false)
                 }
               }}
-              className="text-sm font-semibold bg-white dark:bg-neutral-800 border border-primary px-1.5 py-0.5 rounded text-neutral-800 dark:text-neutral-200 focus:outline-none w-full"
             />
           ) : (
             <h3
               onDoubleClick={() => setIsEditingName(true)}
-              className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 truncate cursor-pointer hover:opacity-80"
+              className="text-sm text-[var(--text)] truncate cursor-pointer hover:opacity-80 uppercase tracking-wider"
+              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
               title="Double-click to rename"
             >
               {column.name}
@@ -380,7 +384,7 @@ function ColumnComponent({
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse column"
             title="Collapse column"
-            className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700"
+            className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)]"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -392,7 +396,7 @@ function ColumnComponent({
             {...listeners}
             aria-label="Drag to reorder column"
             title="Drag to reorder"
-            className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 cursor-grab active:cursor-grabbing touch-none"
+            className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)] cursor-grab active:cursor-grabbing touch-none"
           >
             <GripVertical className="w-4 h-4" />
           </button>
@@ -400,20 +404,21 @@ function ColumnComponent({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700"
+              aria-label="Column menu"
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)]"
             >
               <MoreHorizontal className="w-4 h-4" />
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-1 z-20 text-xs">
+              <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--surface)] border border-[var(--line)] p-1 z-20 text-xs">
                 <button
                   onClick={() => {
                     setShowMenu(false)
                     setColumnName(column.name)
                     setIsEditingName(true)
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Rename</span>
@@ -438,7 +443,7 @@ function ColumnComponent({
                       onSetWipLimit(column.id, parsed)
                     }
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   <span>WIP limit…</span>
@@ -448,7 +453,7 @@ function ColumnComponent({
                     setShowMenu(false)
                     onDeleteColumn(column.id, column.cards.length)
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--danger)] hover:bg-[var(--hi)]"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete</span>
@@ -466,6 +471,7 @@ function ColumnComponent({
             <CardTile
               key={card.id}
               card={card}
+              statusColor={column.color || priorityStatusColor(card.priority)}
               focused={card.id === focusedCardId}
               onClick={() => onCardClick(card.id)}
             />
@@ -473,10 +479,10 @@ function ColumnComponent({
         </SortableContext>
         {column.cards.length === 0 && (
           <div
-            className={`h-24 rounded-xl border border-dashed flex items-center justify-center text-xs font-medium transition-colors select-none ${
+            className={`h-24 border border-dashed flex items-center justify-center text-xs font-medium transition-colors select-none ${
               isOver
-                ? 'border-primary/60 text-primary bg-primary/5'
-                : 'border-neutral-300 dark:border-neutral-700/60 text-neutral-400'
+                ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--hi)]'
+                : 'border-[var(--line)] text-[var(--muted)]'
             }`}
           >
             Drop cards here
@@ -485,7 +491,7 @@ function ColumnComponent({
       </div>
 
       {/* Add Card Bottom Button / Form */}
-      <div className="mt-2 pt-1 border-t border-neutral-200/40 dark:border-neutral-800/40">
+      <div className="mt-2 pt-1 border-t border-[var(--hair)]">
         {isAdding ? (
           <QuickAddCard
             boardId={boardId}
@@ -496,7 +502,7 @@ function ColumnComponent({
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="w-full py-1.5 px-2 rounded-xl text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60 transition flex items-center justify-center gap-1.5"
+            className="w-full py-1.5 px-2 min-h-[44px] text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--hi)] transition flex items-center justify-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add card</span>
@@ -847,10 +853,14 @@ export function KanbanView({
   const priorityCard = priorityCardId ? findCard(priorityCardId) : undefined
   const assignCard = assignCardId ? findCard(assignCardId) : undefined
 
+  const activeCardColumn = activeCard
+    ? (columns.find((c) => c.cards.some((cc) => cc.id === activeCard.id))?.color ?? null)
+    : null
+
   return (
     <>
-      {/* Columns Container (Horizontal Scroll) */}
-      <div className="flex-1 overflow-x-auto p-6 flex items-start gap-4">
+      {/* Columns Container (Horizontal Scroll with mobile snap) */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 flex items-start gap-4 snap-x snap-mandatory md:snap-none bg-[var(--bg)]">
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetectionStrategy}
@@ -879,16 +889,16 @@ export function KanbanView({
           </SortableContext>
 
           <DragOverlay>
-            {activeCard ? <CardTile card={activeCard} isOverlay /> : null}
+            {activeCard ? <CardTile card={activeCard} statusColor={activeCardColumn} isOverlay /> : null}
           </DragOverlay>
         </DndContext>
 
         {/* Add Column Button & Inline Card on the Kanban Board */}
         {isAddingColumn ? (
-          <div className="w-72 shrink-0 bg-neutral-100/70 dark:bg-neutral-900/50 rounded-2xl p-3 flex flex-col gap-2.5 border border-primary/40 shadow-xs">
-            <input
-              type="text"
+          <Card className="w-[85vw] max-w-72 md:w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col gap-2.5 border-[var(--accent)]">
+            <Input
               autoFocus
+              type="text"
               placeholder="Column name…"
               value={newColumnName}
               onChange={(e) => setNewColumnName(e.target.value)}
@@ -902,36 +912,36 @@ export function KanbanView({
                   setNewColumnName('')
                 }
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:border-primary text-neutral-900 dark:text-neutral-100 placeholder-neutral-400"
             />
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleCreateColumn}
                 disabled={!newColumnName.trim() || createColumnMutation.isPending}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-white hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{createColumnMutation.isPending ? 'Adding…' : 'Add Column'}</span>
-              </button>
+              </Button>
               <button
                 type="button"
                 onClick={() => {
                   setIsAddingColumn(false)
                   setNewColumnName('')
                 }}
-                className="p-1.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition cursor-pointer"
+                aria-label="Cancel"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)] transition cursor-pointer"
                 title="Cancel"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          </Card>
         ) : (
           <button
             type="button"
             onClick={() => setIsAddingColumn(true)}
-            className="w-72 shrink-0 h-12 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700/60 hover:border-primary/60 dark:hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/10 text-xs font-semibold text-neutral-500 hover:text-primary transition flex items-center justify-center gap-2 cursor-pointer select-none"
+            className="w-[85vw] max-w-72 md:w-72 shrink-0 snap-start h-12 min-h-[44px] border-2 border-dashed border-[var(--line)] hover:border-[var(--accent)] hover:bg-[var(--hi)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--accent)] transition flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <Plus className="w-4 h-4" />
             <span>Add Column</span>

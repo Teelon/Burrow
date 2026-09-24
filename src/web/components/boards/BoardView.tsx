@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import {
   CalendarDays,
   Filter,
@@ -7,12 +6,10 @@ import {
   List,
   Plus,
   Search,
-  Trash2,
   X,
 } from 'lucide-react'
 import {
   useBoard,
-  useDeleteBoard,
   useMembers,
   useProjectTags,
   useUpdateBoard,
@@ -21,6 +18,11 @@ import { CardPanel } from './CardPanel'
 import { KanbanView } from './views/KanbanView'
 import { ListView } from './views/ListView'
 import { CalendarView } from './views/CalendarView'
+import { Button } from '../ui/Button'
+import { Chip } from '../ui/Chip'
+import { Input } from '../ui/Input'
+import { SegmentedControl } from '../ui/SegmentedControl'
+import { Select } from '../ui/Select'
 import type { ColumnItem } from './views/types'
 
 interface BoardViewProps {
@@ -49,10 +51,8 @@ const VIEW_TABS: Array<{ mode: BoardViewMode; label: string; icon: typeof Kanban
 ]
 
 export function BoardView({ boardId, projectId }: BoardViewProps) {
-  const navigate = useNavigate()
   const { data: board, isLoading } = useBoard(boardId)
   const updateBoardMutation = useUpdateBoard()
-  const deleteBoardMutation = useDeleteBoard()
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [isEditingBoardName, setIsEditingBoardName] = useState(false)
@@ -116,7 +116,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
 
   if (isLoading || !board) {
     return (
-      <div className="p-8 flex items-center justify-center text-sm text-neutral-400">
+      <div className="p-8 flex items-center justify-center text-sm text-[var(--muted)]">
         Loading board…
       </div>
     )
@@ -132,22 +132,12 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     setIsEditingBoardName(false)
   }
 
-  const handleDeleteBoard = () => {
-    if (window.confirm('Move this board to Trash?')) {
-      deleteBoardMutation.mutate(boardId, {
-        onSuccess: () => {
-          navigate({ to: `/p/${projectId}` })
-        },
-      })
-    }
-  }
-
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-neutral-50/40 dark:bg-neutral-950/40">
+    <div className="h-full flex flex-col overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       {/* Board Header Bar */}
-      <div className="p-4 px-6 border-b border-neutral-200/60 dark:border-neutral-800/60 flex items-center justify-between gap-4 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{board.icon || '📋'}</span>
+      <div className="p-4 px-4 md:px-6 border-b border-[var(--line)] flex items-center justify-between gap-4 bg-[var(--surface)]">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-2xl shrink-0">{board.icon || '📋'}</span>
           {isEditingBoardName ? (
             <input
               type="text"
@@ -159,7 +149,8 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
                 if (e.key === 'Enter') handleBoardNameSave()
                 if (e.key === 'Escape') setIsEditingBoardName(false)
               }}
-              className="text-xl font-bold bg-transparent border-b border-primary focus:outline-none"
+              className="text-xl bg-transparent border-b-2 border-[var(--accent)] focus:outline-none text-[var(--text)] min-w-0 text-[16px]"
+              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800" }}
             />
           ) : (
             <h1
@@ -167,7 +158,8 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
                 setBoardName(board.name)
                 setIsEditingBoardName(true)
               }}
-              className="text-xl font-bold text-neutral-900 dark:text-neutral-100 cursor-pointer hover:opacity-80"
+              className="text-xl md:text-2xl text-[var(--text)] cursor-pointer hover:opacity-80 truncate tracking-tight"
+              style={{ fontFamily: 'Archivo, sans-serif', fontVariationSettings: "'wdth' 122, 'wght' 800", letterSpacing: '-0.02em' }}
               title="Click to rename"
             >
               {board.name}
@@ -175,124 +167,118 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {viewMode === 'kanban' && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => setIsAddingColumn(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Column</span>
-            </button>
+            </Button>
           )}
-          <button
-            onClick={handleDeleteBoard}
-            title="Delete Board"
-            className="p-1.5 rounded-xl text-neutral-400 hover:text-rose-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* Filter Bar + View Switcher */}
-      <div className="px-6 py-2 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/30 flex items-center gap-3 flex-wrap text-xs">
-        <div className="flex items-center gap-1.5 text-neutral-400">
-          <Filter className="w-3.5 h-3.5" />
-          <span className="font-semibold uppercase tracking-wider text-[10px]">Filter:</span>
-        </div>
+      {/* Filter Bar + View Switcher — horizontally scrollable chip track on mobile */}
+      <div className="border-b border-[var(--line)] bg-[var(--surface2)]">
+        <div className="px-4 md:px-6 py-2 flex items-center gap-2 md:gap-3 md:flex-wrap text-xs overflow-x-auto no-scrollbar whitespace-nowrap snap-x">
+          <div className="flex items-center gap-1.5 text-[var(--muted)] shrink-0">
+            <Filter className="w-3.5 h-3.5" />
+            <span className="font-semibold uppercase tracking-wider text-[10px]">Filter:</span>
+          </div>
 
-        {/* Text Search */}
-        <div className="relative flex items-center">
-          <Search className="w-3 h-3 text-neutral-400 absolute left-2" />
-          <input
-            type="text"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            placeholder="Search cards…"
-            className="pl-7 pr-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none focus:border-primary w-32 focus:w-44 transition-all"
-          />
-        </div>
+          {/* Text Search */}
+          <div className="relative flex items-center shrink-0">
+            <Search className="w-3 h-3 text-[var(--muted)] absolute left-2 pointer-events-none" />
+            <Input
+              type="text"
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              placeholder="Search cards…"
+              aria-label="Search cards"
+              className="pl-7 pr-2 w-32 focus:w-44 transition-all"
+            />
+          </div>
 
-        {/* Priority Filter */}
-        <select
-          value={filterPriority}
-          onChange={(e) => setFilterPriority(e.target.value)}
-          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
-        >
-          <option value="all">All Priorities</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-
-        {/* Assignee Filter */}
-        <select
-          value={filterAssignee}
-          onChange={(e) => setFilterAssignee(e.target.value)}
-          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
-        >
-          <option value="all">All Assignees</option>
-          {members.map((m) => (
-            <option key={m.userId} value={m.userId}>
-              {m.name || m.email}
-            </option>
-          ))}
-        </select>
-
-        {/* Tag Filter */}
-        <select
-          value={filterTag}
-          onChange={(e) => setFilterTag(e.target.value)}
-          className="px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs outline-none text-neutral-700 dark:text-neutral-300"
-        >
-          <option value="all">All Tags</option>
-          {tags.map((t) => (
-            <option key={t.id} value={t.id}>
-              #{t.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Reset Filter Button */}
-        {isFiltered && (
-          <button
-            onClick={() => {
-              setFilterSearch('')
-              setFilterPriority('all')
-              setFilterAssignee('all')
-              setFilterTag('all')
-            }}
-            className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 font-medium px-2 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+          {/* Priority Filter */}
+          <Select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            aria-label="Filter by priority"
+            className="shrink-0 w-auto"
           >
-            <X className="w-3 h-3" />
-            <span>Reset filters</span>
-          </button>
-        )}
+            <option value="all">All Priorities</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </Select>
 
-        {/* View Switcher (persisted per board) */}
-        <div className="ml-auto flex items-center gap-0.5 rounded-xl border border-neutral-200 bg-white p-0.5 dark:border-neutral-700 dark:bg-neutral-900">
-          {VIEW_TABS.map((tab) => {
-            const Icon = tab.icon
-            const active = viewMode === tab.mode
-            return (
-              <button
-                key={tab.mode}
-                type="button"
-                onClick={() => changeView(tab.mode)}
-                aria-pressed={active}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                  active
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
+          {/* Assignee Filter */}
+          <Select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            aria-label="Filter by assignee"
+            className="shrink-0 w-auto"
+          >
+            <option value="all">All Assignees</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name || m.email}
+              </option>
+            ))}
+          </Select>
+
+          {/* Tag Filter */}
+          <Select
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+            aria-label="Filter by tag"
+            className="shrink-0 w-auto"
+          >
+            <option value="all">All Tags</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id}>
+                #{t.name}
+              </option>
+            ))}
+          </Select>
+
+          {/* Reset Filter Button */}
+          {isFiltered && (
+            <Chip
+              active
+              onClick={() => {
+                setFilterSearch('')
+                setFilterPriority('all')
+                setFilterAssignee('all')
+                setFilterTag('all')
+              }}
+              className="shrink-0"
+            >
+              <X className="w-3 h-3" />
+              <span>Reset filters</span>
+            </Chip>
+          )}
+
+          {/* View Switcher (persisted per board) */}
+          <SegmentedControl
+            value={viewMode}
+            onValueChange={(v) => changeView(v as BoardViewMode)}
+            ariaLabel="Board view"
+            className="ml-auto shrink-0"
+            options={VIEW_TABS.map((tab) => ({
+              value: tab.mode,
+              label: (
+                <span className="flex items-center gap-1.5">
+                  <tab.icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </span>
+              ),
+            }))}
+          />
         </div>
       </div>
 

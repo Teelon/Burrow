@@ -22,6 +22,13 @@ import {
 } from '../../lib/queries'
 import { SubtasksSection } from './SubtasksSection'
 import { CommentsFeed } from './CommentsFeed'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
+import { Badge } from '../ui/Badge'
+import { Avatar } from '../ui/Avatar'
+import { SegmentedControl } from '../ui/SegmentedControl'
+import { StatusDiamond } from '../ui/StatusDiamond'
 
 interface CardPanelProps {
   cardId: string
@@ -31,11 +38,12 @@ interface CardPanelProps {
   onClose: () => void
 }
 
+// Basalt priority → status token mapping (Layer 4 adapter).
 const PRIORITIES = [
-  { value: 'low', label: 'Low', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/60 dark:text-slate-300' },
-  { value: 'medium', label: 'Medium', color: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300' },
-  { value: 'high', label: 'High', color: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' },
-  { value: 'urgent', label: 'Urgent', color: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' },
+  { value: 'low', label: 'Low', colorVar: 'var(--c4)' },
+  { value: 'medium', label: 'Medium', colorVar: 'var(--c3)' },
+  { value: 'high', label: 'High', colorVar: 'var(--c2)' },
+  { value: 'urgent', label: 'Urgent', colorVar: 'var(--danger)' },
 ] as const
 
 export function CardPanel({
@@ -61,8 +69,8 @@ export function CardPanel({
 
   if (isLoading || !card) {
     return (
-      <div className="fixed inset-y-0 right-0 w-full sm:w-[540px] md:w-[640px] bg-white dark:bg-neutral-900 shadow-2xl z-50 border-l border-neutral-200 dark:border-neutral-800 p-6 flex flex-col items-center justify-center">
-        <div className="text-sm text-neutral-400">Loading card…</div>
+      <div className="fixed inset-x-0 bottom-0 top-[8dvh] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[540px] md:w-[680px] h-[100dvh] bg-[var(--surface)] border-t-2 border-[var(--line)] sm:border-t-0 sm:border-l sm:border-l-[var(--line)] z-50 p-6 flex flex-col items-center justify-center pb-[env(safe-area-inset-bottom)]">
+        <div className="text-sm text-[var(--muted)]">Loading card…</div>
       </div>
     )
   }
@@ -138,38 +146,40 @@ export function CardPanel({
   const isoDueDate = card.dueDate ? new Date(card.dueDate).toISOString().slice(0, 10) : ''
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[540px] md:w-[680px] bg-white dark:bg-neutral-950 shadow-2xl z-50 border-l border-neutral-200 dark:border-neutral-800 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-x-0 bottom-0 top-[8dvh] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[540px] md:w-[680px] h-[100dvh] bg-[var(--surface)] border-t-2 border-[var(--line)] sm:border-t-0 sm:border-l sm:border-l-[var(--line)] z-50 flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]">
       {/* Top Header */}
-      <div className="p-4 border-b border-neutral-200/60 dark:border-neutral-800/60 flex items-center justify-between gap-3">
+      <div className="p-4 border-b border-[var(--hair)] flex items-center justify-between gap-3 bg-[var(--surface2)]">
         <div className="flex items-center gap-2">
-          <select
+          <Select
             value={card.columnId}
             onChange={(e) => handleColumnChange(e.target.value)}
-            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 focus:outline-none"
+            className="px-2.5 py-1 text-xs font-semibold min-h-[44px] sm:min-h-0"
           >
             {columns.map((col) => (
               <option key={col.id} value={col.id}>
                 {col.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
+          <Button
+            variant="ghost"
             onClick={handleDelete}
             title="Delete card"
-            className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            className="p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-[var(--muted)] hover:text-[var(--danger)]"
           >
             <Trash2 className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={onClose}
             title="Close"
-            className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+            className="p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-[var(--muted)] hover:text-[var(--text)]"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -177,62 +187,62 @@ export function CardPanel({
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Title */}
         <div>
-          <input
+          <Input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             placeholder="Card Title"
-            className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none placeholder-neutral-300 dark:placeholder-neutral-700"
+            className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none placeholder:text-[var(--muted)] text-[var(--text)]"
           />
         </div>
 
-        {/* Metadata Properties Grid */}
-        <div className="bg-neutral-50/80 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 space-y-3 text-xs">
-          {/* Priority */}
+        {/* Metadata Properties Grid — flat, angular */}
+        <div className="bg-[var(--surface2)] p-4 border border-[var(--line)] space-y-3 text-xs">
+          {/* Priority — geometric selector */}
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-neutral-500 w-28">
+            <div className="flex items-center gap-2 text-[var(--muted)] w-28">
               <Flag className="w-3.5 h-3.5" />
               <span>Priority</span>
             </div>
-            <div className="flex items-center gap-1 flex-wrap">
-              {PRIORITIES.map((p) => {
-                const active = card.priority === p.value
-                return (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => handlePriorityChange(active ? null : p.value)}
-                    className={`px-2 py-0.5 rounded-md font-medium transition ${
-                      active
-                        ? `${p.color} ring-1 ring-inset ring-neutral-400/40`
-                        : 'text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
+            <SegmentedControl
+              value={card.priority ?? ''}
+              onValueChange={(v) =>
+                handlePriorityChange(
+                  card.priority === v
+                    ? null
+                    : (v as 'low' | 'medium' | 'high' | 'urgent'),
                 )
-              })}
-            </div>
+              }
+              options={PRIORITIES.map((p) => ({
+                value: p.value,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusDiamond color={p.colorVar} size={8} />
+                    {p.label}
+                  </span>
+                ),
+              }))}
+            />
           </div>
 
           {/* Due Date */}
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-neutral-500 w-28">
+            <div className="flex items-center gap-2 text-[var(--muted)] w-28">
               <Calendar className="w-3.5 h-3.5" />
               <span>Due Date</span>
             </div>
-            <input
+            <Input
               type="date"
               value={isoDueDate}
               onChange={handleDueDateChange}
-              className="px-2 py-1 text-xs rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 focus:outline-none"
+              className="px-2 py-1 text-xs min-h-[44px] sm:min-h-0"
             />
           </div>
 
           {/* Assignees */}
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-2 text-neutral-500 w-28 pt-1">
+            <div className="flex items-center gap-2 text-[var(--muted)] w-28 pt-1">
               <Users className="w-3.5 h-3.5" />
               <span>Assignees</span>
             </div>
@@ -244,15 +254,13 @@ export function CardPanel({
                     key={m.userId}
                     type="button"
                     onClick={() => toggleAssignee(m.userId)}
-                    className={`px-2 py-1 rounded-lg border text-xs flex items-center gap-1.5 transition ${
+                    className={`px-2 py-1 min-h-[44px] sm:min-h-0 border text-xs flex items-center gap-1.5 transition ${
                       isAssigned
-                        ? 'bg-primary/10 border-primary/30 text-primary font-medium'
-                        : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900'
+                        ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-ink)] font-medium'
+                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)]'
                     }`}
                   >
-                    <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px]">
-                      {m.name?.[0]?.toUpperCase() || 'U'}
-                    </span>
+                    <Avatar name={m.name} size="xs" />
                     <span>{m.name}</span>
                   </button>
                 )
@@ -263,22 +271,15 @@ export function CardPanel({
           {/* Tags */}
           {card.tags && card.tags.length > 0 && (
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-neutral-500 w-28">
+              <div className="flex items-center gap-2 text-[var(--muted)] w-28">
                 <Tag className="w-3.5 h-3.5" />
                 <span>Tags</span>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
                 {card.tags.map((t) => (
-                  <span
-                    key={t.id}
-                    className="px-2 py-0.5 rounded text-[11px] font-medium"
-                    style={{
-                      backgroundColor: `${t.color || '#64748b'}20`,
-                      color: t.color || '#64748b',
-                    }}
-                  >
+                  <Badge key={t.id} style={{ borderLeftColor: t.color || '#64748b' }}>
                     #{t.name}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -289,13 +290,13 @@ export function CardPanel({
         <SubtasksSection cardId={cardId} boardId={boardId} subtasks={card.subtasks || []} />
 
         {/* Card Body (BlockNote Notepad Editor) */}
-        <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 pt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
+        <div className="border-t border-[var(--hair)] pt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
             Card Notes & Body
           </h3>
           <Suspense
             fallback={
-              <div className="p-4 text-xs text-neutral-400">Loading card notes…</div>
+              <div className="p-4 text-xs text-[var(--muted)]">Loading card notes…</div>
             }
           >
             <LazyNotepadEditor notepadId={card.notepadId} hideTitle hideFavorite />

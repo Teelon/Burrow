@@ -9,6 +9,10 @@ import {
   X,
 } from 'lucide-react'
 import { useCreateCard, useMembers } from '../../lib/queries'
+import { Avatar } from '../ui/Avatar'
+import { Button } from '../ui/Button'
+import { Card } from '../ui/Card'
+import { Input } from '../ui/Input'
 
 interface QuickAddCardProps {
   boardId: string
@@ -185,19 +189,20 @@ export function QuickAddCard({
   }
 
   return (
-    <div className="p-2 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl shadow-xs space-y-2 relative">
+    <Card className="p-2 space-y-2 relative">
       {/* Active Structured Chips */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {chips.notepad && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-            <FileText className="w-3 h-3 text-purple-500" />
+          <span className="chamfer-sm inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)]">
+            <FileText className="w-3 h-3 text-[var(--muted)]" />
             <span>
               {chips.notepad.mode === 'new' ? 'New Notepad' : chips.notepad.title}
             </span>
             <button
               type="button"
               onClick={() => setChips((c) => ({ ...c, notepad: undefined }))}
-              className="hover:text-purple-900"
+              aria-label="Remove notepad"
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center hover:text-[var(--danger)]"
             >
               <X className="w-2.5 h-2.5" />
             </button>
@@ -205,13 +210,14 @@ export function QuickAddCard({
         )}
 
         {chips.priority && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-            <Flag className="w-3 h-3 text-amber-500" />
+          <span className="chamfer-sm inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40">
+            <Flag className="w-3 h-3" />
             <span className="capitalize">{chips.priority}</span>
             <button
               type="button"
               onClick={() => setChips((c) => ({ ...c, priority: undefined }))}
-              className="hover:text-amber-900"
+              aria-label="Remove priority"
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center"
             >
               <X className="w-2.5 h-2.5" />
             </button>
@@ -219,13 +225,14 @@ export function QuickAddCard({
         )}
 
         {chips.dueDate && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-            <Calendar className="w-3 h-3 text-blue-500" />
+          <span className="chamfer-sm inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)]">
+            <Calendar className="w-3 h-3 text-[var(--muted)]" />
             <span>{chips.dueDate.label}</span>
             <button
               type="button"
               onClick={() => setChips((c) => ({ ...c, dueDate: undefined }))}
-              className="hover:text-blue-900"
+              aria-label="Remove due date"
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center"
             >
               <X className="w-2.5 h-2.5" />
             </button>
@@ -235,9 +242,9 @@ export function QuickAddCard({
         {chips.assignees.map((a) => (
           <span
             key={a.userId}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+            className="chamfer-sm inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[var(--surface2)] text-[var(--text)] border border-[var(--line)]"
           >
-            <User className="w-3 h-3 text-neutral-500" />
+            <User className="w-3 h-3 text-[var(--muted)]" />
             <span>{a.name}</span>
             <button
               type="button"
@@ -247,7 +254,8 @@ export function QuickAddCard({
                   assignees: c.assignees.filter((x) => x.userId !== a.userId),
                 }))
               }
-              className="hover:text-neutral-900"
+              aria-label={`Remove ${a.name}`}
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center"
             >
               <X className="w-2.5 h-2.5" />
             </button>
@@ -257,7 +265,7 @@ export function QuickAddCard({
         {chips.tags.map((t) => (
           <span
             key={t.tagId}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium"
+            className="chamfer-sm inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border"
             style={{
               backgroundColor: `${t.color || '#64748b'}20`,
               color: t.color || '#64748b',
@@ -268,12 +276,14 @@ export function QuickAddCard({
             <span>#{t.name}</span>
             <button
               type="button"
+              aria-label={`Remove tag ${t.name}`}
               onClick={() =>
                 setChips((c) => ({
                   ...c,
                   tags: c.tags.filter((x) => x.tagId !== t.tagId),
                 }))
               }
+              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center"
             >
               <X className="w-2.5 h-2.5" />
             </button>
@@ -282,21 +292,20 @@ export function QuickAddCard({
       </div>
 
       {/* Main Input */}
-      <input
+      <Input
         ref={inputRef}
-        type="text"
         autoFocus
         value={title}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         placeholder="Type a title, / for commands, @ for members, # for tags…"
-        className="w-full text-xs bg-transparent border-none focus:outline-none placeholder-neutral-400"
+        className="border-none bg-transparent px-0"
       />
 
       {/* Slash Menu Popup */}
       {menuMode === 'slash' && (
-        <div className="absolute left-2 bottom-full mb-1 w-64 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl p-1.5 z-30 text-xs space-y-1 animate-in fade-in">
-          <div className="px-2 py-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
+        <div className="absolute left-2 bottom-full mb-1 w-64 bg-[var(--surface)] border border-[var(--line)] p-1.5 z-30 text-xs space-y-1">
+          <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Quick-Add Commands
           </div>
           <button
@@ -307,12 +316,12 @@ export function QuickAddCard({
               setMenuMode('none')
               inputRef.current?.focus()
             }}
-            className="w-full p-1.5 flex items-center gap-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
+            className="w-full p-1.5 min-h-[44px] flex items-center gap-2 hover:bg-[var(--hi)] text-left text-[var(--text)]"
           >
-            <FileText className="w-3.5 h-3.5 text-purple-500" />
+            <FileText className="w-3.5 h-3.5 text-[var(--muted)]" />
             <div>
               <div className="font-semibold">/notepad</div>
-              <div className="text-[10px] text-neutral-400">Create new linked notepad</div>
+              <div className="text-[10px] text-[var(--muted)]">Create new linked notepad</div>
             </div>
           </button>
 
@@ -322,24 +331,24 @@ export function QuickAddCard({
               setDateInputOpen(true)
               setMenuMode('none')
             }}
-            className="w-full p-1.5 flex items-center gap-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
+            className="w-full p-1.5 min-h-[44px] flex items-center gap-2 hover:bg-[var(--hi)] text-left text-[var(--text)]"
           >
-            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+            <Calendar className="w-3.5 h-3.5 text-[var(--muted)]" />
             <div>
               <div className="font-semibold">/due</div>
-              <div className="text-[10px] text-neutral-400">Set due date (e.g., tomorrow)</div>
+              <div className="text-[10px] text-[var(--muted)]">Set due date (e.g., tomorrow)</div>
             </div>
           </button>
 
-          <div className="border-t border-neutral-100 dark:border-neutral-800 pt-1">
-            <div className="px-2 py-0.5 text-[10px] text-neutral-400">/priority</div>
+          <div className="border-t border-[var(--hair)] pt-1">
+            <div className="px-2 py-0.5 text-[10px] text-[var(--muted)]">/priority</div>
             <div className="grid grid-cols-4 gap-1 p-1">
               {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => selectPriority(p)}
-                  className="py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-medium capitalize hover:bg-neutral-200"
+                  className="chamfer-sm py-1 min-h-[44px] md:min-h-0 bg-[var(--surface2)] text-[10px] font-medium capitalize hover:bg-[var(--hi)] text-[var(--text)]"
                 >
                   {p}
                 </button>
@@ -351,8 +360,8 @@ export function QuickAddCard({
 
       {/* At (@) Menu Popup */}
       {menuMode === 'at' && (
-        <div className="absolute left-2 bottom-full mb-1 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl p-1.5 z-30 text-xs space-y-1 animate-in fade-in max-h-48 overflow-y-auto">
-          <div className="px-2 py-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
+        <div className="absolute left-2 bottom-full mb-1 w-56 bg-[var(--surface)] border border-[var(--line)] p-1.5 z-30 text-xs space-y-1 max-h-48 overflow-y-auto">
+          <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Assign Member
           </div>
           {members
@@ -367,11 +376,9 @@ export function QuickAddCard({
                 key={m.userId}
                 type="button"
                 onClick={() => selectAssignee(m.userId, m.name)}
-                className="w-full p-1.5 flex items-center gap-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
+                className="w-full p-1.5 min-h-[44px] flex items-center gap-2 hover:bg-[var(--hi)] text-left text-[var(--text)]"
               >
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px]">
-                  {m.name?.[0]?.toUpperCase() || 'U'}
-                </span>
+                <Avatar name={m.name || m.email} size="xs" />
                 <span className="truncate">{m.name}</span>
               </button>
             ))}
@@ -380,8 +387,8 @@ export function QuickAddCard({
 
       {/* Hash (#) Menu Popup */}
       {menuMode === 'hash' && (
-        <div className="absolute left-2 bottom-full mb-1 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl p-1.5 z-30 text-xs space-y-1 animate-in fade-in max-h-48 overflow-y-auto">
-          <div className="px-2 py-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
+        <div className="absolute left-2 bottom-full mb-1 w-56 bg-[var(--surface)] border border-[var(--line)] p-1.5 z-30 text-xs space-y-1 max-h-48 overflow-y-auto">
+          <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Project Tags
           </div>
           {availableTags
@@ -391,7 +398,7 @@ export function QuickAddCard({
                 key={t.id}
                 type="button"
                 onClick={() => selectTag(t.id, t.name, t.color)}
-                className="w-full p-1.5 flex items-center gap-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left"
+                className="w-full p-1.5 min-h-[44px] flex items-center gap-2 hover:bg-[var(--hi)] text-left text-[var(--text)]"
               >
                 <Tag className="w-3.5 h-3.5" style={{ color: t.color || '#64748b' }} />
                 <span>#{t.name}</span>
@@ -403,9 +410,9 @@ export function QuickAddCard({
       {/* Inline Date Input if /due selected */}
       {dateInputOpen && (
         <div className="flex items-center gap-1.5 pt-1">
-          <input
-            type="text"
+          <Input
             autoFocus
+            type="text"
             value={dateInputValue}
             onChange={(e) => setDateInputValue(e.target.value)}
             onKeyDown={(e) => {
@@ -416,33 +423,33 @@ export function QuickAddCard({
               if (e.key === 'Escape') setDateInputOpen(false)
             }}
             placeholder="e.g. tomorrow, next fri, Oct 3"
-            className="p-1 text-xs rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex-1 focus:outline-none"
+            className="flex-1"
           />
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => selectDueDate(dateInputValue)}
-            className="px-2 py-1 text-xs rounded bg-primary text-primary-foreground font-medium"
           >
             Set
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Footer controls: Submit & Hints */}
-      <div className="flex items-center justify-between text-[10px] text-neutral-400 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+      <div className="flex items-center justify-between text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--hair)]">
         <span>↵ Enter to save &bull; ⇧↵ to add another &bull; ⌫ backspace clears chips</span>
         <div className="flex items-center gap-1">
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="px-2 py-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              className="px-2 py-0.5 min-h-[44px] md:min-h-0 hover:bg-[var(--hi)] hover:text-[var(--text)]"
             >
               Cancel
             </button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

@@ -25,7 +25,7 @@ export function AppShell() {
   }, [])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-bg text-text">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex shrink-0">
         <Sidebar />
@@ -35,13 +35,13 @@ export function AppShell() {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
         />
       )}
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer: flush --side panel, viewport edges stay square (0px) */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 transform md:hidden transition-transform duration-200 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 transform md:hidden transition-transform duration-200 ease-in-out bg-side ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -50,12 +50,12 @@ export function AppShell() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Navbar for Mobile & Common Actions */}
-        <header className="h-12 border-b border-neutral-200/60 dark:border-neutral-800/60 flex items-center justify-between px-4 shrink-0 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xs">
+        {/* Dense 48px slate header bar (--side) */}
+        <header className="h-12 border-b border-line flex items-center justify-between px-4 shrink-0 bg-side">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              className="md:hidden flex h-11 w-11 items-center justify-center text-muted hover:text-text hover:bg-hi transition"
               aria-label="Open sidebar"
             >
               <Menu className="w-5 h-5" />
@@ -68,7 +68,7 @@ export function AppShell() {
           <div className="flex items-center gap-2">
             <button
               id="notifications-bell"
-              className="relative p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              className="relative flex h-11 w-11 md:h-8 md:w-8 items-center justify-center text-muted hover:text-text hover:bg-hi transition"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />

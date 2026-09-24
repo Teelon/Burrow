@@ -4,6 +4,9 @@ import { bin, run } from './lib.mjs'
 console.log('check: typecheck')
 run(bin('typescript', 'tsc'), ['-b'])
 
+console.log('check: basalt')
+run('./scripts/check-basalt.mjs', [])
+
 console.log('check: lint')
 run(bin('eslint'), ['.'])
 

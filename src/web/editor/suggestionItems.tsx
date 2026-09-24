@@ -102,7 +102,7 @@ export function getCustomSlashItems(
     subtext: 'Insert current date mention',
     aliases: ['date', 'today', 'now'],
     group: 'Dates',
-    icon: <Calendar className="w-4 h-4 text-neutral-500" />,
+    icon: <Calendar className="w-4 h-4 text-[var(--muted)]" />,
     onItemClick: () => {
       const now = new Date()
       editor.insertInlineContent([
@@ -123,7 +123,7 @@ export function getCustomSlashItems(
     subtext: 'Insert tomorrow date mention',
     aliases: ['date', 'tomorrow'],
     group: 'Dates',
-    icon: <Calendar className="w-4 h-4 text-neutral-500" />,
+    icon: <Calendar className="w-4 h-4 text-[var(--muted)]" />,
     onItemClick: () => {
       const tomorrow = new Date(Date.now() + 86400000)
       editor.insertInlineContent([
