@@ -1,5 +1,8 @@
-# Copy to .dev.vars (git-ignored) for local development.
+# Copy to .dev.vars (git-ignored) for local development and deployment.
 # Never commit real values. Production secrets go through `wrangler secret put`.
+D1_DATABASE_ID=
+CLOUDFLARE_ACCOUNT_ID=
+
 BETTER_AUTH_SECRET=dev-secret-change-me-32-bytes-minimum!!
-BETTER_AUTH_URL=http://127.0.0.1:8787
+BETTER_AUTH_URL=http://localhost:5173
 BOOTSTRAP_TOKEN=dev-bootstrap-token

@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Release. Run with `pnpm deploy`.
+ * Release. Run with `pnpm run deploy`.
  * check -> build -> record D1 Time Travel bookmark -> migrate remote -> deploy -> smoke.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { bin, root, run, smoke, step, parseFirstJson } from './lib.mjs';
+import { bin, root, run, smoke, step, parseFirstJson, getWranglerConfigArgs } from './lib.mjs';
 
 async function main() {
+  const configArgs = getWranglerConfigArgs();
+
   step('Check (typecheck, lint, tests)');
   run(path.join(root, 'scripts', 'check.mjs'));
 
@@ -15,7 +17,7 @@ async function main() {
   run(bin('vite'), ['build']);
 
   step('Record D1 Time Travel bookmark (rollback point)');
-  const tt = run(bin('wrangler'), ['d1', 'time-travel', 'info', 'burrow', '--remote', '--json'], {
+  const tt = run(bin('wrangler'), [...configArgs, 'd1', 'time-travel', 'info', 'burrow', '--remote', '--json'], {
     capture: true,
     allowFail: true,
     quiet: true,
@@ -33,10 +35,10 @@ async function main() {
   }
 
   step('Apply pending migrations to remote D1 (before uploading code)');
-  run(bin('wrangler'), ['d1', 'migrations', 'apply', 'burrow', '--remote'], { env: { CI: '1' } });
+  run(bin('wrangler'), [...configArgs, 'd1', 'migrations', 'apply', 'burrow', '--remote'], { env: { CI: '1' } });
 
   step('Deploy');
-  const deploy = run(bin('wrangler'), ['deploy'], { capture: true });
+  const deploy = run(bin('wrangler'), [...configArgs, 'deploy'], { capture: true });
   const url = deploy.stdout.match(/https:\/\/[^\s]*workers\.dev[^\s]*/)?.[0];
   if (url) console.log(`  deployed: ${url}`);
 

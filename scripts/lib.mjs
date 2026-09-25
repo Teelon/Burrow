@@ -105,3 +105,56 @@ export async function smoke(url, { attempts = 3, delayMs = 2000 } = {}) {
   console.error(`  smoke test failed for ${url}/api/health`);
   return false;
 }
+
+/** Load environment variables from .env and .dev.vars if present. */
+export function loadEnv() {
+  const envFiles = [path.join(root, '.env'), path.join(root, '.dev.vars')];
+  for (const file of envFiles) {
+    if (!fs.existsSync(file)) continue;
+    const content = fs.readFileSync(file, 'utf8');
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      const idx = line.indexOf('=');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      if (process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  }
+}
+
+/**
+ * Returns wrangler CLI config args (--config wrangler.local.jsonc).
+ * Uses git-ignored wrangler.local.jsonc if D1_DATABASE_ID is set in .env / .dev.vars,
+ * ensuring no personal UUIDs or account identifiers are committed to wrangler.jsonc.
+ */
+export function getWranglerConfigArgs(d1IdOverride = null) {
+  loadEnv();
+  const d1Id =
+    d1IdOverride || process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID;
+  const configPath = path.join(root, 'wrangler.jsonc');
+  const baseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+  if (!d1Id) {
+    return [];
+  }
+
+  // Create or update git-ignored wrangler.local.jsonc
+  const localConfig = JSON.parse(JSON.stringify(baseConfig));
+  if (localConfig.d1_databases?.[0]) {
+    localConfig.d1_databases[0].database_id = d1Id;
+  }
+  const localConfigPath = path.join(root, 'wrangler.local.jsonc');
+  fs.writeFileSync(localConfigPath, JSON.stringify(localConfig, null, 2) + '\n');
+  return ['--config', 'wrangler.local.jsonc'];
+}
+
