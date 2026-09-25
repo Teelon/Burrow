@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Inbox, Kanban, Plus, Search, Star, Tag, Trash2, Users, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Inbox, Kanban, Plus, Search, Star, Tag, Trash2, Users, X } from 'lucide-react';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { Input } from '../ui/Input';
@@ -46,6 +46,42 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     null,
   );
   const [createBoardOpen, setCreateBoardOpen] = useState(false);
+  const [notepadsOpen, setNotepadsOpen] = useState(() => {
+    try {
+      const val = localStorage.getItem('sidebar:notepads:open');
+      return val !== null ? val === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+  const [boardsOpen, setBoardsOpen] = useState(() => {
+    try {
+      const val = localStorage.getItem('sidebar:boards:open');
+      return val !== null ? val === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleNotepads = () => {
+    setNotepadsOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar:notepads:open', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const toggleBoards = () => {
+    setBoardsOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar:boards:open', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const createRootNotepad = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/projects/${currentProjectId}/notepads`, {
@@ -155,13 +191,27 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         {/* Notepads Section */}
         <div>
           <div className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-3 h-3" />
+            <button
+              type="button"
+              onClick={toggleNotepads}
+              className="flex items-center gap-1.5 hover:text-text transition focus:outline-none cursor-pointer py-0.5"
+              aria-expanded={notepadsOpen}
+              title={notepadsOpen ? 'Collapse Notepads' : 'Expand Notepads'}
+            >
+              {notepadsOpen ? (
+                <ChevronDown className="w-3 h-3 text-muted shrink-0" />
+              ) : (
+                <ChevronRight className="w-3 h-3 text-muted shrink-0" />
+              )}
+              <FileText className="w-3 h-3 shrink-0" />
               <span>Notepads</span>
-            </div>
+            </button>
             {currentProjectId && me?.role !== 'viewer' && (
               <button
-                onClick={() => createRootNotepad.mutate()}
+                onClick={() => {
+                  if (!notepadsOpen) setNotepadsOpen(true);
+                  createRootNotepad.mutate();
+                }}
                 className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center hover:bg-hi text-muted hover:text-text transition"
                 title="New notepad"
               >
@@ -169,21 +219,37 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               </button>
             )}
           </div>
-          <div id="sidebar-notepad-tree" className="space-y-0.5 mt-1">
-            {currentProjectId && <NotepadTree projectId={currentProjectId} />}
-          </div>
+          {notepadsOpen && (
+            <div id="sidebar-notepad-tree" className="space-y-0.5 mt-1">
+              {currentProjectId && <NotepadTree projectId={currentProjectId} />}
+            </div>
+          )}
         </div>
 
         {/* Boards Section */}
         <div>
           <div className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-muted uppercase tracking-wider">
-            <div className="flex items-center gap-1.5">
-              <Kanban className="w-3 h-3" />
+            <button
+              type="button"
+              onClick={toggleBoards}
+              className="flex items-center gap-1.5 hover:text-text transition focus:outline-none cursor-pointer py-0.5"
+              aria-expanded={boardsOpen}
+              title={boardsOpen ? 'Collapse Boards' : 'Expand Boards'}
+            >
+              {boardsOpen ? (
+                <ChevronDown className="w-3 h-3 text-muted shrink-0" />
+              ) : (
+                <ChevronRight className="w-3 h-3 text-muted shrink-0" />
+              )}
+              <Kanban className="w-3 h-3 shrink-0" />
               <span>Boards</span>
-            </div>
+            </button>
             {currentProjectId && me?.role !== 'viewer' && (
               <button
-                onClick={() => setCreateBoardOpen(true)}
+                onClick={() => {
+                  if (!boardsOpen) setBoardsOpen(true);
+                  setCreateBoardOpen(true);
+                }}
                 className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center hover:bg-hi text-muted hover:text-text transition"
                 title="Create Board"
               >
@@ -191,51 +257,53 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               </button>
             )}
           </div>
-          <div id="sidebar-boards-list" className="space-y-0.5 mt-1">
-            {boards.length === 0 ? (
-              <div className="px-2 py-1 text-xs text-muted italic">No boards yet</div>
-            ) : (
-              boards.map((b) => {
-                const isActive = b.id === currentBoardId;
-                return (
-                  <div key={b.id} className="group relative flex items-center justify-between">
-                    <Link
-                      to="/p/$projectId/boards/$boardId"
-                      params={{
-                        projectId: currentProjectId!,
-                        boardId: b.id,
-                      }}
-                      className={`relative flex-1 flex items-center gap-2 px-3 py-2 text-xs font-medium transition min-h-[44px] md:min-h-0 ${
-                        isActive
-                          ? 'bg-hi text-text font-semibold'
-                          : 'text-muted hover:bg-hi hover:text-text'
-                      }`}
-                    >
-                      {isActive && (
-                        <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
-                      )}
-                      <span className="text-sm leading-none">{b.icon || '📋'}</span>
-                      <span className="truncate">{b.name}</span>
-                    </Link>
-                    {me?.role !== 'viewer' && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setConfirmDeleteBoard({ id: b.id, name: b.name });
+          {boardsOpen && (
+            <div id="sidebar-boards-list" className="space-y-0.5 mt-1">
+              {boards.length === 0 ? (
+                <div className="px-2 py-1 text-xs text-muted italic">No boards yet</div>
+              ) : (
+                boards.map((b) => {
+                  const isActive = b.id === currentBoardId;
+                  return (
+                    <div key={b.id} className="group relative flex items-center justify-between">
+                      <Link
+                        to="/p/$projectId/boards/$boardId"
+                        params={{
+                          projectId: currentProjectId!,
+                          boardId: b.id,
                         }}
-                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] transition shrink-0 mr-1 cursor-pointer"
-                        title="Delete board to Trash"
+                        className={`relative flex-1 flex items-center gap-2 px-3 py-2 text-xs font-medium transition min-h-[44px] md:min-h-0 ${
+                          isActive
+                            ? 'bg-hi text-text font-semibold'
+                            : 'text-muted hover:bg-hi hover:text-text'
+                        }`}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                        {isActive && (
+                          <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
+                        )}
+                        <span className="text-sm leading-none">{b.icon || '📋'}</span>
+                        <span className="truncate">{b.name}</span>
+                      </Link>
+                      {me?.role !== 'viewer' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmDeleteBoard({ id: b.id, name: b.name });
+                          }}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] transition shrink-0 mr-1 cursor-pointer"
+                          title="Delete board to Trash"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* Project Tags Section */}
