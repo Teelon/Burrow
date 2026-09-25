@@ -27,6 +27,8 @@ export function createAuthProvider(_env: EnvBindings): AuthProvider {
 // Factory that creates the auth provider with a DB instance
 export function createAuthProviderWithDB(db: any, env: EnvBindings): AuthProvider {
   const trustedOrigins = [
+    'http://localhost',
+    'http://127.0.0.1',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:8787',

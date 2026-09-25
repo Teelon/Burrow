@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Command } from 'cmdk';
 import { useNavigate, useParams } from '@tanstack/react-router';
-import { Home, Kanban, Search, Settings, Trash2, Users } from 'lucide-react';
-import { useBoards, useProjects, useRecentNotepads, useSearch } from '../lib/queries';
+import { Home, Kanban, LogOut, Search, Settings, Trash2, Users } from 'lucide-react';
+import { useBoards, useProjects, useRecentNotepads, useSearch, useSignOut } from '../lib/queries';
 import { ModalShell } from './ui/ModalShell';
+import { ConfirmDialog } from './ui/ConfirmDialog';
+import { toast } from 'sonner';
 import { SegmentedControl } from './ui/SegmentedControl';
 
 const ITEM_CLASSES =
@@ -13,6 +15,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'project' | 'all'>('project');
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const signOutMutation = useSignOut();
 
   const navigate = useNavigate();
   const { projectId } = useParams({ strict: false }) as { projectId?: string };
@@ -52,15 +56,17 @@ export function CommandPalette() {
     setQuery('');
   };
 
-  if (!open) return null;
+  if (!open && !confirmSignOut) return null;
 
   return (
-    <ModalShell
-      open={open}
-      onClose={() => setOpen(false)}
-      title="Search and commands"
-      className="w-full self-start mt-[8dvh] sm:max-w-xl"
-    >
+    <>
+      {open && (
+        <ModalShell
+          open={open}
+          onClose={() => setOpen(false)}
+          title="Search and commands"
+          className="w-full self-start mt-[8dvh] sm:max-w-xl"
+        >
       <Command
         className="w-full flex flex-col"
         shouldFilter={false} // We handle search via FTS API
@@ -255,6 +261,18 @@ export function CommandPalette() {
                   <Settings className="w-4 h-4 text-[var(--muted)]" />
                   <span>Settings</span>
                 </Command.Item>
+
+                <Command.Item
+                  onSelect={() =>
+                    handleSelect(() => {
+                      setConfirmSignOut(true);
+                    })
+                  }
+                  className="flex items-center gap-2.5 px-3 py-2 min-h-[44px] text-xs text-red-500 cursor-pointer select-none data-[selected=true]:bg-[var(--accent)] data-[selected=true]:text-[var(--accent-ink)]"
+                >
+                  <LogOut className="w-4 h-4 text-red-500" />
+                  <span>Log out</span>
+                </Command.Item>
               </Command.Group>
             </>
           )}
@@ -279,5 +297,25 @@ export function CommandPalette() {
         </div>
       </Command>
     </ModalShell>
+    )}
+
+    <ConfirmDialog
+      open={confirmSignOut}
+      title="Log out"
+      message="Are you sure you want to log out of your account?"
+      confirmLabel="Log out"
+      danger={false}
+      busy={signOutMutation.isPending}
+      onConfirm={async () => {
+        try {
+          await signOutMutation.mutateAsync();
+        } catch (err: any) {
+          toast.error(err?.message || 'Failed to sign out');
+          setConfirmSignOut(false);
+        }
+      }}
+      onCancel={() => setConfirmSignOut(false)}
+    />
+    </>
   );
 }

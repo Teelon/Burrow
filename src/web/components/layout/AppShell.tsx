@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet } from '@tanstack/react-router';
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from '../CommandPalette';
@@ -62,17 +62,6 @@ export function AppShell() {
             <span className="font-semibold text-sm tracking-tight hidden md:inline-block">
               Burrow
             </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              id="notifications-bell"
-              className="relative flex h-11 w-11 md:h-8 md:w-8 items-center justify-center text-muted hover:text-text hover:bg-hi transition"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="sr-only">Notifications</span>
-            </button>
           </div>
         </header>
 

@@ -16,6 +16,7 @@ export declare function useMe(): import("@tanstack/react-query").UseQueryResult<
     role: "owner" | "editor" | "viewer";
     lastProjectId: string | null;
 } | null, Error>;
+export declare function useSignOut(): import("@tanstack/react-query").UseMutationResult<Response, Error, void, unknown>;
 export declare function useProjects(): import("@tanstack/react-query").UseQueryResult<{
     id: string;
     workspaceId: string;

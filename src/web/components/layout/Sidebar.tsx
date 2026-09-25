@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, FileText, Inbox, Kanban, Plus, Search, Star, Tag, Trash2, Users, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronsUpDown, FileText, Inbox, Kanban, LogOut, Plus, Search, Settings, Star, Tag, Trash2, Users, X } from 'lucide-react';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { Input } from '../ui/Input';
@@ -9,10 +9,10 @@ import { StatusDiamond } from '../ui/StatusDiamond';
 import { Avatar } from '../ui/Avatar';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { PromptDialog } from '../ui/PromptDialog';
-import { useBoards, useCreateBoard, useDeleteBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries';
+import { useBoards, useCreateBoard, useDeleteBoard, useMe, useMyTasks, useProjectTags, useSignOut } from '../../lib/queries';
 import { NotepadTree } from '../notepads/NotepadTree';
 import { NotificationsBell } from './NotificationsBell';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface SidebarProps {
@@ -46,6 +46,23 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     null,
   );
   const [createBoardOpen, setCreateBoardOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const signOutMutation = useSignOut();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    if (accountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [accountMenuOpen]);
+
   const [notepadsOpen, setNotepadsOpen] = useState(() => {
     try {
       const val = localStorage.getItem('sidebar:notepads:open');
@@ -68,7 +85,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       const next = !prev;
       try {
         localStorage.setItem('sidebar:notepads:open', String(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -78,7 +97,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       const next = !prev;
       try {
         localStorage.setItem('sidebar:boards:open', String(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -354,12 +375,92 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
           </Link>
         )}
 
-        <div className="pt-1 flex items-center justify-between">
-          <div className="flex items-center gap-2 truncate text-xs text-text">
+        <div className="pt-1 flex items-center justify-between relative" ref={accountMenuRef}>
+          <button
+            type="button"
+            onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+            className="flex items-center gap-2 truncate text-xs text-text hover:bg-hi p-1.5 -ml-1.5 transition flex-1 min-w-0 text-left"
+            title="Account menu"
+            aria-expanded={accountMenuOpen}
+            aria-haspopup="menu"
+          >
             <Avatar name={me?.user?.name || 'Account'} size="xs" />
-            <span className="truncate">{me?.user?.name || 'Account'}</span>
+            <div className="flex-1 min-w-0">
+              <div className="truncate font-medium">{me?.user?.name || 'Account'}</div>
+            </div>
+            <ChevronsUpDown className="w-3.5 h-3.5 text-muted shrink-0" />
+          </button>
+          <div className="flex items-center">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setConfirmSignOut(true)}
+              className="flex h-11 w-11 md:h-8 md:w-8 items-center justify-center text-muted hover:text-danger hover:bg-hi transition"
+              title="Log out"
+              aria-label="Log out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <ThemeToggle />
+
+          {accountMenuOpen && (
+            <div className="absolute bottom-full left-0 mb-2 w-60 bg-surface border border-line p-1 z-50 text-xs">
+              <div className="px-3 py-2 border-b border-hair">
+                <div className="font-semibold text-text truncate">{me?.user?.name || 'Account'}</div>
+                {me?.user?.email && (
+                  <div className="text-[11px] text-muted truncate">{me.user.email}</div>
+                )}
+                {me?.role && (
+                  <div className="mt-1">
+                    <span className="inline-block px-1.5 py-0.5 text-[9px] uppercase font-mono tracking-wider bg-hi text-muted border border-hair">
+                      {me.role}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="py-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    navigate({ to: '/settings' });
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted hover:text-text hover:bg-hi transition text-left"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Settings</span>
+                </button>
+                {me?.role === 'owner' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountMenuOpen(false);
+                      navigate({ to: '/settings/members' });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted hover:text-text hover:bg-hi transition text-left"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Workspace Members</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="border-t border-hair pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    setConfirmSignOut(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-hi transition text-left"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>
@@ -416,6 +517,24 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         }
       }}
       onCancel={() => setCreateBoardOpen(false)}
+    />
+
+    <ConfirmDialog
+      open={confirmSignOut}
+      title="Log out"
+      message="Are you sure you want to log out of your account?"
+      confirmLabel="Log out"
+      danger={false}
+      busy={signOutMutation.isPending}
+      onConfirm={async () => {
+        try {
+          await signOutMutation.mutateAsync();
+        } catch (err: any) {
+          toast.error(err?.message || 'Failed to sign out');
+          setConfirmSignOut(false);
+        }
+      }}
+      onCancel={() => setConfirmSignOut(false)}
     />
     </>
   );

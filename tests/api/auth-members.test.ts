@@ -416,6 +416,42 @@ describe('Phase 1: Auth, Workspace, Members, Invites & Security', () => {
     expect(err.error.code).toBe('payload_too_large');
   });
 
+  it('signs out an authenticated user and invalidates session for /api/me', async () => {
+    const meBefore = await app.request(
+      'http://localhost/api/me',
+      {
+        method: 'GET',
+        headers: { Cookie: viewerCookie },
+      },
+      env,
+    );
+    expect(meBefore.status).toBe(200);
+
+    const signOutRes = await app.request(
+      'http://localhost/api/auth/sign-out',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://localhost',
+          Cookie: viewerCookie,
+        },
+      },
+      env,
+    );
+    expect(signOutRes.status).toBe(200);
+
+    const meAfter = await app.request(
+      'http://localhost/api/me',
+      {
+        method: 'GET',
+        headers: { Cookie: viewerCookie },
+      },
+      env,
+    );
+    expect(meAfter.status).toBe(401);
+  });
+
   it('invariants hold after all tests', async () => {
     await expectInvariantsHold(env.DB);
   });

@@ -27,6 +27,34 @@ export function useMe() {
   });
 }
 
+export function useSignOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/auth/sign-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        throw new Error('Failed to sign out');
+      }
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      try {
+        localStorage.removeItem('burrow-last-project');
+      } catch {
+        /* ignore */
+      }
+      window.location.href = '/login';
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to sign out');
+    },
+  });
+}
+
 export function useProjects() {
   return useQuery({
     queryKey: ['projects'],

@@ -6,6 +6,8 @@ import type { Env } from './env';
 
 export function createAuth(db: DB, env: Env['Bindings']) {
   const trustedOrigins = [
+    'http://localhost',
+    'http://127.0.0.1',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:8787',
