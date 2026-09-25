@@ -162,14 +162,14 @@ export declare function useUpdateColumn(): import("@tanstack/react-query").UseMu
 export declare function useDeleteColumn(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     deletedId: string;
-}, Error, {
+}, any, {
     boardId: string;
     columnId: string;
     moveTo?: string | null;
 }, unknown>;
 export declare function useMoveColumn(): import("@tanstack/react-query").UseMutationResult<{
     position: string;
-}, Error, {
+}, any, {
     boardId: string;
     columnId: string;
     afterId?: string | null;
@@ -251,7 +251,7 @@ export declare function useUpdateCard(): import("@tanstack/react-query").UseMuta
 export declare function useMoveCard(): import("@tanstack/react-query").UseMutationResult<{
     columnId: string;
     position: string;
-}, Error, {
+}, any, {
     cardId: string;
     boardId: string;
     columnId: string;
@@ -262,7 +262,7 @@ export declare function useMoveCard(): import("@tanstack/react-query").UseMutati
 export declare function useDeleteCard(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     deletedId: string;
-}, Error, {
+}, any, {
     cardId: string;
     boardId: string;
 }, unknown>;
@@ -407,15 +407,15 @@ export declare function useRestoreNotepad(): import("@tanstack/react-query").Use
     notepadId: string;
     projectId: string;
 }, unknown>;
-export declare function usePermanentDeleteNotepad(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+export declare function usePermanentDeleteNotepad(): import("@tanstack/react-query").UseMutationResult<any, any, {
     notepadId: string;
     projectId: string;
 }, unknown>;
-export declare function useRestoreBoard(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+export declare function useRestoreBoard(): import("@tanstack/react-query").UseMutationResult<any, any, {
     boardId: string;
     projectId: string;
 }, unknown>;
-export declare function usePermanentDeleteBoard(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+export declare function usePermanentDeleteBoard(): import("@tanstack/react-query").UseMutationResult<any, any, {
     boardId: string;
     projectId: string;
 }, unknown>;

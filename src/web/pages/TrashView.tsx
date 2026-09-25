@@ -10,6 +10,7 @@ import {
   useTrash,
 } from '../lib/queries';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { SegmentedControl } from '../components/ui/SegmentedControl';
 
 export function TrashView() {
@@ -25,6 +26,11 @@ export function TrashView() {
   const permanentDeleteBoard = usePermanentDeleteBoard();
 
   const [activeTab, setActiveTab] = useState<'all' | 'notepads' | 'boards'>('all');
+  const [confirmDelete, setConfirmDelete] = useState<{
+    type: 'notepad' | 'board';
+    id: string;
+    name: string;
+  } | null>(null);
 
   const notepads = trash?.notepads || [];
   const boards = trash?.boards || [];
@@ -36,13 +42,7 @@ export function TrashView() {
 
   const handlePermanentDeleteNotepad = (notepadId: string, title: string) => {
     if (!currentProjectId) return;
-    if (
-      window.confirm(
-        `Are you sure you want to permanently delete "${title}"? This cannot be undone.`,
-      )
-    ) {
-      permanentDeleteNotepad.mutate({ notepadId, projectId: currentProjectId });
-    }
+    setConfirmDelete({ type: 'notepad', id: notepadId, name: title });
   };
 
   const handleRestoreBoard = (boardId: string) => {
@@ -52,13 +52,7 @@ export function TrashView() {
 
   const handlePermanentDeleteBoard = (boardId: string, name: string) => {
     if (!currentProjectId) return;
-    if (
-      window.confirm(
-        `Are you sure you want to permanently delete board "${name}" and all its cards? This cannot be undone.`,
-      )
-    ) {
-      permanentDeleteBoard.mutate({ boardId, projectId: currentProjectId });
-    }
+    setConfirmDelete({ type: 'board', id: boardId, name });
   };
 
   const totalCount = notepads.length + boards.length;
@@ -197,6 +191,41 @@ export function TrashView() {
         </div>
       )}
     </div>
+
+    {confirmDelete && (
+      <ConfirmDialog
+        open
+        title={`Permanently delete ${confirmDelete.type === 'notepad' ? 'notepad' : 'board'}?`}
+        message={
+          confirmDelete.type === 'notepad'
+            ? `Are you sure you want to permanently delete "${confirmDelete.name}"? This cannot be undone.`
+            : `Are you sure you want to permanently delete board "${confirmDelete.name}" and all its cards? This cannot be undone.`
+        }
+        confirmLabel="Permanently Delete"
+        danger
+        busy={permanentDeleteNotepad.isPending || permanentDeleteBoard.isPending}
+        onConfirm={async () => {
+          if (!currentProjectId) return;
+          try {
+            if (confirmDelete.type === 'notepad') {
+              await permanentDeleteNotepad.mutateAsync({
+                notepadId: confirmDelete.id,
+                projectId: currentProjectId,
+              });
+            } else {
+              await permanentDeleteBoard.mutateAsync({
+                boardId: confirmDelete.id,
+                projectId: currentProjectId,
+              });
+            }
+            setConfirmDelete(null);
+          } catch {
+            setConfirmDelete(null);
+          }
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
+    )}
     </div>
   );
 }

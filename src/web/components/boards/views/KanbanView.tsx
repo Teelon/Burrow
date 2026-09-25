@@ -51,6 +51,7 @@ import { StatusDiamond } from '../../ui/StatusDiamond';
 import { priorityBadgeTone } from '../../ui/status';
 import { AssignPickerModal, PriorityPickerModal, QuickPeekModal } from './BoardQuickModals';
 import { COMPLETED_COLUMN_RE, PRIORITY_BADGES, type CardItem, type ColumnItem } from './types';
+import { computeCardDropTarget, computeColumnDropTarget } from '../kanbanReorder';
 
 interface KanbanViewProps {
   boardId: string;
@@ -647,122 +648,53 @@ export function KanbanView({
 
     // --- Column reorder: the column itself was dragged ---
     if (active.data.current?.type === 'column') {
-      let overColId: string;
-      if (columns.some((c) => c.id === overId)) {
-        overColId = overId;
-      } else if (over.data.current?.type === 'card') {
-        // Collided with a card; reorder relative to its column
-        overColId = over.data.current.columnId as string;
-      } else {
-        return;
+      const cardColumnMap = new Map<string, string>();
+      for (const col of columns) {
+        for (const card of col.cards) {
+          cardColumnMap.set(card.id, col.id);
+        }
       }
-      if (overColId === activeId) return;
-
-      const activeIndex = columns.findIndex((c) => c.id === activeId);
-      const overIndex = columns.findIndex((c) => c.id === overColId);
-      if (activeIndex === -1 || overIndex === -1) return;
-
-      // Dragged right -> land after the target column;
-      // dragged left -> land before it (i.e. after its predecessor)
-      const afterId = activeIndex < overIndex ? overColId : (columns[overIndex - 1]?.id ?? null);
-      if (afterId === activeId) return;
-
-      moveColumnMutation.mutate({ boardId, columnId: activeId, afterId });
+      const target = computeColumnDropTarget(columns, {
+        activeId,
+        overId,
+        overType: over.data.current?.type,
+        cardColumnMap,
+      });
+      if (target) {
+        moveColumnMutation.mutate({ boardId, columnId: target.columnId, afterId: target.afterId });
+      }
       return;
     }
 
-    // 1. Find active card and its current column
-    let sourceCol: ColumnItem | undefined;
-    for (const col of columns) {
-      if (col.cards.some((c) => c.id === activeId)) {
-        sourceCol = col;
-        break;
-      }
-    }
-    if (!sourceCol) return;
-
-    // 2. Find destination column: either over a column directly or over another card
-    let destCol = columns.find((c) => c.id === overId);
-    const isOverColumn = Boolean(destCol);
-
-    if (!destCol) {
-      // overId is a card id; find which column contains it
-      destCol = columns.find((c) => c.cards.some((c) => c.id === overId));
-    }
-    if (!destCol) return;
-
-    // 3. Compute target otherCards (cards in destination column excluding activeCard)
-    const targetCards = destCol.cards.filter((c) => c.id !== activeId);
-    let afterId: string | null;
-
-    if (isOverColumn) {
-      // Dropped on the column itself (e.g. empty column or empty bottom area)
-      if (targetCards.length === 0) {
-        afterId = null;
-      } else {
-        // Append to the bottom of the column
-        afterId = targetCards[targetCards.length - 1]!.id;
-      }
-    } else {
-      // Dropped onto a specific card (overId)
-      const overIndex = targetCards.findIndex((c) => c.id === overId);
-
-      if (sourceCol.id === destCol.id) {
-        // Reordering within the SAME column
-        const sourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId);
-        const rawOverIndex = sourceCol.cards.findIndex((c) => c.id === overId);
-
-        if (sourceIndex === rawOverIndex) {
-          return;
-        }
-
-        if (sourceIndex < rawOverIndex) {
-          // Dragged downward past overId -> place AFTER overId
-          afterId = overId;
-        } else {
-          // Dragged upward before overId -> place BEFORE overId
-          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null;
-        }
-      } else {
-        // Dragging into a DIFFERENT column (stage)
-        const overRect = event.over?.rect;
-        const activeRect = event.active.rect.current.translated;
-
-        let isBelow = false;
-        if (overRect && activeRect) {
-          const overMidY = overRect.top + overRect.height / 2;
-          const activeMidY = activeRect.top + activeRect.height / 2;
-          isBelow = activeMidY > overMidY;
-        }
-
-        if (isBelow) {
-          afterId = overId;
-        } else {
-          afterId = overIndex > 0 ? targetCards[overIndex - 1]!.id : null;
-        }
-      }
+    // --- Card reorder ---
+    const isOverColumn = columns.some((c) => c.id === overId);
+    const overRect = event.over?.rect;
+    const activeRect = event.active.rect.current.translated;
+    let isBelow = false;
+    if (overRect && activeRect) {
+      const overMidY = overRect.top + overRect.height / 2;
+      const activeMidY = activeRect.top + activeRect.height / 2;
+      isBelow = activeMidY > overMidY;
     }
 
-    // 4. Skip mutation if position didn't change in the same column
-    if (sourceCol.id === destCol.id) {
-      const currentSourceIndex = sourceCol.cards.findIndex((c) => c.id === activeId);
-      const currentPredecessorId =
-        currentSourceIndex > 0 ? sourceCol.cards[currentSourceIndex - 1]!.id : null;
-      if (afterId === currentPredecessorId) {
-        return;
-      }
-    }
+    const drop = computeCardDropTarget(columns, {
+      activeId,
+      overId,
+      isOverColumn,
+      isBelow,
+    });
+    if (!drop) return;
 
-    // 5. Execute move mutation
     moveCardMutation.mutate({
-      cardId: activeId,
+      cardId: drop.cardId,
       boardId,
-      columnId: destCol.id,
-      afterId,
+      columnId: drop.columnId,
+      afterId: drop.afterId,
     });
 
-    // 6. Drop landed in a completion column? Small celebratory burst.
-    if (COMPLETED_COLUMN_RE.test(destCol.name)) {
+    // Drop landed in a completion column? Small celebratory burst.
+    const destCol = columns.find((c) => c.id === drop.columnId);
+    if (destCol && COMPLETED_COLUMN_RE.test(destCol.name)) {
       celebrate(event);
     }
   };

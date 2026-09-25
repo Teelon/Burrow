@@ -10,6 +10,7 @@ import {
 } from '../../lib/queries';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface CommentsFeedProps {
   cardId: string;
@@ -102,6 +103,7 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
   const deleteComment = useDeleteComment();
 
   const [draft, setDraft] = useState('');
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Member picker while typing `@query` right before the caret.
@@ -185,11 +187,7 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
               key={comment.id}
               comment={comment}
               canDelete={comment.userId === me?.user?.id || me?.role === 'owner'}
-              onDelete={() => {
-                if (window.confirm('Delete this comment?')) {
-                  deleteComment.mutate({ cardId, commentId: comment.id });
-                }
-              }}
+              onDelete={() => setCommentToDelete(comment.id)}
             />
           ))}
         </div>
@@ -241,6 +239,26 @@ export function CommentsFeed({ cardId }: CommentsFeedProps) {
           </button>
         </div>
       </div>
+
+      {commentToDelete && (
+        <ConfirmDialog
+          open
+          title="Delete comment?"
+          message="Are you sure you want to delete this comment? This cannot be undone."
+          confirmLabel="Delete"
+          danger
+          busy={deleteComment.isPending}
+          onConfirm={async () => {
+            try {
+              await deleteComment.mutateAsync({ cardId, commentId: commentToDelete });
+              setCommentToDelete(null);
+            } catch {
+              setCommentToDelete(null);
+            }
+          }}
+          onCancel={() => setCommentToDelete(null)}
+        />
+      )}
     </div>
   );
 }

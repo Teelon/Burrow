@@ -40,7 +40,7 @@ export default defineConfig({
       },
       {
         test: {
-          include: ['tests/adapters/storage-local.test.ts'],
+          include: ['tests/adapters/storage-local.test.ts', 'src/web/**/*.test.ts'],
           environment: 'node',
         },
       },

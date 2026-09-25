@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { FileText, Kanban, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useBoards, useCreateBoard, useProjects, useRecentNotepads } from '../lib/queries';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PromptDialog } from '../components/ui/PromptDialog';
 
 export function ProjectHome() {
   const navigate = useNavigate();
@@ -13,22 +16,11 @@ export function ProjectHome() {
   const { data: boards = [] } = useBoards(currentProjectId);
   const { data: recentNotepads = [] } = useRecentNotepads(currentProjectId);
   const createBoardMutation = useCreateBoard();
+  const [createBoardOpen, setCreateBoardOpen] = useState(false);
 
-  const handleCreateBoard = async () => {
+  const handleCreateBoard = () => {
     if (!currentProjectId) return;
-    const name = window.prompt('New Board Name:', 'Sprint Board');
-    if (!name?.trim()) return;
-    const res = await createBoardMutation.mutateAsync({
-      projectId: currentProjectId,
-      name: name.trim(),
-    });
-    navigate({
-      to: '/p/$projectId/boards/$boardId',
-      params: {
-        projectId: currentProjectId,
-        boardId: res.id,
-      },
-    });
+    setCreateBoardOpen(true);
   };
 
   return (
@@ -123,6 +115,36 @@ export function ProjectHome() {
         </Card>
       </div>
     </div>
+
+    <PromptDialog
+      open={createBoardOpen}
+      title="Create Board"
+      message="Enter a name for the new board."
+      defaultValue="Sprint Board"
+      placeholder="Board name"
+      confirmLabel="Create"
+      busy={createBoardMutation.isPending}
+      onConfirm={async (name) => {
+        if (!currentProjectId) return;
+        try {
+          const res = await createBoardMutation.mutateAsync({
+            projectId: currentProjectId,
+            name,
+          });
+          setCreateBoardOpen(false);
+          navigate({
+            to: '/p/$projectId/boards/$boardId',
+            params: {
+              projectId: currentProjectId,
+              boardId: res.id,
+            },
+          });
+        } catch (err: any) {
+          toast.error(err?.message || 'Failed to create board');
+        }
+      }}
+      onCancel={() => setCreateBoardOpen(false)}
+    />
     </div>
   );
 }

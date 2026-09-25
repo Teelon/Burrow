@@ -22,27 +22,17 @@ import { useMoveNotepad } from '../../lib/queries';
 import type { NotepadNode } from '../../lib/queries';
 import { StatusDiamond } from '../ui/StatusDiamond';
 
+import {
+  buildTreeStructure,
+  computeBlankRootProjection,
+  computeTargetProjection,
+  type Projection,
+} from './treeProjection';
+
 export type { NotepadNode } from '../../lib/queries';
+export type { Projection } from './treeProjection';
 
-/** Matches the server-side limit (root depth = 1). */
-const MAX_DEPTH = 8;
 const AUTO_EXPAND_MS = 500;
-/** Left edge of a row (within this many px) promotes the dragged note to the root level. */
-const ROOT_EDGE_PX = 24;
-
-type DropMode = 'before' | 'after' | 'inside';
-
-/**
- * A validated drop: where the note will land plus what to highlight.
- * `targetId: null` means "end of the root list" (dropped on blank space).
- */
-interface Projection {
-  activeId: string;
-  parentId: string | null;
-  afterId: string | null;
-  targetId: string | null;
-  mode: DropMode;
-}
 
 /**
  * The blank-space droppable wrapping the root rows: dropping on empty space
@@ -59,37 +49,7 @@ function RootList({ children }: { children: ReactNode }) {
   );
 }
 
-interface Structure {
-  roots: NotepadNode[];
-  childrenMap: Map<string, NotepadNode[]>;
-  parentById: Map<string, string | null>;
-  nodeById: Map<string, NotepadNode>;
-}
 
-/**
- * The flat notepad list comes back ordered by position, which is unique and
- * ascending within each sibling group — so simply bucketing preserves order.
- */
-function buildStructure(notepads: NotepadNode[]): Structure {
-  const parentById = new Map<string, string | null>();
-  const childrenMap = new Map<string, NotepadNode[]>();
-  const nodeById = new Map<string, NotepadNode>();
-  const roots: NotepadNode[] = [];
-  for (const n of notepads) {
-    parentById.set(n.id, n.parentId);
-    nodeById.set(n.id, n);
-  }
-  for (const n of notepads) {
-    if (n.parentId) {
-      const list = childrenMap.get(n.parentId);
-      if (list) list.push(n);
-      else childrenMap.set(n.parentId, [n]);
-    } else {
-      roots.push(n);
-    }
-  }
-  return { roots, childrenMap, parentById, nodeById };
-}
 
 interface TreeRowProps {
   node: NotepadNode;
@@ -311,7 +271,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   const expandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { roots, childrenMap, parentById, nodeById } = useMemo(
-    () => buildStructure(notepads),
+    () => buildTreeStructure(notepads),
     [notepads],
   );
 
@@ -339,72 +299,6 @@ export function NotepadTree({ projectId }: { projectId: string }) {
     return closestCorners(args);
   };
 
-  // -- resolution helpers (closures over the current structure) -------------
-
-  const depthOf = (id: string): number => {
-    let depth = 1;
-    let p = parentById.get(id) ?? null;
-    while (p !== null && depth <= MAX_DEPTH + 1) {
-      depth += 1;
-      p = parentById.get(p) ?? null;
-    }
-    return depth;
-  };
-
-  const subtreeHeightOf = (id: string): number => {
-    const kids = childrenMap.get(id) ?? [];
-    if (kids.length === 0) return 1;
-    return 1 + Math.max(...kids.map((k) => subtreeHeightOf(k.id)));
-  };
-
-  /** The drop that corresponds to a note's current placement (for no-op checks). */
-  const currentDrop = (id: string): { parentId: string | null; afterId: string | null } => {
-    const parentId = parentById.get(id) ?? null;
-    const group = parentId ? (childrenMap.get(parentId) ?? []) : roots;
-    const idx = group.findIndex((n) => n.id === id);
-    const prev = idx > 0 ? group[idx - 1] : null;
-    return { parentId, afterId: prev ? prev.id : null };
-  };
-
-  const rootAncestorOf = (id: string): string => {
-    let cur = id;
-    let guard = 0;
-    while (guard <= MAX_DEPTH + 1) {
-      const p = parentById.get(cur) ?? null;
-      if (p === null) return cur;
-      cur = p;
-      guard += 1;
-    }
-    return cur;
-  };
-
-  /** Validate a proposed placement against cycles, the depth cap, and no-ops. */
-  const validate = (
-    activeId: string,
-    parentId: string | null,
-    afterId: string | null,
-    targetId: string | null,
-    mode: DropMode,
-  ): Projection | null => {
-    // Inserting after yourself is a no-op; a parent inside your own subtree is a cycle.
-    if (afterId === activeId) return null;
-    if (parentId !== null) {
-      if (parentId === activeId) return null;
-      let p = parentById.get(parentId) ?? null;
-      let guard = 0;
-      while (p !== null && guard <= MAX_DEPTH + 1) {
-        if (p === activeId) return null;
-        p = parentById.get(p) ?? null;
-        guard += 1;
-      }
-      if (p !== null) return null; // walked past the guard: malformed chain
-      if (depthOf(parentId) + subtreeHeightOf(activeId) > MAX_DEPTH) return null;
-    }
-    const cur = currentDrop(activeId);
-    if (cur.parentId === parentId && cur.afterId === afterId) return null;
-    return { activeId, parentId, afterId, targetId, mode };
-  };
-
   /** Pure: derive a validated projection from a drag event (works for move/over/end). */
   const computeProjection = (event: DragMoveEvent): Projection | null => {
     const rawActive = String(event.active.id);
@@ -416,49 +310,28 @@ export function NotepadTree({ projectId }: { projectId: string }) {
     if (!over) return null;
     const rawOver = String(over.id);
 
+    if (rawOver === '__root__') {
+      return computeBlankRootProjection({ roots, childrenMap, parentById, nodeById }, activeId);
+    }
+
+    if (!rawOver.startsWith('tree:')) return null;
+    const targetId = rawOver.slice(5);
+
     // Pointer position in client coordinates (activation point + drag delta).
     const activator = event.activatorEvent as Partial<PointerEvent>;
     const px = typeof activator.clientX === 'number' ? activator.clientX + event.delta.x : null;
     const py = typeof activator.clientY === 'number' ? activator.clientY + event.delta.y : null;
 
-    // Dropped on the blank area of the list → append to the end of the roots.
-    if (rawOver === '__root__') {
-      const last = roots.length > 0 ? roots[roots.length - 1] : null;
-      return validate(activeId, null, last ? last.id : null, null, 'after');
-    }
-
-    if (!rawOver.startsWith('tree:')) return null;
-    const targetId = rawOver.slice(5);
-    if (!nodeById.has(targetId)) return null;
-
-    const rect = over.rect;
-    const rectHeight = rect.bottom - rect.top;
-
-    // Left edge of any row → promote to root, just above that row's root ancestor.
-    if (px !== null && px <= rect.left + ROOT_EDGE_PX) {
-      const ancestor = rootAncestorOf(targetId);
-      const idx = roots.findIndex((r) => r.id === ancestor);
-      if (idx >= 0) {
-        const prevRoot = idx > 0 ? roots[idx - 1] : null;
-        return validate(activeId, null, prevRoot ? prevRoot.id : null, ancestor, 'before');
-      }
-    }
-
-    if (py === null) return validate(activeId, targetId, null, targetId, 'inside');
-
-    const relY = Math.min(Math.max(py - rect.top, 0), rectHeight);
-    if (relY < rectHeight * 0.28) {
-      const parentId = parentById.get(targetId) ?? null;
-      const group = parentId ? (childrenMap.get(parentId) ?? []) : roots;
-      const idx = group.findIndex((n) => n.id === targetId);
-      const prev = idx > 0 ? group[idx - 1] : null;
-      return validate(activeId, parentId, prev ? prev.id : null, targetId, 'before');
-    }
-    if (relY > rectHeight * 0.72) {
-      const parentId = parentById.get(targetId) ?? null;
-      return validate(activeId, parentId, targetId, targetId, 'after');
-    }
-    return validate(activeId, targetId, null, targetId, 'inside');
+    return computeTargetProjection(
+      { roots, childrenMap, parentById, nodeById },
+      {
+        activeId,
+        targetId,
+        rect: over.rect,
+        pointerX: px,
+        pointerY: py,
+      },
+    );
   };
 
   const handleDragStart = (event: DragStartEvent) => {

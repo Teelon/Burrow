@@ -8,10 +8,12 @@ import { Badge } from '../ui/Badge';
 import { StatusDiamond } from '../ui/StatusDiamond';
 import { Avatar } from '../ui/Avatar';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { PromptDialog } from '../ui/PromptDialog';
 import { useBoards, useCreateBoard, useDeleteBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries';
 import { NotepadTree } from '../notepads/NotepadTree';
 import { NotificationsBell } from './NotificationsBell';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   onCloseMobile?: () => void;
@@ -43,6 +45,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const [confirmDeleteBoard, setConfirmDeleteBoard] = useState<{ id: string; name: string } | null>(
     null,
   );
+  const [createBoardOpen, setCreateBoardOpen] = useState(false);
   const createRootNotepad = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/projects/${currentProjectId}/notepads`, {
@@ -180,21 +183,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             </div>
             {currentProjectId && me?.role !== 'viewer' && (
               <button
-                onClick={async () => {
-                  const name = window.prompt('New Board Name:', 'Sprint Board');
-                  if (!name?.trim()) return;
-                  const res = await createBoardMutation.mutateAsync({
-                    projectId: currentProjectId,
-                    name: name.trim(),
-                  });
-                  navigate({
-                    to: '/p/$projectId/boards/$boardId',
-                    params: {
-                      projectId: currentProjectId,
-                      boardId: res.id,
-                    },
-                  });
-                }}
+                onClick={() => setCreateBoardOpen(true)}
                 className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center hover:bg-hi text-muted hover:text-text transition"
                 title="Create Board"
               >
@@ -322,14 +311,44 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               navigate({ to: '/p/$projectId', params: { projectId: currentProjectId } });
             }
             setConfirmDeleteBoard(null);
-          } catch (err) {
-            console.error('Failed to delete board', err);
+          } catch (err: any) {
+            toast.error(err?.message || 'Failed to delete board');
             setConfirmDeleteBoard(null);
           }
         }}
         onCancel={() => setConfirmDeleteBoard(null)}
       />
     )}
+
+    <PromptDialog
+      open={createBoardOpen}
+      title="Create Board"
+      message="Enter a name for the new board."
+      defaultValue="Sprint Board"
+      placeholder="Board name"
+      confirmLabel="Create"
+      busy={createBoardMutation.isPending}
+      onConfirm={async (name) => {
+        if (!currentProjectId) return;
+        try {
+          const res = await createBoardMutation.mutateAsync({
+            projectId: currentProjectId,
+            name,
+          });
+          setCreateBoardOpen(false);
+          navigate({
+            to: '/p/$projectId/boards/$boardId',
+            params: {
+              projectId: currentProjectId,
+              boardId: res.id,
+            },
+          });
+        } catch (err: any) {
+          toast.error(err?.message || 'Failed to create board');
+        }
+      }}
+      onCancel={() => setCreateBoardOpen(false)}
+    />
     </>
   );
 }

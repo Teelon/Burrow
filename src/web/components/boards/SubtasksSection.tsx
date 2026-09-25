@@ -9,10 +9,10 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { computeLinearReorderAfterId } from './kanbanReorder';
 import { CheckSquare, GripVertical, Plus, X } from 'lucide-react';
 import {
   useCreateSubtask,
@@ -177,16 +177,8 @@ export function SubtasksSection({ cardId, boardId, subtasks }: SubtasksSectionPr
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = subtasks.findIndex((s) => s.id === active.id);
-    const newIndex = subtasks.findIndex((s) => s.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const reordered = arrayMove(subtasks, oldIndex, newIndex);
-    // Server contract: place after this sibling (null = first).
-    const afterId =
-      reordered.findIndex((s) => s.id === active.id) === 0
-        ? null
-        : reordered[reordered.findIndex((s) => s.id === active.id) - 1]!.id;
+    const afterId = computeLinearReorderAfterId(subtasks, String(active.id), String(over.id));
+    if (afterId === undefined) return;
 
     updateSubtask.mutate({ cardId, boardId, subtaskId: String(active.id), afterId });
   };

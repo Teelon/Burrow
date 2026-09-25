@@ -390,6 +390,9 @@ export function useDeleteColumn() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete column');
+    },
   });
 }
 
@@ -439,7 +442,8 @@ export function useMoveColumn() {
       }
       return { prevBoard };
     },
-    onError: (_err, vars, context) => {
+    onError: (err: any, vars, context) => {
+      toast.error(err?.message || 'Failed to move column');
       if (context?.prevBoard) {
         queryClient.setQueryData(['board', vars.boardId], context.prevBoard);
       }
@@ -613,7 +617,8 @@ export function useMoveCard() {
       }
       return { prevBoard };
     },
-    onError: (_err, vars, context) => {
+    onError: (err: any, vars, context) => {
+      toast.error(err?.message || 'Failed to move card');
       if (context?.prevBoard) {
         queryClient.setQueryData(['board', vars.boardId], context.prevBoard);
       }
@@ -639,6 +644,9 @@ export function useDeleteCard() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete card');
     },
   });
 }
@@ -985,6 +993,9 @@ export function usePermanentDeleteNotepad() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to permanently delete notepad');
+    },
   });
 }
 
@@ -1006,6 +1017,9 @@ export function useRestoreBoard() {
       queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
       queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to restore board');
+    },
   });
 }
 
@@ -1025,6 +1039,9 @@ export function usePermanentDeleteBoard() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to permanently delete board');
     },
   });
 }
