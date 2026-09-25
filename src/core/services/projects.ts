@@ -129,9 +129,10 @@ export class ProjectService {
 
     const projectId = args.projectId;
 
-    // 1. Hard delete all notepads in the project (cascades to FTS, links, tags via repository)
-    const notepads = await this.repos.notepads.listByProject(projectId);
-    for (const np of notepads) {
+    // 1. Hard delete all trashed notepads in the project (cascades to FTS, links, tags via repository).
+    // NOTE: listByProject returns live tree rows only, so trashed rows must come from listDeletedByProject.
+    const trashedNotepads = await this.repos.notepads.listDeletedByProject(projectId);
+    for (const np of trashedNotepads) {
       if (np.deletedAt !== null) {
         await this.repos.notepads.hardDelete(np.id);
       }

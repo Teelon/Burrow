@@ -11,6 +11,7 @@ import { Chip } from '../ui/Chip';
 import { Input } from '../ui/Input';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { Select } from '../ui/Select';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { ColumnItem } from './views/types';
 
 interface BoardViewProps {
@@ -48,6 +49,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   const [isEditingBoardName, setIsEditingBoardName] = useState(false);
   const [boardName, setBoardName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Board filters
   const [filterSearch, setFilterSearch] = useState('');
@@ -122,6 +124,12 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
     setIsEditingBoardName(false);
   };
 
+  const handleDeleteBoard = async () => {
+    await deleteBoardMutation.mutateAsync(boardId);
+    setConfirmDeleteOpen(false);
+    navigate({ to: '/p/$projectId', params: { projectId } });
+  };
+
   return (
     <div className="h-full flex flex-col min-h-0 bg-[var(--bg)] text-[var(--text)]">
       {/* Board Header Bar */}
@@ -174,12 +182,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={async () => {
-              if (window.confirm(`Delete board "${board.name}" to trash?`)) {
-                await deleteBoardMutation.mutateAsync(boardId);
-                navigate({ to: '/p/$projectId', params: { projectId } });
-              }
-            }}
+            onClick={() => setConfirmDeleteOpen(true)}
             className="text-[var(--muted)] hover:text-[var(--danger)] cursor-pointer"
             title="Delete board to Trash"
           >
@@ -324,6 +327,17 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           onClose={() => setSelectedCardId(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete board"
+        message={`Move "${board.name}" to Trash? You can restore it from Trash if needed.`}
+        confirmLabel="Delete to Trash"
+        danger
+        busy={deleteBoardMutation.isPending}
+        onConfirm={handleDeleteBoard}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </div>
   );
 }

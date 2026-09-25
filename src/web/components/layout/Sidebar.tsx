@@ -7,9 +7,11 @@ import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { StatusDiamond } from '../ui/StatusDiamond';
 import { Avatar } from '../ui/Avatar';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useBoards, useCreateBoard, useDeleteBoard, useMe, useMyTasks, useProjectTags } from '../../lib/queries';
 import { NotepadTree } from '../notepads/NotepadTree';
 import { NotificationsBell } from './NotificationsBell';
+import { useState } from 'react';
 
 interface SidebarProps {
   onCloseMobile?: () => void;
@@ -38,6 +40,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const deleteBoardMutation = useDeleteBoard();
   const badgeCount = useMyTasksBadgeCount();
   const queryClient = useQueryClient();
+  const [confirmDeleteBoard, setConfirmDeleteBoard] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const createRootNotepad = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/projects/${currentProjectId}/notepads`, {
@@ -52,7 +57,8 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   });
 
   return (
-    <aside className="w-64 h-screen flex flex-col bg-side text-text border-r border-line select-none">
+    <>
+      <aside className="w-64 h-screen flex flex-col bg-side text-text border-r border-line select-none">
       {/* Top Header: Project Switcher & Mobile Close */}
       <div className="p-3 flex items-center justify-between gap-2 border-b border-hair">
         <div className="flex-1 min-w-0">
@@ -225,18 +231,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                     {me?.role !== 'viewer' && (
                       <button
                         type="button"
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          if (window.confirm(`Delete board "${b.name}" to trash?`)) {
-                            await deleteBoardMutation.mutateAsync(b.id);
-                            if (b.id === currentBoardId && currentProjectId) {
-                              navigate({
-                                to: '/p/$projectId',
-                                params: { projectId: currentProjectId },
-                              });
-                            }
-                          }
+                          setConfirmDeleteBoard({ id: b.id, name: b.name });
                         }}
                         className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] transition shrink-0 mr-1 cursor-pointer"
                         title="Delete board to Trash"
@@ -308,5 +306,30 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         </div>
       </div>
     </aside>
+
+    {confirmDeleteBoard && (
+      <ConfirmDialog
+        open
+        title="Delete board"
+        message={`Move "${confirmDeleteBoard.name}" to Trash? You can restore it from Trash if needed.`}
+        confirmLabel="Delete to Trash"
+        danger
+        busy={deleteBoardMutation.isPending}
+        onConfirm={async () => {
+          try {
+            await deleteBoardMutation.mutateAsync(confirmDeleteBoard.id);
+            if (confirmDeleteBoard.id === currentBoardId && currentProjectId) {
+              navigate({ to: '/p/$projectId', params: { projectId: currentProjectId } });
+            }
+            setConfirmDeleteBoard(null);
+          } catch (err) {
+            console.error('Failed to delete board', err);
+            setConfirmDeleteBoard(null);
+          }
+        }}
+        onCancel={() => setConfirmDeleteBoard(null)}
+      />
+    )}
+    </>
   );
 }

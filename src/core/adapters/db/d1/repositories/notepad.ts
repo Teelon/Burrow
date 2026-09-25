@@ -40,10 +40,18 @@ export const MAX_CONTENT_BYTES = 1_500_000;
 export function createNotepadRepository(db: DB): INotepadRepository {
   return {
     async listByProject(projectId: string): Promise<Notepad[]> {
+      // Tree metadata only: live `notepad`-kind rows. Soft-deleted rows are
+      // served by listDeletedByProject; card bodies never appear in the tree.
       const rows = await db
         .select()
         .from(t.notepads)
-        .where(eq(t.notepads.projectId, projectId))
+        .where(
+          and(
+            eq(t.notepads.projectId, projectId),
+            eq(t.notepads.kind, 'notepad'),
+            isNull(t.notepads.deletedAt),
+          ),
+        )
         .orderBy(asc(t.notepads.position));
       return rows.map(mapNotepad);
     },

@@ -37,6 +37,7 @@ import { DocumentOutline } from './DocumentOutline';
 import { BasaltSuggestionMenu } from './BasaltSuggestionMenu';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 function getTabClientId(): string {
   if (typeof window === 'undefined') return nanoid();
@@ -118,6 +119,8 @@ function NotepadEditorInner({
   const [dialogState, setDialogState] = useState<SuggestionDialogState>({ type: null });
   const [isBlank, setIsBlank] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false,
   );
@@ -527,6 +530,27 @@ function NotepadEditorInner({
     }, 400);
   };
 
+  const handleDeleteNotepad = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/notepads/${initialData.id}`, { method: 'DELETE' });
+      if (res.status === 404) {
+        // Already deleted — treat as success, same as the sidebar tree.
+      } else if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        throw new Error(err?.error?.message || 'Failed to delete notepad');
+      }
+      setConfirmDeleteOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] });
+      navigate({ to: '/p/$projectId', params: { projectId: initialData.projectId } });
+    } catch (err) {
+      setConfirmDeleteOpen(false);
+      setIsDeleting(false);
+      console.error('Failed to delete notepad', err);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -715,20 +739,18 @@ function NotepadEditorInner({
                   <span>Print / Export as PDF</span>
                 </button>
                 <div className="my-1 border-t border-[var(--line)]" />
-                <button
-                  onClick={async () => {
-                    setShowExportMenu(false);
-                    if (window.confirm(`Delete notepad "${data.title || 'Untitled'}" to trash?`)) {
-                      await fetch(`/api/notepads/${initialData.id}`, { method: 'DELETE' });
-                      queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] });
-                      navigate({ to: '/p/$projectId', params: { projectId: initialData.projectId } });
-                    }
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete to Trash</span>
-                </button>
+                {data.kind !== 'card' && (
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      setConfirmDeleteOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--danger)] hover:bg-[var(--danger)]/10 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete to Trash</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -852,6 +874,20 @@ function NotepadEditorInner({
       {dialogState.type === 'template' && (
         <TemplatePickerModal editor={editor} onClose={() => setDialogState({ type: null })} />
       )}
+
+      {/* Delete to Trash confirmation */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete notepad"
+        message={`Move "${data.title || 'Untitled'}" to Trash? You can restore it from Trash if needed.`}
+        confirmLabel="Delete to Trash"
+        danger
+        busy={isDeleting}
+        onConfirm={handleDeleteNotepad}
+        onCancel={() => {
+          if (!isDeleting) setConfirmDeleteOpen(false);
+        }}
+      />
 
       {/* Reference Dialogs: /notepad and /task */}
       {dialogState.type === 'notepad' && data.projectId && (

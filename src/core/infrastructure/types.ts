@@ -125,6 +125,11 @@ export interface ICardRepository {
 }
 
 export interface INotepadRepository {
+  /**
+   * Live tree rows for a project: `kind = 'notepad'` AND `deletedAt IS NULL`,
+   * ordered by position. Soft-deleted rows come from listDeletedByProject;
+   * card bodies never appear in the tree (invariant I2).
+   */
   listByProject(projectId: string): Promise<Notepad[]>;
   findById(id: string): Promise<Notepad | null>;
   findByIdAndWorkspace(id: string, workspaceId: string): Promise<Notepad | null>;

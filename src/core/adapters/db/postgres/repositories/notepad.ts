@@ -23,10 +23,17 @@ export class PostgresNotepadRepository implements INotepadRepository {
   constructor(private db: PostgresDb) {}
 
   async listByProject(projectId: string): Promise<Notepad[]> {
+    // Tree metadata only: live `notepad`-kind rows (excludes cards and deleted).
     return this.db
       .select()
       .from(notepads)
-      .where(and(eq(notepads.projectId, projectId), isNull(notepads.deletedAt)))
+      .where(
+        and(
+          eq(notepads.projectId, projectId),
+          eq(notepads.kind, 'notepad'),
+          isNull(notepads.deletedAt),
+        ),
+      )
       .orderBy(notepads.position);
   }
 
