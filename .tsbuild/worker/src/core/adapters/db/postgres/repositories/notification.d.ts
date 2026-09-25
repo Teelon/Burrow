@@ -14,4 +14,12 @@ export declare class PostgresNotificationRepository implements INotificationRepo
         userIds: string[];
         now: number;
     }): Promise<void>;
+    createAssignments(args: {
+        workspaceId: string;
+        notepadId: string;
+        cardId: string;
+        actorId: string;
+        userIds: string[];
+        now: number;
+    }): Promise<void>;
 }

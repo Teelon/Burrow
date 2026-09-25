@@ -63,8 +63,8 @@ async function main() {
   }
 
   step('Typecheck + build');
-  run(process.execPath, [bin('typescript', 'tsc'), '-b'], { dryRun });
-  run(process.execPath, [bin('vite'), 'build'], { dryRun });
+  run(bin('typescript', 'tsc'), ['-b'], { dryRun });
+  run(bin('vite'), ['build'], { dryRun });
 
   step('Deploy (auto-provisions D1 + R2 on first deploy, then writes ids into wrangler.jsonc)');
   const deployArgs = ['deploy', ...WRANGLER_ARGS];

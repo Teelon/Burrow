@@ -12,8 +12,6 @@ import {
   LIVE_CONTENT_COND_PARAMS,
 } from '../lib/search';
 import {
-  diffLinks,
-  filterWorkspaceTargets,
   linkDeleteStatements,
   linkInsertStatements,
   mentionNotificationStatements,
@@ -253,46 +251,17 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         throw new Error('content_too_large');
       }
 
-      const [row] = await db.select().from(t.notepads).where(eq(t.notepads.id, id));
-      if (!row) throw new Error('not_found');
-
-      // Version check is done by the conditional update
       const now = Date.now();
-      const newVersion = expectedVersion + 1;
-      const cond = liveContentCond(id, newVersion, content);
-      const plain = extractPlainText(content);
-
-      const extraction = await extractAndFilterLinks(db, row.workspaceId, content);
-      const validLinks = extraction.validLinks;
-      const previousLinks = await db
-        .select({ targetType: t.notepadLinks.targetType, targetId: t.notepadLinks.targetId })
-        .from(t.notepadLinks)
-        .where(eq(t.notepadLinks.sourceId, id));
-
-      const { added, removed } = diffLinks(previousLinks, validLinks);
-
-      // Use variables to satisfy TypeScript (they are passed to buildSaveContentStatements)
-      void cond;
-      void plain;
-      void added;
-      void removed;
-
-      const statements = buildSaveContentStatements(db, {
-        row: { id: row.id, workspaceId: row.workspaceId, title: row.title },
-        content,
-        baseVersion: expectedVersion,
-        actorId: '', // Not used in repo
-        validLinks,
-        previousLinks,
-        now,
-      });
-
-      await runBatch(db, statements);
+      await db
+        .update(t.notepads)
+        .set({ content, version: expectedVersion + 1, updatedAt: now })
+        .where(and(eq(t.notepads.id, id), eq(t.notepads.version, expectedVersion)));
 
       const [after] = await db
         .select({ content: t.notepads.content, version: t.notepads.version })
         .from(t.notepads)
         .where(eq(t.notepads.id, id));
+        
       if (!after || after.content !== content) {
         throw new Error('version_conflict');
       }
@@ -446,6 +415,21 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       if (statements.length > 0) await runBatch(db, statements);
     },
 
+    async listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]> {
+      const rows = await db
+        .select({ id: t.notepads.id, title: t.notepads.title })
+        .from(t.notepadLinks)
+        .innerJoin(t.notepads, eq(t.notepads.id, t.notepadLinks.sourceId))
+        .where(
+          and(
+            eq(t.notepadLinks.targetId, notepadId),
+            eq(t.notepadLinks.targetType, 'notepad'),
+            isNull(t.notepads.deletedAt)
+          )
+        );
+      return rows;
+    },
+
     // Mentions
     async insertMentions(args: MentionNotificationArgs): Promise<void> {
       const statements = mentionNotificationStatements(db, {
@@ -539,75 +523,6 @@ export function createNotepadRepository(db: DB): INotepadRepository {
   };
 }
 
-async function extractAndFilterLinks(
-  db: DB,
-  workspaceId: string,
-  content: string,
-): Promise<{ validLinks: StoredLink[] }> {
-  const { extractFromContent } = await import('../../../../shared/extract');
-  const extraction = extractFromContent(content);
-  const validLinks = await filterWorkspaceTargets(
-    db,
-    workspaceId,
-    extraction.links as StoredLink[],
-  );
-  return { validLinks };
-}
-
-function buildSaveContentStatements(
-  db: DB,
-  args: {
-    row: { id: string; workspaceId: string; title: string };
-    content: string;
-    baseVersion: number;
-    actorId: string;
-    validLinks: StoredLink[];
-    previousLinks: StoredLink[];
-    now: number;
-  },
-): BatchItem<'sqlite'>[] {
-  const { row, content, baseVersion, actorId, validLinks, previousLinks, now } = args;
-  const newVersion = baseVersion + 1;
-  const cond = liveContentCond(row.id, newVersion, content);
-  const plain = extractPlainText(content);
-  const { added, removed } = diffLinks(previousLinks, validLinks);
-
-  // Use variables to satisfy TypeScript (they are used in the returned array)
-  void cond;
-  void plain;
-  void added;
-  void removed;
-
-  return [
-    db
-      .update(t.notepads)
-      .set({ content, version: sql`${t.notepads.version} + 1`, updatedAt: now })
-      .where(and(eq(t.notepads.id, row.id), eq(t.notepads.version, baseVersion))),
-    db.run(ftsDeleteStmt(row.id, cond)),
-    db.run(ftsInsertStmt(row.id, row.title, plain, cond)),
-    ...mentionNotificationStatements(db, {
-      workspaceId: row.workspaceId,
-      notepadId: row.id,
-      actorId,
-      addedUserIds: added.filter((l) => l.targetType === 'user').map((l) => l.targetId),
-      cond,
-      condParams: LIVE_CONTENT_COND_PARAMS,
-      now,
-    }),
-    ...linkDeleteStatements(db, {
-      sourceId: row.id,
-      removed,
-      cond,
-      condParams: LIVE_CONTENT_COND_PARAMS,
-    }),
-    ...linkInsertStatements(db, {
-      sourceId: row.id,
-      added,
-      cond,
-      condParams: LIVE_CONTENT_COND_PARAMS,
-    }),
-  ];
-}
 
 function mapNotepad(row: typeof t.notepads.$inferSelect): Notepad {
   return {

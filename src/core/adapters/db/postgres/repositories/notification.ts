@@ -75,4 +75,28 @@ export class PostgresNotificationRepository implements INotificationRepository {
       await this.db.insert(notifications).values(values);
     }
   }
+
+  async createAssignments(args: {
+    workspaceId: string;
+    notepadId: string;
+    cardId: string;
+    actorId: string;
+    userIds: string[];
+    now: number;
+  }): Promise<void> {
+    const values = args.userIds.map((userId) => ({
+      id: `notif_${args.now}_${Math.random().toString(36).slice(2, 9)}`,
+      workspaceId: args.workspaceId,
+      userId,
+      type: 'assigned' as const,
+      actorId: args.actorId,
+      notepadId: args.notepadId,
+      cardId: args.cardId,
+      readAt: null,
+      createdAt: args.now,
+    }));
+    if (values.length > 0) {
+      await this.db.insert(notifications).values(values);
+    }
+  }
 }

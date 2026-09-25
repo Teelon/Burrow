@@ -13,6 +13,7 @@ import type {
   UpdateSubtaskData,
   UpdateCardData,
   CardWithDetails,
+  INotificationRepository,
 } from '../infrastructure/types';
 import { notFound, badRequest } from './errors';
 import { positionAfterLast, positionBetween } from './utils/ordering';
@@ -64,6 +65,7 @@ export class CardService {
       notepads: INotepadRepository;
       tags: ITagRepository;
       boards: IBoardRepository;
+      notifications: INotificationRepository;
       boardColumns?: { findById: (id: string) => Promise<any> };
     },
   ) {}
@@ -208,6 +210,20 @@ export class CardService {
     if (plan.tagIds.length > 0) {
       await this.repos.cards.setTagIds(plan.notepadId, plan.tagIds);
     }
+
+    if (plan.assigneeIds.length > 0 && plan.actorId) {
+      const newlyAdded = plan.assigneeIds.filter((id) => id !== plan.actorId);
+      if (newlyAdded.length > 0) {
+        await this.repos.notifications.createAssignments({
+          workspaceId: plan.workspaceId,
+          notepadId: plan.notepadId,
+          cardId: plan.cardId,
+          actorId: plan.actorId,
+          userIds: newlyAdded,
+          now: plan.now,
+        });
+      }
+    }
   }
 
   async getCard(workspaceId: string, cardId: string): Promise<CardWithDetails> {
@@ -286,8 +302,14 @@ export class CardService {
       await this.repos.cards.setAssignees(cardId, cleanAssignees);
 
       if (actorId && newlyAdded.length > 0) {
-        // Notifications would be created here - delegated to notification service
-        // For now, we skip notification creation in the service
+        await this.repos.notifications.createAssignments({
+          workspaceId,
+          notepadId: card.notepadId,
+          cardId: card.id,
+          actorId,
+          userIds: newlyAdded,
+          now,
+        });
       }
     }
 

@@ -4,7 +4,7 @@ export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    status?: "completed" | "all" | "open" | undefined;
+                    status?: "open" | "completed" | "all" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -19,7 +19,7 @@ export declare const cardsRoutes: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    status?: "completed" | "all" | "open" | undefined;
+                    status?: "open" | "completed" | "all" | undefined;
                     projectId?: string | undefined;
                 };
             };

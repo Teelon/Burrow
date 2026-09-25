@@ -9,10 +9,10 @@ import { bin, root, run, smoke, step, parseFirstJson } from './lib.mjs';
 
 async function main() {
   step('Check (typecheck, lint, tests)');
-  run(process.execPath, [path.join(root, 'scripts', 'check.mjs')]);
+  run(path.join(root, 'scripts', 'check.mjs'));
 
   step('Build');
-  run(process.execPath, [bin('vite'), 'build']);
+  run(bin('vite'), ['build']);
 
   step('Record D1 Time Travel bookmark (rollback point)');
   const tt = run(bin('wrangler'), ['d1', 'time-travel', 'info', 'burrow', '--remote', '--json'], {

@@ -147,6 +147,10 @@ export interface INotepadRepository {
     insertFtsConditional(notepadId: string, title: string, body: string, version: number, content: string): Promise<void>;
     listLinks(sourceId: string): Promise<StoredLink[]>;
     replaceLinks(sourceId: string, added: StoredLink[], removed: StoredLink[], version: number, content: string): Promise<void>;
+    listBacklinks(notepadId: string): Promise<{
+        id: string;
+        title: string;
+    }[]>;
     insertMentions(args: MentionNotificationArgs): Promise<void>;
     getLastChildPosition(parentId: string): Promise<string | null>;
     getLastRootPosition(projectId: string): Promise<string | null>;
@@ -182,6 +186,14 @@ export interface INotificationRepository {
         workspaceId: string;
         notepadId: string;
         cardId: string | null;
+        actorId: string;
+        userIds: string[];
+        now: number;
+    }): Promise<void>;
+    createAssignments(args: {
+        workspaceId: string;
+        notepadId: string;
+        cardId: string;
         actorId: string;
         userIds: string[];
         now: number;

@@ -11,6 +11,8 @@ import type {
   CreateColumnData,
   UpdateColumnData,
 } from '../../../../infrastructure/types';
+import type { BatchItem } from 'drizzle-orm/batch';
+import { runBatch } from '../lib/batch';
 
 export function createBoardRepository(db: DB): IBoardRepository {
   return {
@@ -36,7 +38,6 @@ export function createBoardRepository(db: DB): IBoardRepository {
           and(
             eq(t.boards.id, id),
             eq(t.boards.workspaceId, workspaceId),
-            isNull(t.boards.deletedAt),
           ),
         );
       return row ? mapBoard(row) : null;
@@ -73,7 +74,24 @@ export function createBoardRepository(db: DB): IBoardRepository {
     },
 
     async hardDelete(id: string): Promise<void> {
-      await db.delete(t.boards).where(eq(t.boards.id, id));
+      const cardRows = await db
+        .select({ notepadId: t.cards.notepadId })
+        .from(t.cards)
+        .where(eq(t.cards.boardId, id));
+
+      const notepadIds = cardRows.map((r) => r.notepadId);
+
+      const statements: BatchItem<any>[] = [];
+      if (notepadIds.length > 0) {
+        statements.push(
+          db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${notepadIds}`),
+          db.run(sql`DELETE FROM notepad_links WHERE target_id IN ${notepadIds}`),
+          db.delete(t.notepads).where(inArray(t.notepads.id, notepadIds)),
+        );
+      }
+      statements.push(db.delete(t.boards).where(eq(t.boards.id, id)));
+
+      await runBatch(db, statements);
     },
 
     // Columns

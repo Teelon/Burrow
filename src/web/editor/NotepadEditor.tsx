@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
+import { toast } from 'sonner';
 import { schema } from './schema';
 import {
   getAtMenuSuggestions,
@@ -547,7 +548,9 @@ function NotepadEditorInner({
     } catch (err) {
       setConfirmDeleteOpen(false);
       setIsDeleting(false);
-      console.error('Failed to delete notepad', err);
+      const msg = err instanceof Error ? err.message : 'Failed to delete notepad';
+      console.error(msg, err);
+      toast.error(msg);
     }
   };
 

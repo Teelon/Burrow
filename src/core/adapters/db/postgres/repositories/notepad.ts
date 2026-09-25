@@ -300,6 +300,21 @@ export class PostgresNotepadRepository implements INotepadRepository {
     }
   }
 
+  async listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]> {
+    const rows = await this.db
+      .select({ id: notepads.id, title: notepads.title })
+      .from(notepadLinks)
+      .innerJoin(notepads, eq(notepads.id, notepadLinks.sourceId))
+      .where(
+        and(
+          eq(notepadLinks.targetId, notepadId),
+          eq(notepadLinks.targetType, 'notepad'),
+          isNull(notepads.deletedAt)
+        )
+      );
+    return rows;
+  }
+
   // Mentions
   async insertMentions(args: MentionNotificationArgs): Promise<void> {
     const now = args.now;

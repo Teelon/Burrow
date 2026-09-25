@@ -77,7 +77,18 @@ export class PostgresBoardRepository implements IBoardRepository {
   }
 
   async hardDelete(id: string): Promise<void> {
-    await this.db.delete(boards).where(eq(boards.id, id));
+    await this.db.transaction(async (tx) => {
+      const cardRows = await tx
+        .select({ notepadId: cards.notepadId })
+        .from(cards)
+        .where(eq(cards.boardId, id));
+
+      const notepadIds = cardRows.map((r) => r.notepadId);
+      if (notepadIds.length > 0) {
+        await tx.delete(notepads).where(inArray(notepads.id, notepadIds));
+      }
+      await tx.delete(boards).where(eq(boards.id, id));
+    });
   }
 
   // Columns

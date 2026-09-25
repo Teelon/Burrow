@@ -173,6 +173,7 @@ export interface INotepadRepository {
     version: number,
     content: string,
   ): Promise<void>;
+  listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]>;
   // Mentions (notifications)
   insertMentions(args: MentionNotificationArgs): Promise<void>;
   // Position helpers
@@ -211,6 +212,14 @@ export interface INotificationRepository {
     workspaceId: string;
     notepadId: string;
     cardId: string | null;
+    actorId: string;
+    userIds: string[];
+    now: number;
+  }): Promise<void>;
+  createAssignments(args: {
+    workspaceId: string;
+    notepadId: string;
+    cardId: string;
     actorId: string;
     userIds: string[];
     now: number;

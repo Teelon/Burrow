@@ -70,7 +70,6 @@ export function createCardRepository(db: DB): ICardRepository {
           and(
             eq(t.cards.id, id),
             eq(t.notepads.workspaceId, workspaceId),
-            isNull(t.notepads.deletedAt),
           ),
         );
       return row ? mapCard(row) : null;

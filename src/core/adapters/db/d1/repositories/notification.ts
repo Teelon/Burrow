@@ -95,6 +95,32 @@ export function createNotificationRepository(db: DB): INotificationRepository {
       }
       if (statements.length > 0) await runBatch(db, statements);
     },
+    async createAssignments(args: {
+      workspaceId: string;
+      notepadId: string;
+      cardId: string;
+      actorId: string;
+      userIds: string[];
+      now: number;
+    }): Promise<void> {
+      const { workspaceId, notepadId, cardId, actorId, userIds, now } = args;
+      const statements: BatchItem<'sqlite'>[] = [];
+      for (const chunk of chunkByParamBudget(userIds, 9, 0)) {
+        const values = chunk.map((userId) => ({
+          id: crypto.randomUUID(), // Using crypto.randomUUID() for unique IDs
+          workspaceId,
+          userId,
+          type: 'assigned' as const,
+          actorId,
+          notepadId,
+          cardId,
+          readAt: null,
+          createdAt: now,
+        }));
+        statements.push(db.insert(t.notifications).values(values));
+      }
+      if (statements.length > 0) await runBatch(db, statements);
+    },
   };
 }
 

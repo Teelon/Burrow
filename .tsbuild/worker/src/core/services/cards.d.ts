@@ -1,4 +1,4 @@
-import type { ICardRepository, INotepadRepository, ITagRepository, IBoardRepository, CardPriority, MyTasksFilters, MyTaskItem, CardSummary, CardSubtask, CardWithDetails } from '../infrastructure/types';
+import type { ICardRepository, INotepadRepository, ITagRepository, IBoardRepository, CardPriority, MyTasksFilters, MyTaskItem, CardSummary, CardSubtask, CardWithDetails, INotificationRepository } from '../infrastructure/types';
 export interface CreateCardInput {
     workspaceId: string;
     actorId: string;
@@ -51,6 +51,7 @@ export declare class CardService {
         notepads: INotepadRepository;
         tags: ITagRepository;
         boards: IBoardRepository;
+        notifications: INotificationRepository;
         boardColumns?: {
             findById: (id: string) => Promise<any>;
         };

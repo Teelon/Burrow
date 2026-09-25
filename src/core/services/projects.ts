@@ -131,19 +131,17 @@ export class ProjectService {
 
     // 1. Hard delete all trashed notepads in the project (cascades to FTS, links, tags via repository).
     // NOTE: listByProject returns live tree rows only, so trashed rows must come from listDeletedByProject.
+    const liveNotepads = await this.repos.notepads.listByProject(projectId);
     const trashedNotepads = await this.repos.notepads.listDeletedByProject(projectId);
-    for (const np of trashedNotepads) {
-      if (np.deletedAt !== null) {
-        await this.repos.notepads.hardDelete(np.id);
-      }
+    for (const np of [...liveNotepads, ...trashedNotepads]) {
+      await this.repos.notepads.hardDelete(np.id);
     }
 
     // 2. Hard delete all boards in the project
-    const boards = await this.repos.boards.listByProject(projectId);
-    for (const board of boards) {
-      if (board.deletedAt !== null) {
-        await this.repos.boards.hardDelete(board.id);
-      }
+    const liveBoards = await this.repos.boards.listByProject(projectId);
+    const trashedBoards = await this.repos.boards.listDeletedByProject(projectId);
+    for (const board of [...liveBoards, ...trashedBoards]) {
+      await this.repos.boards.hardDelete(board.id);
     }
 
     // 3. Delete all tags in the project

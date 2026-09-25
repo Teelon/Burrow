@@ -35,6 +35,10 @@ export declare class PostgresNotepadRepository implements INotepadRepository {
     insertFtsConditional(notepadId: string, _title: string, body: string, version: number, content: string): Promise<void>;
     listLinks(sourceId: string): Promise<StoredLink[]>;
     replaceLinks(sourceId: string, added: StoredLink[], removed: StoredLink[], _version: number, _content: string): Promise<void>;
+    listBacklinks(notepadId: string): Promise<{
+        id: string;
+        title: string;
+    }[]>;
     insertMentions(args: MentionNotificationArgs): Promise<void>;
     getLastChildPosition(parentId: string): Promise<string | null>;
     getLastRootPosition(projectId: string): Promise<string | null>;

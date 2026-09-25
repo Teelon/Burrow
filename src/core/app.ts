@@ -52,6 +52,7 @@ export function createCoreApp(infra: Infrastructure) {
     notepads: repositories.notepads,
     tags: repositories.tags,
     boards: repositories.boards,
+    notifications: repositories.notifications,
   });
   const members = new MemberService({ members: repositories.members });
   const comments = new CommentService({
@@ -453,10 +454,12 @@ export function createCoreApp(infra: Infrastructure) {
       };
     }
 
+    const backlinks = await repositories.notepads.listBacklinks(notepadId);
+
     return c.json({
       ...notepad,
       tags,
-      backlinks: [],
+      backlinks,
       lock: lockInfo,
     });
   });
@@ -571,7 +574,14 @@ export function createCoreApp(infra: Infrastructure) {
   });
 
   app.get('/api/projects/:pid/recent', requireSession, async (c) => {
-    return c.json([]);
+    const projectId = c.req.param('pid');
+    const notepadsList = await repositories.notepads.listByProject(projectId);
+    const recent = notepadsList
+      .filter((n) => n.deletedAt === null && n.kind === 'notepad')
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 20)
+      .map((n) => ({ id: n.id, title: n.title, updatedAt: n.updatedAt }));
+    return c.json(recent);
   });
 
   app.post(
@@ -1203,7 +1213,17 @@ export function createCoreApp(infra: Infrastructure) {
     const workspaceId = c.get('workspaceId');
     const unreadOnly = c.req.query('unread') === '1';
     const rows = await notifications.listNotifications(userId, workspaceId, unreadOnly);
-    return c.json(rows);
+    const mapped = rows.map((r) => {
+      const { actorId, actorName, ...rest } = r;
+      return {
+        ...rest,
+        actor: {
+          id: actorId,
+          name: actorName || 'Unknown User',
+        },
+      };
+    });
+    return c.json(mapped);
   });
 
   app.post(
