@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   DndContext,
   DragOverlay,
@@ -27,7 +28,7 @@ export type { NotepadNode } from '../../lib/queries';
 const MAX_DEPTH = 8;
 const AUTO_EXPAND_MS = 500;
 /** Left edge of a row (within this many px) promotes the dragged note to the root level. */
-const ROOT_EDGE_PX = 16;
+const ROOT_EDGE_PX = 24;
 
 type DropMode = 'before' | 'after' | 'inside';
 
@@ -52,7 +53,7 @@ interface Projection {
 function RootList({ children }: { children: ReactNode }) {
   const { setNodeRef } = useDroppable({ id: '__root__' });
   return (
-    <div ref={setNodeRef} className="min-h-4">
+    <div ref={setNodeRef} className="min-h-8 pb-4">
       {children}
     </div>
   );
@@ -276,6 +277,9 @@ export function NotepadTree({ projectId }: { projectId: string }) {
       return res.json();
     },
     onSuccess: invalidate,
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create notepad');
+    },
   });
 
   const deleteNotepad = useMutation({
@@ -293,12 +297,16 @@ export function NotepadTree({ projectId }: { projectId: string }) {
         navigate({ to: '/p/$projectId', params: { projectId } });
       }
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete notepad');
+    },
   });
 
   const moveNote = useMoveNotepad(projectId);
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [projection, setProjection] = useState<Projection | null>(null);
+  const projectionRef = useRef<Projection | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const expandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -320,15 +328,15 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   /**
    * Rows must be gapless so the pointer always sits inside *some* row while over
    * the list; prefer a row over the root container when both contain the pointer.
+   * Falls back to closestCorners so moving slightly off the edge doesn't abruptly drop out.
    */
   const collisionDetection: CollisionDetection = (args) => {
     if (!args.pointerCoordinates) return closestCorners(args);
     const hits = pointerWithin(args);
-    if (hits.length === 0) return [];
     const row = hits.find((c) => String(c.id).startsWith('tree:'));
     if (row) return [row];
-    const first = hits[0];
-    return first ? [first] : [];
+    if (hits.length > 0) return [hits[0]!];
+    return closestCorners(args);
   };
 
   // -- resolution helpers (closures over the current structure) -------------
@@ -439,14 +447,14 @@ export function NotepadTree({ projectId }: { projectId: string }) {
     if (py === null) return validate(activeId, targetId, null, targetId, 'inside');
 
     const relY = Math.min(Math.max(py - rect.top, 0), rectHeight);
-    if (relY < rectHeight / 3) {
+    if (relY < rectHeight * 0.28) {
       const parentId = parentById.get(targetId) ?? null;
       const group = parentId ? (childrenMap.get(parentId) ?? []) : roots;
       const idx = group.findIndex((n) => n.id === targetId);
       const prev = idx > 0 ? group[idx - 1] : null;
       return validate(activeId, parentId, prev ? prev.id : null, targetId, 'before');
     }
-    if (relY > (rectHeight * 2) / 3) {
+    if (relY > rectHeight * 0.72) {
       const parentId = parentById.get(targetId) ?? null;
       return validate(activeId, parentId, targetId, targetId, 'after');
     }
@@ -458,10 +466,12 @@ export function NotepadTree({ projectId }: { projectId: string }) {
     const raw = String(event.active.id);
     setDragId(raw.startsWith('tree:') ? raw.slice(5) : null);
     setProjection(null);
+    projectionRef.current = null;
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
     const p = computeProjection(event);
+    projectionRef.current = p;
     setProjection(p);
 
     // Auto-expand a collapsed drop target while hovering "inside" it.
@@ -480,9 +490,16 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   const handleDragEnd = (event: DragEndEvent) => {
     clearTimer();
     setDragId(null);
-    const drop = computeProjection(event);
+    const drop = projectionRef.current ?? computeProjection(event);
+    projectionRef.current = null;
     setProjection(null);
     if (!drop) return;
+
+    // Auto-expand the target parent so newly nested notepads are immediately visible
+    if (drop.parentId) {
+      setExpanded((prev) => ({ ...prev, [drop.parentId!]: true }));
+    }
+
     moveNote.mutate({
       notepadId: drop.activeId,
       parentId: drop.parentId,
@@ -493,6 +510,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   const handleDragCancel = () => {
     clearTimer();
     setDragId(null);
+    projectionRef.current = null;
     setProjection(null);
   };
 
@@ -541,7 +559,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
 
         <DragOverlay dropAnimation={null}>
           {draggedNode ? (
-            <div className="flex items-center gap-1.5 border border-line bg-surface px-3 py-2 text-xs text-text">
+            <div className="flex items-center gap-1.5 border border-line bg-surface px-3 py-2 text-xs text-text pointer-events-none">
               <GripVertical className="h-3 w-3 text-muted" />
               <span className="max-w-40 truncate">{draggedNode.title || 'Untitled'}</span>
             </div>

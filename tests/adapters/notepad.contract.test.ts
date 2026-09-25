@@ -131,4 +131,51 @@ describe('createNotepadRepository contract', () => {
     expect(trashed.some((r) => r.id === siblingId)).toBe(false);
     expect(trashed.find((r) => r.id === childId)?.deletedAt).toBe(now);
   });
+
+  it('move updates parentId and position and reflects in tree ordering', async () => {
+    const projectId = await seedProject();
+    const p1 = await seedNotepad({ projectId, title: 'p1', position: 'a0' });
+    const p2 = await seedNotepad({ projectId, title: 'p2', position: 'a1' });
+    const child = await seedNotepad({ projectId, title: 'child', position: 'a0', parentId: p1 });
+
+    // Move child out of p1 to root after p2
+    await repo().move(child, null, 'a2');
+    let rows = await repo().listByProject(projectId);
+    const movedChild = rows.find((r) => r.id === child);
+    expect(movedChild?.parentId).toBeNull();
+    expect(movedChild?.position).toBe('a2');
+
+    // Move p2 to root before p1
+    await repo().move(p2, null, 'Zz');
+    rows = await repo().listByProject(projectId);
+    const roots = rows.filter((r) => r.parentId === null);
+    expect(roots.map((r) => r.id)).toEqual([p2, p1, child]);
+  });
+
+  it('getLastRootPosition and getLastChildPosition exclude deleted and card-kind notepads', async () => {
+    const projectId = await seedProject();
+    // Empty root
+    expect(await repo().getLastRootPosition(projectId)).toBeNull();
+
+    const root1 = await seedNotepad({ projectId, title: 'root1', position: 'a0' });
+    const nextRootPos = await repo().getLastRootPosition(projectId);
+    expect(nextRootPos).toBeDefined();
+    expect(nextRootPos! > 'a0').toBe(true);
+
+    // Soft-deleted root shouldn't advance position
+    const root2 = await seedNotepad({ projectId, title: 'root2', position: 'a5' });
+    await repo().softDelete(root2, Date.now());
+    expect(await repo().getLastRootPosition(projectId)).toBe(nextRootPos);
+
+    // Card kind shouldn't advance root position
+    await seedNotepad({ projectId, title: 'card', position: 'a9', kind: 'card' });
+    expect(await repo().getLastRootPosition(projectId)).toBe(nextRootPos);
+
+    // Empty children
+    expect(await repo().getLastChildPosition(root1)).toBeNull();
+    await seedNotepad({ projectId, title: 'c1', position: 'a0', parentId: root1 });
+    const nextChildPos = await repo().getLastChildPosition(root1);
+    expect(nextChildPos).toBeDefined();
+    expect(nextChildPos! > 'a0').toBe(true);
+  });
 });

@@ -436,7 +436,7 @@ export interface NotepadNode {
 export declare function useMoveNotepad(projectId: string): import("@tanstack/react-query").UseMutationResult<{
     parentId: string | null;
     position: string;
-}, Error, {
+}, any, {
     notepadId: string;
     parentId: string | null;
     afterId: string | null;

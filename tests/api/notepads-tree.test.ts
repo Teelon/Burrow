@@ -185,4 +185,80 @@ describe('Notepad tree excludes soft-deleted and card-kind notepads', () => {
 
     await expectInvariantsHold(env.DB);
   });
+
+  it('reorders root notepads and moves child notepads', async () => {
+    // Create a second root notepad
+    const p2Res = await app.request(
+      `http://localhost/api/projects/${projectId}/notepads`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ title: 'Tree Parent 2' }),
+      },
+      env,
+    );
+    expect(p2Res.status).toBe(201);
+    const parent2Id = ((await p2Res.json()) as { id: string }).id;
+
+    // Initially, tree has parentId before parent2Id
+    let tree = await getTree(projectId, ownerCookie);
+    let roots = tree.filter((n) => n.parentId === null);
+    expect(roots.findIndex((n) => n.id === parentId)).toBeLessThan(
+      roots.findIndex((n) => n.id === parent2Id),
+    );
+
+    // Move parent2 to the beginning of roots (afterId: null, parentId: null)
+    const moveRes1 = await app.request(
+      `http://localhost/api/notepads/${parent2Id}/move`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ parentId: null, afterId: null }),
+      },
+      env,
+    );
+    expect(moveRes1.status).toBe(200);
+
+    tree = await getTree(projectId, ownerCookie);
+    roots = tree.filter((n) => n.parentId === null);
+    expect(roots[0]!.id).toBe(parent2Id);
+    expect(roots[roots.length - 1]!.id).toBe(parentId);
+
+    // Move childId out of parentId and into parent2Id
+    const moveRes2 = await app.request(
+      `http://localhost/api/notepads/${childId}/move`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ parentId: parent2Id, afterId: null }),
+      },
+      env,
+    );
+    expect(moveRes2.status).toBe(200);
+
+    tree = await getTree(projectId, ownerCookie);
+    const movedChild = tree.find((n) => n.id === childId);
+    expect(movedChild?.parentId).toBe(parent2Id);
+
+    // Move childId to root after parentId
+    const moveRes3 = await app.request(
+      `http://localhost/api/notepads/${childId}/move`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ parentId: null, afterId: parentId }),
+      },
+      env,
+    );
+    expect(moveRes3.status).toBe(200);
+
+    tree = await getTree(projectId, ownerCookie);
+    roots = tree.filter((n) => n.parentId === null);
+    const parentIndex = roots.findIndex((r) => r.id === parentId);
+    const childIndex = roots.findIndex((r) => r.id === childId);
+    expect(childIndex).toBe(parentIndex + 1);
+
+    await expectInvariantsHold(env.DB);
+  });
 });
+

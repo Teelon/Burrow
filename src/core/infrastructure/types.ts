@@ -177,8 +177,11 @@ export interface INotepadRepository {
   // Mentions (notifications)
   insertMentions(args: MentionNotificationArgs): Promise<void>;
   // Position helpers
+  /** Returns the next position string after the last live child notepad in parentId, or null if empty. Live notepad-kind only. */
   getLastChildPosition(parentId: string): Promise<string | null>;
+  /** Returns the next position string after the last live root notepad in projectId, or null if empty. Live notepad-kind only. */
   getLastRootPosition(projectId: string): Promise<string | null>;
+  /** Returns the next position string after the last live root notepad in projectId, or initial position if empty. Live notepad-kind only. */
   getLastRootNotepadPosition(projectId: string): Promise<string>;
   // Search/suggest
   findByPattern(

@@ -13,6 +13,7 @@ import type {
 import { eq, and, inArray, desc, sql, isNull, isNotNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
 import { notepads, notepadTags, notepadLinks, notifications, members, projects } from '../schema';
+import { positionAfterLast } from '../../../../services/utils/ordering';
 
 // Helper to safely get first element of array
 function first<T>(arr: T[]): T | undefined {
@@ -339,22 +340,35 @@ export class PostgresNotepadRepository implements INotepadRepository {
     const result = await this.db
       .select({ position: notepads.position })
       .from(notepads)
-      .where(eq(notepads.parentId, parentId))
+      .where(
+        and(
+          eq(notepads.parentId, parentId),
+          isNull(notepads.deletedAt),
+          eq(notepads.kind, 'notepad'),
+        ),
+      )
       .orderBy(desc(notepads.position))
       .limit(1);
     const row = first(result);
-    return row?.position ?? null;
+    return row ? positionAfterLast(row.position) : null;
   }
 
   async getLastRootPosition(projectId: string): Promise<string | null> {
     const result = await this.db
       .select({ position: notepads.position })
       .from(notepads)
-      .where(and(eq(notepads.projectId, projectId), isNull(notepads.parentId)))
+      .where(
+        and(
+          eq(notepads.projectId, projectId),
+          isNull(notepads.parentId),
+          isNull(notepads.deletedAt),
+          eq(notepads.kind, 'notepad'),
+        ),
+      )
       .orderBy(desc(notepads.position))
       .limit(1);
     const row = first(result);
-    return row?.position ?? null;
+    return row ? positionAfterLast(row.position) : null;
   }
 
   async getLastRootNotepadPosition(projectId: string): Promise<string> {
@@ -365,13 +379,14 @@ export class PostgresNotepadRepository implements INotepadRepository {
         and(
           eq(notepads.projectId, projectId),
           isNull(notepads.parentId),
+          isNull(notepads.deletedAt),
           eq(notepads.kind, 'notepad'),
         ),
       )
       .orderBy(desc(notepads.position))
       .limit(1);
     const row = first(result);
-    return row?.position ?? 'a';
+    return positionAfterLast(row?.position ?? null);
   }
 
   // Search/suggest

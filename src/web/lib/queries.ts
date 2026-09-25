@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from './api';
 
 export function useHealth() {
@@ -1108,10 +1109,11 @@ export function useMoveNotepad(projectId: string) {
       }
       return { prev };
     },
-    onError: (_err, _vars, context) => {
+    onError: (err: any, _vars, context) => {
       if (context?.prev) {
         queryClient.setQueryData(['notepads', projectId], context.prev);
       }
+      toast.error(err?.message || 'Failed to move notepad');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notepads', projectId] });
