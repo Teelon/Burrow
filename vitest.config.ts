@@ -33,6 +33,7 @@ export default defineConfig({
             'tests/unit/**/*.test.ts',
             'tests/adapters/lock.contract.test.ts',
             'tests/adapters/search.contract.test.ts',
+            'tests/adapters/notepad.contract.test.ts',
           ],
           setupFiles: ['./tests/api/setup.ts'],
         },

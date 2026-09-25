@@ -18,7 +18,7 @@ export function BasaltSuggestionMenu(props: SuggestionMenuProps<DefaultReactSugg
     <div
       id="bn-suggestion-menu"
       role="listbox"
-      className="bn-suggestion-menu bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] shadow-2xl z-50 min-w-[300px] max-w-[360px] max-h-72 overflow-y-auto overflow-x-hidden p-1 select-none"
+      className="bn-suggestion-menu bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] z-50 min-w-[300px] max-w-[360px] max-h-72 overflow-y-auto overflow-x-hidden p-1 select-none"
     >
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;

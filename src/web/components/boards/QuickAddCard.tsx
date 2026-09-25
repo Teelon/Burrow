@@ -439,7 +439,9 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
               setAvailableTags((prev) => [...prev, found!]);
             }
           }
-        } catch {}
+        } catch (err) {
+          console.error('Failed to create tag', err);
+        }
       }
       if (found && !tagIds.includes(found.id)) {
         tagIds.push(found.id);
@@ -479,7 +481,7 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
   };
 
   return (
-    <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] p-2.5 space-y-2 relative shadow-md">
+    <div className="border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] p-2.5 space-y-2 relative">
       {/* Active Structured Chips */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {chips.notepad && (
@@ -592,7 +594,7 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
 
       {/* Slash Menu Popup */}
       {menuMode === 'slash' && filteredSlashCommands.length > 0 && (
-        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-2xl p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
+        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] chamfer-sm p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
           <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Quick-Add Commands
           </div>
@@ -627,7 +629,7 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
 
       {/* At (@) Menu Popup */}
       {menuMode === 'at' && (
-        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-2xl p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
+        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] chamfer-sm p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
           <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Assign Member
           </div>
@@ -670,7 +672,7 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
 
       {/* Hash (#) Menu Popup */}
       {menuMode === 'hash' && (
-        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-2xl p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
+        <div className="absolute left-0 bottom-full mb-1.5 w-64 bg-[var(--surface)] border border-[var(--line)] chamfer-sm p-1.5 z-50 text-xs space-y-0.5 max-h-56 overflow-y-auto">
           <div className="px-2 py-1 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
             Project Tags
           </div>
