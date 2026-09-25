@@ -74,7 +74,11 @@ import { NotepadEditor } from './editor/NotepadEditor';
 function NotepadView() {
   const { notepadId } = useParams({ strict: false }) as { notepadId?: string };
   if (!notepadId) return <div className="p-8 text-sm text-[var(--muted)]">Select a notepad</div>;
-  return <NotepadEditor notepadId={notepadId} />;
+  return (
+    <div className="flex-1 overflow-y-auto w-full">
+      <NotepadEditor notepadId={notepadId} />
+    </div>
+  );
 }
 
 import { BoardView } from './components/boards/BoardView';

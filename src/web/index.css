@@ -263,6 +263,7 @@ div[contenteditable='true'].bn-editor {
   border-radius: 0 !important;
   color: var(--text) !important;
   font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  width: 100% !important;
 }
 
 /* Embedded editor in CardPanel / drawers / modals */

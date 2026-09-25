@@ -559,7 +559,7 @@ function NotepadEditorInner({
       ref={containerRef}
       onFocusCapture={handleFocus}
       onBlurCapture={handleBlur}
-      className={hideTitle ? 'space-y-4' : 'max-w-4xl mx-auto py-8 px-6 space-y-6'}
+      className={hideTitle ? 'w-full space-y-4' : 'w-full max-w-4xl mx-auto py-8 px-6 space-y-6'}
     >
       {/* Top Banner: Read-only Lock */}
       {lockBanner && (
@@ -657,7 +657,7 @@ function NotepadEditorInner({
       )}
 
       {/* Header controls: icon, favorite, export/outline menu, save status */}
-      <div className="flex items-center justify-between gap-4 no-print">
+      <div className="w-full flex items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-2">
           {!hideFavorite && (
             <Button
@@ -762,7 +762,7 @@ function NotepadEditorInner({
 
       {/* Notepad Title Input */}
       {!hideTitle && (
-        <div>
+        <div className="w-full">
           <Input
             type="text"
             value={data.title || ''}
@@ -776,7 +776,7 @@ function NotepadEditorInner({
 
       {/* Blank document: starter template prompt */}
       {isBlank && isEditable && (
-        <div className="no-print flex items-center justify-between gap-3 p-3 border border-dashed border-[var(--line)] bg-[var(--surface2)] text-xs">
+        <div className="no-print w-full flex items-center justify-between gap-3 p-3 border border-dashed border-[var(--line)] bg-[var(--surface2)] text-xs">
           <div className="flex items-center gap-2 text-[var(--muted)]">
             <LayoutTemplate className="w-4 h-4 text-[var(--accent)] shrink-0" />
             <span>This page is empty — start from a template?</span>
@@ -799,7 +799,7 @@ function NotepadEditorInner({
       {/* BlockNote Editor Surface */}
       <div
         className={
-          hideTitle ? 'pt-1 bn-embedded' : 'border-t border-[var(--hair)] pt-4 min-h-[350px]'
+          hideTitle ? 'w-full pt-1 bn-embedded' : 'w-full border-t border-[var(--hair)] pt-4 min-h-[350px]'
         }
       >
         {editor && (
@@ -808,7 +808,7 @@ function NotepadEditorInner({
             editable={isEditable}
             slashMenu={false}
             theme={isDarkTheme ? 'dark' : 'light'}
-            className={hideTitle ? 'bn-embedded' : ''}
+            className={hideTitle ? 'w-full bn-embedded' : 'w-full'}
           >
             {/* Custom Slash Menu */}
             <SuggestionMenuController
@@ -998,7 +998,7 @@ export function NotepadEditor({
 
   if (loading) {
     return (
-      <div className="p-8 max-w-3xl mx-auto space-y-4">
+      <div className={hideTitle ? 'w-full space-y-4' : 'w-full max-w-4xl mx-auto p-8 space-y-4'}>
         <div className="h-8 w-48 bg-[var(--surface2)] animate-pulse" />
         <div className="h-64 bg-[var(--surface2)] animate-pulse" />
       </div>
@@ -1007,7 +1007,7 @@ export function NotepadEditor({
 
   if (error || !data) {
     return (
-      <div className="p-12 max-w-xl mx-auto text-center space-y-4">
+      <div className="w-full p-12 max-w-xl mx-auto text-center space-y-4">
         <div className="text-4xl">📄</div>
         <h2 className="text-lg font-semibold text-[var(--text)]">Notepad Unavailable</h2>
         <p className="text-xs text-[var(--muted)]">
