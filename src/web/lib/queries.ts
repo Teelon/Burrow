@@ -34,6 +34,7 @@ export function useSignOut() {
       const res = await fetch('/api/auth/sign-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         throw new Error('Failed to sign out');

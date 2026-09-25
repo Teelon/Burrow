@@ -155,10 +155,30 @@ export const authRoutes = new Hono<Env>()
 
     return authRes;
   })
-  .all('/api/auth/*', (c) => {
+  .all('/api/auth/*', async (c) => {
     const db = createDb(c.env.DB);
     const auth = createAuth(db, c.env);
-    return auth.handler(c.req.raw);
+    const req = c.req.raw;
+    const contentType = req.headers.get('content-type') || '';
+    if (
+      req.method !== 'GET' &&
+      req.method !== 'HEAD' &&
+      contentType.includes('application/json')
+    ) {
+      const cloned = req.clone();
+      const text = await cloned.text();
+      if (!text || text.trim() === '') {
+        const headers = new Headers(req.headers);
+        const fixedReq = new Request(req.url, {
+          method: req.method,
+          headers,
+          body: JSON.stringify({}),
+          duplex: 'half',
+        } as RequestInit);
+        return auth.handler(fixedReq);
+      }
+    }
+    return auth.handler(req);
   })
   .get('/api/me', requireSession, async (c) => {
     const db = createDb(c.env.DB);

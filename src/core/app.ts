@@ -236,7 +236,29 @@ export function createCoreApp(infra: Infrastructure) {
   // Auth routes (delegated to auth provider handler)
   // ---------------------------------------------------------------------------
   app.all('/api/auth/*', async (c) => {
-    return auth.handler(c.req.raw);
+    // Better-auth attempts to parse JSON body if content-type contains application/json,
+    // which throws if the request body is empty. Fall back gracefully to {} if body is empty.
+    const req = c.req.raw;
+    const contentType = req.headers.get('content-type') || '';
+    if (
+      req.method !== 'GET' &&
+      req.method !== 'HEAD' &&
+      contentType.includes('application/json')
+    ) {
+      const cloned = req.clone();
+      const text = await cloned.text();
+      if (!text || text.trim() === '') {
+        const headers = new Headers(req.headers);
+        const fixedReq = new Request(req.url, {
+          method: req.method,
+          headers,
+          body: JSON.stringify({}),
+          duplex: 'half',
+        } as RequestInit);
+        return auth.handler(fixedReq);
+      }
+    }
+    return auth.handler(req);
   });
 
   app.get('/api/me', requireSession, async (c) => {

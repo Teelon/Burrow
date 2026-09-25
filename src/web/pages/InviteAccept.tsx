@@ -250,7 +250,11 @@ export function InviteAccept() {
             <button
               type="button"
               onClick={async () => {
-                await fetch('/api/auth/sign-out', { method: 'POST' }).catch(() => {});
+                await fetch('/api/auth/sign-out', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({}),
+                }).catch(() => {});
                 queryClient.clear();
                 window.location.reload();
               }}
