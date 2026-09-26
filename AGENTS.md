@@ -17,6 +17,13 @@
 - **No silent mutations.** Every `useMutation` and every fire-and-forget `fetch` write must have an `onError`/catch path that surfaces a toast (sonner) — never `console.error`-only, never an unhandled rejection. Silent failures double every future debug session.
 - **No native dialogs for destructive actions.** Use the in-app `ConfirmDialog` (`src/web/components/ui/ConfirmDialog.tsx`); `window.confirm`/`alert`/`prompt` are silently ignored in sandboxed/embedded contexts.
 
+## Algorithmic Isolation & Thin UI Rule (learned 2026-09-25)
+
+- **Decouple spatial/reorder/domain math from JSX.** Never embed complex coordinate math, drag-and-drop projections, cycle detection, or multi-step reordering algorithms directly in React components.
+- **Extract to pure, headless modules.** Extract domain and spatial calculations into standalone `.ts` files (e.g. `treeProjection.ts`, `kanbanReorder.ts`).
+- **Co-locate unit tests before touching UI.** Any algorithm module must have co-located unit tests (`*.test.ts`) covering all edge cases (empty states, boundaries, cycle/depth limits, invalid IDs) before or alongside UI integration.
+- **Components are thin wrappers.** React components should only be responsible for rendering DOM/tokens and forwarding user gestures/events into the tested pure functions.
+
 ## Parallel Subagent Instruction
 
 - **Always parallelize large tasks.** If a task touches 3+ files, spans multiple independent areas/components, or has separable workstreams (e.g. foundation + feature areas, independent files, research + implementation), split it into parallel `subagent` workers instead of doing it sequentially.

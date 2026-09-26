@@ -71,7 +71,9 @@ async function main() {
     }
   }
 
-  const configArgs = isRemote ? getWranglerConfigArgs() : [];
+  const configArgs = isRemote
+    ? getWranglerConfigArgs({ required: true, purpose: 'remote database reset' })
+    : [];
   const targetFlag = isRemote ? '--remote' : '--local';
 
   step(`Cleaning all records from ${targetName} D1 database`);

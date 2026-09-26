@@ -8,7 +8,8 @@ import path from 'node:path';
 import { bin, root, run, smoke, step, parseFirstJson, getWranglerConfigArgs } from './lib.mjs';
 
 async function main() {
-  const configArgs = getWranglerConfigArgs();
+  step('Preflight check (Cloudflare D1 configuration)');
+  const configArgs = getWranglerConfigArgs({ required: true, purpose: 'deploying' });
 
   step('Check (typecheck, lint, tests)');
   run(path.join(root, 'scripts', 'check.mjs'));

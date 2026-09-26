@@ -185,6 +185,34 @@ Every execution of `pnpm run deploy` records the active D1 Time Travel bookmark 
    ```
    *(Replace `<db-name>` with your database name, defaulting to `burrow` or whatever `--name` was configured).*
 
+### 6. Troubleshooting & Common Deployment Errors
+
+#### `Authentication error [code: 10000]` on D1 API endpoints
+- **Symptom:** When running `pnpm run deploy` or remote migrations, Wrangler outputs:
+  ```
+  X [ERROR] A request to the Cloudflare API (/accounts/.../d1/database/burrow) failed.
+    Authentication error [code: 10000]
+  ```
+- **Cause:** Cloudflare D1 requires a 36-character database UUID for remote API calls. When `D1_DATABASE_ID` is missing from your environment or `.dev.vars`, Wrangler attempts to use the database name (`burrow`) as the ID in the URL, which Cloudflare's API rejects.
+- **Solution:**
+  1. Retrieve your database UUID with:
+     ```bash
+     pnpm exec wrangler d1 list
+     ```
+  2. Add it to your `.dev.vars` (or `.env`) file:
+     ```bash
+     D1_DATABASE_ID=<your-database-uuid>
+     ```
+  3. Re-run `pnpm run deploy`.
+
+#### Expired Wrangler OAuth Token
+- **Symptom:** API requests return authentication or authorization errors even with correct IDs.
+- **Solution:** Refresh your OAuth session by running:
+  ```bash
+  pnpm exec wrangler login
+  ```
+  and verify the active account with `pnpm exec wrangler whoami`.
+
 ---
 
 ## Scripts

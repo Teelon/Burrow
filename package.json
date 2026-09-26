@@ -23,7 +23,7 @@
     "check:data": "node scripts/check-data.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply burrow --local",
-    "db:migrate:remote": "wrangler d1 migrations apply burrow --remote",
+    "db:migrate:remote": "node scripts/migrate-remote.mjs",
     "db:clean:local": "node scripts/clean.mjs",
     "reset": "node scripts/reset.mjs",
     "teardown": "node scripts/teardown.mjs",
