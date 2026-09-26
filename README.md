@@ -12,7 +12,9 @@
 [![BlockNote](https://img.shields.io/badge/Editor-BlockNote-7C3AED)](https://www.blocknotejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. Built with **Hono** as the core web framework to run natively on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA (with self-hostable Node.js / PostgreSQL support).
+A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. 
+
+Built with **Hono** as the core web framework. Currently optimized to run serverless on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA, with an adapter-driven foundation already laid for standalone Node.js and PostgreSQL self-hosting.
 
 ---
 
@@ -26,6 +28,17 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
 - **Mentions (`@`) & Tags (`#`)**: Inline mention chips for workspace members, notepads, cards, and natural dates, with automatic in-app notifications and backlinks indexing.
 - **Smart Quick-Add**: Add cards with structured chips (`/notepad`, `/due`, `/priority`, `@assignee`, `#tag`) created atomically in single batch transactions.
 - **Organization & Search**: FTS5 full-text search with highlight snippets, Command Palette (`Cmd/Ctrl+K`), Tag filtering, and a Trash view with subtree restore and permanent delete.
+- **Adapter-Driven Architecture**: Decoupled core business logic from platform runtimes. Pluggable adapters handle storage (R2/S3/local disk), search (SQLite FTS5/PostgreSQL tsvector), locks, and transactional email.
+
+---
+
+## Architecture & Portability
+
+Burrow follows an adapter-driven (hexagonal) architecture where core business logic interacts strictly through unified interfaces:
+
+* **Cloudflare (Current Primary Target):** Production builds run natively on Cloudflare Workers, D1 (distributed SQLite), R2 (object storage), and Worker static assets for SPA delivery.
+* **Node.js & PostgreSQL (Groundwork Laid):** Concrete adapter implementations for PostgreSQL (`src/core/adapters/db/postgres/`) and filesystem/S3 storage already exist. The app factory (`createCoreApp`) compiles identically for Node (`src/server/index.ts`), paving the way for containerized Docker deployments.
+* **Pluggable Transactional Email:** Email sending is completely abstract (`IEmailProvider` in `src/core/adapters/email.ts`). It is wired for **Resend** by default (with a zero-config local console fallback), but swapping to Postmark, Amazon SES, SendGrid, or custom SMTP only requires writing a single adapter file—zero core app or route changes needed.
 
 ---
 
@@ -136,9 +149,9 @@ This release pipeline automatically:
 5. Deploys updated code and assets with `wrangler deploy`.
 6. Executes a live `/api/health` smoke test.
 
-### 4. Transactional Email Setup (Resend)
+### 4. Transactional Email Setup (Resend & Pluggable Providers)
 
-Burrow includes provider-agnostic transactional email support for workspace invites with built-in fallback resilience:
+Burrow features a provider-agnostic email adapter architecture (`src/core/adapters/email.ts`). While wired for **Resend** by default (with native `fetch` and zero SDK bloat), swapping or adding new providers (such as Postmark, Amazon SES, SendGrid, or custom SMTP) only requires implementing `IEmailProvider` and registering it in the factory—no route handlers or business logic ever touch provider-specific code:
 
 * **Zero-config fallback:** If `RESEND_API_KEY` is not set, invites log to the terminal console (`[email:console]`) and remain instantly shareable via the 1-click **Copy Link** button in the UI.
 * **Production delivery:** Emails are sent asynchronously via Resend with responsive HTML buttons, copyable link fallbacks, and plain-text multipart alternatives.
