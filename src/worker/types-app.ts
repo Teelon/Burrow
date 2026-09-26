@@ -11,7 +11,6 @@ import { sessionMiddleware } from './middleware/session';
 import { httpError, isHttpError } from './lib/errors';
 import { authRoutes } from './routes/auth';
 import { membersRoutes } from './routes/members';
-import { invitesRoutes } from './routes/invites';
 import { projectsRoutes } from './routes/projects';
 import { notepadsRoutes } from './routes/notepads';
 import { filesRoutes } from './routes/files';
@@ -30,7 +29,7 @@ const _typeOnlyApp = new Hono<Env>()
   .get('/api/health', (c) => c.json({ ok: true, now: Date.now() }))
   .route('', authRoutes)
   .route('', membersRoutes)
-  .route('', invitesRoutes)
+  // Invite routes live in core/app.ts — no worker duplicate needed
   .route('', projectsRoutes)
   .route('', notepadsRoutes)
   .route('', filesRoutes)

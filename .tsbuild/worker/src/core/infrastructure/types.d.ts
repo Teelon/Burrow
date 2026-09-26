@@ -1,6 +1,7 @@
 import type { IStorageAdapter } from '../adapters/storage';
 import type { ISearchAdapter } from '../adapters/search';
 import type { ILockAdapter } from '../adapters/lock';
+import type { IEmailProvider } from '../adapters/email';
 /**
  * Minimal auth provider interface for the core app factory.
  * Implementations (e.g. BetterAuth) live in the platform layer.
@@ -38,6 +39,7 @@ export interface Infrastructure {
     search: ISearchAdapter;
     locks: ILockAdapter;
     auth: AuthProvider;
+    email: IEmailProvider;
     bootstrapToken: string;
 }
 export interface IWorkspaceRepository {

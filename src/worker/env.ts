@@ -5,6 +5,8 @@ export interface Env {
     BETTER_AUTH_SECRET: string;
     BETTER_AUTH_URL: string;
     BOOTSTRAP_TOKEN: string;
+    RESEND_API_KEY?: string;
+    EMAIL_FROM?: string;
   };
   Variables: {
     userId: string;

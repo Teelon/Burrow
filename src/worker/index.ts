@@ -22,6 +22,8 @@ export function createWorkerApp(env: Env['Bindings']): Hono<any, any, any> {
     BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: env.BETTER_AUTH_URL,
     BOOTSTRAP_TOKEN: env.BOOTSTRAP_TOKEN,
+    RESEND_API_KEY: env.RESEND_API_KEY,
+    EMAIL_FROM: env.EMAIL_FROM,
   });
   return createCoreApp(infra);
 }

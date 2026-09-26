@@ -6,6 +6,8 @@ interface EnvBindings {
     BETTER_AUTH_SECRET: string;
     BETTER_AUTH_URL: string;
     BOOTSTRAP_TOKEN: string;
+    RESEND_API_KEY?: string;
+    EMAIL_FROM?: string;
 }
 /**
  * Create the full D1 infrastructure bundle for the core app.

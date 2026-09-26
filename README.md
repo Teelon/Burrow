@@ -2,6 +2,7 @@
 
 > _Dig in. Nest your notes._
 
+[![Hono](https://img.shields.io/badge/Hono-4.x-E36002?logo=hono&logoColor=white)](https://hono.dev/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -11,7 +12,7 @@
 [![BlockNote](https://img.shields.io/badge/Editor-BlockNote-7C3AED)](https://www.blocknotejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. Built to run entirely on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA.
+A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. Built with **Hono** as the core web framework to run natively on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA (with self-hostable Node.js / PostgreSQL support).
 
 ---
 
@@ -53,6 +54,7 @@ A lightweight Notion-style workspace with **project separation**, **Kanban board
    - `BETTER_AUTH_URL`: Must match your local web origin (`http://localhost:5173`).
    - `BOOTSTRAP_TOKEN`: Used to claim the initial owner account (defaults to `dev-bootstrap-token`).
    - `D1_DATABASE_ID` and `CLOUDFLARE_ACCOUNT_ID`: Not needed for local dev (Miniflare handles SQLite locally).
+   - `RESEND_API_KEY` & `EMAIL_FROM` (optional): To test live email delivery locally, provide a Resend API key and set `EMAIL_FROM=Burrow <onboarding@resend.dev>`. If omitted, invites log directly to your terminal console with zero external setup.
 
 3. **Run local migrations:**
    ```bash
@@ -134,7 +136,29 @@ This release pipeline automatically:
 5. Deploys updated code and assets with `wrangler deploy`.
 6. Executes a live `/api/health` smoke test.
 
-### 4. Rollback Procedure
+### 4. Transactional Email Setup (Resend)
+
+Burrow includes provider-agnostic transactional email support for workspace invites with built-in fallback resilience:
+
+* **Zero-config fallback:** If `RESEND_API_KEY` is not set, invites log to the terminal console (`[email:console]`) and remain instantly shareable via the 1-click **Copy Link** button in the UI.
+* **Production delivery:** Emails are sent asynchronously via Resend with responsive HTML buttons, copyable link fallbacks, and plain-text multipart alternatives.
+
+To enable live email delivery on your production deployment:
+
+1. **Upload your Resend API key to Cloudflare Secrets:**
+   ```bash
+   pnpm exec wrangler secret put RESEND_API_KEY
+   ```
+2. **Configure your verified sender address:**
+   Add `EMAIL_FROM` to `wrangler.jsonc` under `vars` (or run `pnpm exec wrangler secret put EMAIL_FROM`):
+   ```jsonc
+   "vars": {
+     "EMAIL_FROM": "Burrow <notify@yourverifieddomain.com>"
+   }
+   ```
+3. **Verify domain DNS:** Ensure your sending domain has active SPF and DKIM records verified at [resend.com/domains](https://resend.com/domains). *(For initial testing before domain verification, you can set `EMAIL_FROM=Burrow <onboarding@resend.dev>`, which delivers to your Resend account email).*
+
+### 5. Rollback Procedure
 
 > [!IMPORTANT]
 > **D1 Time Travel Backup Note**: Cloudflare D1's SQL dump export (`wrangler d1 export`) does not support databases containing SQLite FTS5 virtual tables (`notepads_fts`). Burrow relies on Cloudflare D1 **Time Travel** for continuous point-in-time recovery.

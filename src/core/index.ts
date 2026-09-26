@@ -96,6 +96,7 @@ export type {
 export type { IStorageAdapter, StorageObject } from './adapters/storage';
 export type { ISearchAdapter, SearchHit, SearchIndexDoc, SearchQuery } from './adapters/search';
 export type { ILockAdapter, LockAcquireResult, LockAcquireOptions } from './adapters/lock';
+export type { IEmailProvider, SendEmailParams } from './adapters/email';
 
 // Re-export middleware
 export { securityHeaders, bodyLimit, DEFAULT_MAX_BODY_BYTES } from './middleware/security';

@@ -141,137 +141,6 @@ export declare const api: {
     };
 } & {
     api: {
-        invites: import("hono/client").ClientRequest<string, "/api/invites", {
-            $post: {
-                input: {
-                    json: {
-                        email: string;
-                        role: "editor" | "viewer";
-                    };
-                };
-                output: {
-                    error: {
-                        code: string;
-                        message: string;
-                    };
-                };
-                outputFormat: "json";
-                status: 400;
-            } | {
-                input: {
-                    json: {
-                        email: string;
-                        role: "editor" | "viewer";
-                    };
-                };
-                output: {
-                    id: string;
-                    email: string;
-                    role: "editor" | "viewer";
-                    token: string;
-                    expiresAt: number;
-                    url: string;
-                };
-                outputFormat: "json";
-                status: import("hono/utils/http-status").ContentfulStatusCode;
-            };
-            $get: {
-                input: {};
-                output: {
-                    id: string;
-                    email: string;
-                    role: "editor" | "viewer";
-                    expiresAt: number;
-                    createdAt: number;
-                }[];
-                outputFormat: "json";
-                status: import("hono/utils/http-status").ContentfulStatusCode;
-            };
-        }>;
-    };
-} & {
-    api: {
-        invites: {
-            info: {
-                ":token": import("hono/client").ClientRequest<string, "/api/invites/info/:token", {
-                    $get: {
-                        input: {
-                            param: {
-                                token: string;
-                            };
-                        };
-                        output: {
-                            valid: true;
-                            token: string;
-                            email: string;
-                            role: "editor" | "viewer";
-                            workspaceName: string;
-                            expiresAt: number;
-                        };
-                        outputFormat: "json";
-                        status: import("hono/utils/http-status").ContentfulStatusCode;
-                    };
-                }>;
-            };
-        };
-    };
-} & {
-    api: {
-        invites: {
-            ":id": import("hono/client").ClientRequest<string, "/api/invites/:id", {
-                $delete: {
-                    input: {
-                        param: {
-                            id: string;
-                        };
-                    };
-                    output: {
-                        ok: true;
-                        id: string;
-                    };
-                    outputFormat: "json";
-                    status: import("hono/utils/http-status").ContentfulStatusCode;
-                };
-            }>;
-        };
-    };
-} & {
-    api: {
-        invites: {
-            accept: import("hono/client").ClientRequest<string, "/api/invites/accept", {
-                $post: {
-                    input: {
-                        json: {
-                            token: string;
-                        };
-                    };
-                    output: {
-                        error: {
-                            code: string;
-                            message: string;
-                        };
-                    };
-                    outputFormat: "json";
-                    status: 400;
-                } | {
-                    input: {
-                        json: {
-                            token: string;
-                        };
-                    };
-                    output: {
-                        ok: true;
-                        workspaceId: string;
-                        role: "editor" | "viewer";
-                    };
-                    outputFormat: "json";
-                    status: import("hono/utils/http-status").ContentfulStatusCode;
-                };
-            }>;
-        };
-    };
-} & {
-    api: {
         projects: import("hono/client").ClientRequest<string, "/api/projects", {
             $get: {
                 input: {};
@@ -1375,7 +1244,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        status?: "open" | "completed" | "all" | undefined;
+                        status?: "all" | "completed" | "open" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -1390,7 +1259,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        status?: "open" | "completed" | "all" | undefined;
+                        status?: "all" | "completed" | "open" | undefined;
                         projectId?: string | undefined;
                     };
                 };

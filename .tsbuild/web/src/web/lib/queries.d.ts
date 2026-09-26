@@ -64,14 +64,14 @@ export declare function useMembers(): import("@tanstack/react-query").UseQueryRe
 export declare function useInvites(): import("@tanstack/react-query").UseQueryResult<{
     id: string;
     email: string;
-    role: "editor" | "viewer";
+    role: string;
     expiresAt: number;
     createdAt: number;
 }[], Error>;
 export declare function useCreateInvite(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     email: string;
-    role: "editor" | "viewer";
+    role: string;
     token: string;
     expiresAt: number;
     url: string;

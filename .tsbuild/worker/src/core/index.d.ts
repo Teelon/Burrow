@@ -21,6 +21,7 @@ export type { Workspace, Project, Board, BoardColumn, Card, Notepad, Tag, Notifi
 export type { IStorageAdapter, StorageObject } from './adapters/storage';
 export type { ISearchAdapter, SearchHit, SearchIndexDoc, SearchQuery } from './adapters/search';
 export type { ILockAdapter, LockAcquireResult, LockAcquireOptions } from './adapters/lock';
+export type { IEmailProvider, SendEmailParams } from './adapters/email';
 export { securityHeaders, bodyLimit, DEFAULT_MAX_BODY_BYTES } from './middleware/security';
 export { createSessionMiddleware, requireSession, requireRole } from './middleware/session';
 export { zValidator } from './middleware/validator';

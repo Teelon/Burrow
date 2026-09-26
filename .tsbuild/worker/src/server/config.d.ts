@@ -7,6 +7,8 @@ declare const configSchema: z.ZodObject<{
     BETTER_AUTH_URL: z.ZodDefault<z.ZodString>;
     BOOTSTRAP_TOKEN: z.ZodDefault<z.ZodString>;
     DATABASE_URL: z.ZodOptional<z.ZodString>;
+    RESEND_API_KEY: z.ZodOptional<z.ZodString>;
+    EMAIL_FROM: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export type ServerConfig = z.infer<typeof configSchema>;
 /** Load + validate the Node server env. Throws a zod error on bad input. */

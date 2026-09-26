@@ -148,9 +148,11 @@ export function useInvites() {
   return useQuery({
     queryKey: ['invites'],
     queryFn: async () => {
-      const res = await api.api.invites.$get();
+      const res = await fetch('/api/invites');
       if (!res.ok) throw new Error(`Failed to load invites: ${res.status}`);
-      return res.json();
+      return res.json() as Promise<
+        Array<{ id: string; email: string; role: string; expiresAt: number; createdAt: number }>
+      >;
     },
   });
 }
@@ -159,12 +161,23 @@ export function useCreateInvite() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { email: string; role: 'editor' | 'viewer' }) => {
-      const res = await api.api.invites.$post({ json: data });
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
       if (!res.ok) {
         const err = (await res.json()) as { error?: { message?: string } };
         throw new Error(err.error?.message || 'Failed to create invite');
       }
-      return res.json();
+      return res.json() as Promise<{
+        id: string;
+        email: string;
+        role: string;
+        token: string;
+        expiresAt: number;
+        url: string;
+      }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });
@@ -176,12 +189,14 @@ export function useRevokeInvite() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.invites[':id'].$delete({ param: { id } });
+      const res = await fetch(`/api/invites/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
       if (!res.ok) {
         const err = (await res.json()) as { error?: { message?: string } };
         throw new Error(err.error?.message || 'Failed to revoke invite');
       }
-      return res.json();
+      return res.json() as Promise<{ ok: true; id: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });

@@ -16,6 +16,7 @@ import { TagService } from './services/tags';
 import { InviteService } from './services/invites';
 import { nanoid } from 'nanoid';
 import { hashToken } from './shared/crypto';
+import { inviteEmail } from './services/email-templates';
 
 // Type for Hono context with our custom variables
 interface Env {
@@ -31,7 +32,7 @@ interface Env {
  * This factory can be called from both Worker and Node entrypoints.
  */
 export function createCoreApp(infra: Infrastructure) {
-  const { repositories, storage, search, locks, auth, bootstrapToken } = infra;
+  const { repositories, storage, search, locks, auth, email: emailProvider, bootstrapToken } = infra;
   const projects = new ProjectService({
     projects: repositories.projects,
     notepads: repositories.notepads,
@@ -1114,13 +1115,30 @@ export function createCoreApp(infra: Infrastructure) {
       const { email, role } = c.req.valid('json');
       const result = await invites.createInvite(workspaceId, userId, email, role);
       const origin = new URL(c.req.url).origin;
+      const inviteUrl = `${origin}/invite/${result.token}`;
+
+      // Fire-and-forget invite email via waitUntil — never blocks or fails the response
+      const sendPromise = (async () => {
+        const ws = await repositories.workspaces.findById(workspaceId);
+        return emailProvider.send({
+          to: email,
+          ...inviteEmail(undefined, ws?.name, inviteUrl),
+        });
+      })().catch((err) => console.error('[email] invite send failed:', err));
+
+      try {
+        c.executionCtx.waitUntil(sendPromise);
+      } catch {
+        // No ExecutionContext available (e.g. Node or unit tests without ExecutionContext)
+      }
+
       return c.json({
         id: result.invite.id,
         email,
         role,
         token: result.token,
         expiresAt: result.invite.expiresAt,
-        url: `${origin}/invite/${result.token}`,
+        url: inviteUrl,
       });
     },
   );

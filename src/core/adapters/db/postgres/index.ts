@@ -17,6 +17,7 @@ import { PostgresInviteRepository } from './repositories/invite';
 import { PostgresSearchAdapter } from './search';
 import { PostgresLockAdapter } from './lock';
 import { createPostgresAuthProvider } from './auth';
+import { createEmailFromEnv } from '../d1/adapters/email/factory';
 
 /**
  * Postgres database instance type
@@ -75,6 +76,12 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
   // Create lock adapter
   const locks = new PostgresLockAdapter(db);
 
+  // Create email adapter
+  const email = createEmailFromEnv({
+    RESEND_API_KEY: config.RESEND_API_KEY,
+    EMAIL_FROM: config.EMAIL_FROM,
+  });
+
   // Create auth provider
   const auth = createPostgresAuthProvider(
     db,
@@ -88,6 +95,7 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
     search,
     locks,
     auth,
+    email,
     bootstrapToken: config.BOOTSTRAP_TOKEN,
   };
 }

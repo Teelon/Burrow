@@ -4,7 +4,7 @@ export declare const suggestRoutes: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -20,7 +20,7 @@ export declare const suggestRoutes: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -37,7 +37,7 @@ export declare const suggestRoutes: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -53,7 +53,7 @@ export declare const suggestRoutes: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -70,7 +70,7 @@ export declare const suggestRoutes: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };

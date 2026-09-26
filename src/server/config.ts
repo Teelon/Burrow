@@ -8,6 +8,8 @@ const configSchema = z.object({
   BETTER_AUTH_URL: z.string().min(1).default('http://localhost:8788'),
   BOOTSTRAP_TOKEN: z.string().default(''),
   DATABASE_URL: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 export type ServerConfig = z.infer<typeof configSchema>;
@@ -22,5 +24,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     BETTER_AUTH_URL: env.BETTER_AUTH_URL,
     BOOTSTRAP_TOKEN: env.BOOTSTRAP_TOKEN,
     DATABASE_URL: env.DATABASE_URL,
+    RESEND_API_KEY: env.RESEND_API_KEY,
+    EMAIL_FROM: env.EMAIL_FROM,
   });
 }

@@ -1,6 +1,7 @@
 import { createStorageFromEnv } from './adapters/storage/factory';
 import { SqliteFtsSearchAdapter } from './adapters/search/sqlite-fts';
 import { SqlLockAdapter } from './adapters/lock/sql-lock';
+import { createEmailFromEnv } from './adapters/email/factory';
 import { createAuthProviderWithDB } from './auth';
 import { createWorkspaceRepository } from './repositories/workspace';
 import { createProjectRepository } from './repositories/project';
@@ -20,6 +21,8 @@ interface EnvBindings {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   BOOTSTRAP_TOKEN: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 }
 
 /**
@@ -33,6 +36,7 @@ export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure
   const locks = new SqlLockAdapter(db);
   const storage = createStorageFromEnv(env);
   const auth = createAuthProviderWithDB(db, env);
+  const email = createEmailFromEnv(env);
 
   // Create repositories (stateless, can be shared)
   const repositories = {
@@ -53,6 +57,7 @@ export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure
     search,
     locks,
     auth,
+    email,
     bootstrapToken: env.BOOTSTRAP_TOKEN,
   };
 }
