@@ -60,14 +60,18 @@ export const AvatarGroup: React.FC<AvatarGroupProps & { children: React.ReactNod
   const visible = max > 0 ? items.slice(0, max) : items;
   const overflow = items.length - visible.length;
   return (
-    <div className={cn('flex items-center', className)} {...props}>
+    <div className={cn('flex items-center -space-x-1.5', className)} {...props}>
       {visible.map((child, i) => (
-        <div key={i} className={cn(i > 0 && '-ml-2')}>
+        <div
+          key={i}
+          className="relative ring-1.5 ring-[var(--surface)] shrink-0"
+          style={{ zIndex: visible.length - i }}
+        >
           {child}
         </div>
       ))}
       {overflow > 0 && (
-        <div className="-ml-2">
+        <div className="relative z-0 ring-1.5 ring-[var(--surface)] shrink-0">
           <Avatar name={`+${overflow}`} size="xs" />
         </div>
       )}

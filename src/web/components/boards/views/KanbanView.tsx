@@ -134,37 +134,48 @@ function CardTile({
       })
     : null;
 
+  // Prioritize card priority color for the left accent stripe so it matches the priority badge;
+  // fall back to column status color only when no priority is set.
+  const activeStatus = card.priority ? priorityStatusColor(card.priority) : statusColor || undefined;
+
   return (
     <Card
       ref={setNodeRef}
-      statusColor={statusColor || priorityStatusColor(card.priority)}
+      statusColor={activeStatus}
       style={style}
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`p-2.5 pl-3.5 cursor-grab active:cursor-grabbing space-y-2 select-none ${
+      className={`group/card p-3 pl-3.5 bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--muted)]/50 hover:bg-[var(--hi)]/20 transition-all cursor-grab active:cursor-grabbing space-y-2 select-none theme-radius-md ${
         isOverlay ? 'rotate-1 scale-105 z-50' : ''
       } ${focused && !isOverlay ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg)]' : ''}`}
     >
-      <div className="text-[13px] font-semibold text-[var(--text)] leading-snug tracking-tight">
-        {card.title || 'Untitled'}
+      {/* Header Row: Title on Left, Priority on Top-Right */}
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="text-[13px] font-semibold text-[var(--text)] leading-snug tracking-tight group-hover/card:text-[var(--accent)] transition-colors flex-1 min-w-0">
+          {card.title || 'Untitled'}
+        </div>
+
+        {card.priority && PRIORITY_BADGES[card.priority] && (
+          <Badge tone={priorityBadgeTone(card.priority)} className="shrink-0 mt-0.5">
+            <StatusDiamond color={priorityStatusColor(card.priority)} size={6} />
+            <span>{PRIORITY_BADGES[card.priority]!.label}</span>
+          </Badge>
+        )}
       </div>
 
-      {/* Meta tags & priority */}
-      {((card.priority && PRIORITY_BADGES[card.priority]) || (card.tags && card.tags.length > 0)) && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {card.priority && PRIORITY_BADGES[card.priority] && (
-            <Badge tone={priorityBadgeTone(card.priority)}>
-              {PRIORITY_BADGES[card.priority]!.label}
-            </Badge>
-          )}
-
+      {/* Tags row (if any) */}
+      {(card.tags || []).length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
           {(card.tags || []).map((tag) => (
             <span
               key={tag.id}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[var(--surface2)] text-[var(--ink-muted)] border border-[var(--hair)]"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[var(--surface2)] text-[var(--ink-muted)] border border-[var(--hair)] theme-radius-xs"
             >
-              <StatusDiamond color={tag.color || '#a855f7'} size={6} />
+              <span
+                className="w-1.5 h-1.5 theme-radius-xs shrink-0"
+                style={{ backgroundColor: tag.color || '#a855f7' }}
+              />
               <span>#{tag.name}</span>
             </span>
           ))}
@@ -173,29 +184,31 @@ function CardTile({
 
       {/* Footer: Due date, subtask progress & Assignees */}
       {(formattedDueDate || (card.totalSubtasks ?? 0) > 0 || (card.assignees || []).length > 0) && (
-        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[var(--hair)] text-[11px] text-[var(--ink-muted)]">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--hair)] text-[11px] text-[var(--ink-muted)]">
+          <div className="flex items-center gap-2 min-w-0">
             {formattedDueDate && (
               <div
-                className={`flex items-center gap-1 ${
-                  isOverdue ? 'text-[var(--danger)] font-bold' : ''
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium theme-radius-xs ${
+                  isOverdue
+                    ? 'bg-[var(--danger)]/15 text-[var(--danger)] font-bold border border-[var(--danger)]/30'
+                    : 'text-[var(--ink-muted)] bg-[var(--surface2)]/80 border border-[var(--hair)]'
                 }`}
               >
-                <Calendar className="w-3 h-3" />
+                <Calendar className="w-3 h-3 shrink-0" />
                 <span>{formattedDueDate}</span>
               </div>
             )}
 
             {(card.totalSubtasks ?? 0) > 0 && (
               <div
-                className="flex items-center gap-1 font-medium"
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--ink-muted)]"
                 title={`${card.completedSubtasks ?? 0}/${card.totalSubtasks} subtasks done`}
               >
-                <CheckSquare className="w-3 h-3" />
+                <CheckSquare className="w-3 h-3 text-[var(--ink-muted)]" />
                 <span className="tabular-nums">
                   {card.completedSubtasks ?? 0}/{card.totalSubtasks}
                 </span>
-                <span className="w-7 h-1 bg-[var(--surface2)] overflow-hidden inline-block border border-[var(--hair)]">
+                <span className="w-8 h-1 bg-[var(--surface2)] border border-[var(--hair)] overflow-hidden inline-block theme-radius-xs">
                   <span
                     className="block h-full bg-[var(--accent)]"
                     style={{
@@ -212,7 +225,13 @@ function CardTile({
           {(card.assignees || []).length > 0 && (
             <AvatarGroup max={4}>
               {(card.assignees || []).map((a) => (
-                <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} className="w-5 h-5 text-[9px]" />
+                <Avatar
+                  key={a.userId}
+                  name={a.name || 'U'}
+                  size="xs"
+                  title={a.name}
+                  className="w-5 h-5 text-[9px] font-bold"
+                />
               ))}
             </AvatarGroup>
           )}
