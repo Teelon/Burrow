@@ -1,10 +1,19 @@
+#!/usr/bin/env node
 import path from 'node:path';
-import { bin, root, run } from './lib.mjs';
+import { bin, isRemoteTarget, printTargetBanner, root, run } from './lib.mjs';
 
 /**
  * Seed local D1 database with demo data (two users, projects, nested notepads, board, cards).
- * Usage: pnpm seed:local
+ * Usage: pnpm seed (local only)
  */
+if (isRemoteTarget()) {
+  console.error('\n❌ ERROR: Seeding is only permitted on the local Miniflare database.');
+  console.error('To populate production, log in to the web app and use the UI.\n');
+  process.exit(1);
+}
+
+printTargetBanner('Seed Database', false);
+
 const sqlFile = path.join(root, 'scripts', 'seed.sql');
 
 console.log('Seeding local D1 database with demo data...');
@@ -29,4 +38,4 @@ if (checkRes.status !== 0) {
   process.exit(checkRes.status);
 }
 
-console.log('seed:local OK — database seeded and all invariants hold.');
+console.log('seed OK — database seeded and all invariants hold.');

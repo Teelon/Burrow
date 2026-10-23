@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * First-time provision + deploy. Idempotent. Run with `pnpm run setup`.
+ * One-command setup. Idempotent. Run with `pnpm run setup`.
+ *
+ * Targets:
+ *   (default)              Local setup (installs deps, migrates local D1, prints dev URLs & token)
+ *   --remote, --r, -r      Remote setup (provisions Cloudflare D1/R2, migrates, builds, deploys, sets secrets)
  *
  * Flags:
  *   --dry-run              print every command without running it
- *   --domain <domain>      attach a custom domain (must be on Cloudflare DNS in this account)
- *   --name <worker-name>   deploy under a different worker name
+ *   --domain <domain>      attach a custom domain (remote only; must be on Cloudflare DNS in this account)
+ *   --name <worker-name>   deploy under a different worker name (remote only)
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -15,6 +19,8 @@ import {
   argValue,
   bin,
   hasFlag,
+  isRemoteTarget,
+  printTargetBanner,
   root,
   run,
   smoke,
@@ -25,11 +31,14 @@ import {
 } from './lib.mjs';
 
 const dryRun = hasFlag('--dry-run');
+const isRemote = isRemoteTarget();
 const domain = argValue('--domain');
 const workerName = argValue('--name');
 const WRANGLER_ARGS = workerName ? ['--name', workerName] : [];
 
 async function main() {
+  printTargetBanner('Setup', isRemote);
+
   step('Preflight');
   const nodeMajor = Number(process.versions.node.split('.')[0]);
   if (nodeMajor < 20) {
@@ -38,18 +47,34 @@ async function main() {
   }
   console.log(`node ${process.version}, dry-run: ${dryRun}`);
   loadEnv();
-  const existingD1Id = process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID;
-  if (existingD1Id && !dryRun) {
-    console.error('\n❌ ERROR: D1_DATABASE_ID is already set in your .env or .dev.vars file:');
-    console.error(`   ${existingD1Id}\n`);
-    console.error('`pnpm run setup` is for fresh first-time provisioning.');
-    console.error('If you tore down your old resources or want a clean setup:');
-    console.error('  1. Clear or comment out D1_DATABASE_ID in your .dev.vars or .env file (leave it blank: D1_DATABASE_ID=).');
-    console.error('  2. Re-run `pnpm run setup` so Cloudflare provisions a fresh database.\n');
-    process.exit(1);
-  }
   run('pnpm', ['install'], { dryRun });
 
+  step('Apply migrations to local D1');
+  run(bin('wrangler'), ['d1', 'migrations', 'apply', 'burrow', '--local'], {
+    dryRun,
+    env: { CI: '1' },
+  });
+
+  if (!isRemote) {
+    const localBootstrapToken = process.env.BOOTSTRAP_TOKEN || 'dev-bootstrap-token';
+    const localAuthSecret =
+      process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me-32-bytes-minimum!!';
+    const localUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3005';
+    console.log('\n======================================================');
+    console.log('✅ Local setup complete!');
+    console.log(`  Local Web URL:      ${localUrl}`);
+    console.log('  Local Worker API:   http://127.0.0.1:8787');
+    console.log(`  BETTER_AUTH_URL:    ${localUrl}`);
+    console.log(`  BETTER_AUTH_SECRET: ${localAuthSecret}`);
+    console.log(`  BOOTSTRAP_TOKEN:    ${localBootstrapToken}`);
+    console.log('======================================================');
+    console.log('\nRun `pnpm dev` to start the local development server.');
+    console.log('To set up remote Cloudflare production instead, run:');
+    console.log('  pnpm run setup -r\n');
+    return;
+  }
+
+  // --- Remote Cloudflare Setup ---
   step('Cloudflare login');
   const whoami = run(bin('wrangler'), ['whoami', '--json'], {
     dryRun,
@@ -64,14 +89,13 @@ async function main() {
     console.log('wrangler: logged in');
   }
 
-  // Multiple accounts and no explicit choice? Ask which one to use.
   if (!process.env.CLOUDFLARE_ACCOUNT_ID && !dryRun) {
     const info = parseFirstJson(whoami.stdout ?? '');
     const accounts = collectAccounts(info);
     if (accounts.length > 1) {
       console.log('Multiple Cloudflare accounts found:');
       accounts.forEach((a, i) => console.log(`  [${i}] ${a.name ?? '(no name)'}  ${a.id}`));
-      const rl = await readline.createInterface({ input: process.stdin, output: process.stdout });
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
       const answer = await rl.question('Which account id should be used: ');
       rl.close();
       const chosen = accounts.find((a) => a.id === answer.trim()) ?? accounts[Number(answer)];
@@ -84,13 +108,22 @@ async function main() {
     }
   }
 
+  step('Provision or discover Cloudflare D1 database & R2 bucket');
+  const { d1Id, dbName, bucketName } = ensureCloudflareResources(dryRun);
+  const configArgs = dryRun ? [] : getWranglerConfigArgs({ d1IdOverride: d1Id });
+
+  step('Apply migrations to remote D1');
+  run(bin('wrangler'), [...configArgs, 'd1', 'migrations', 'apply', dbName, '--remote'], {
+    dryRun,
+    env: { CI: '1' },
+  });
+
   step('Typecheck + build');
   run(bin('typescript', 'tsc'), ['-b'], { dryRun });
   run(bin('vite'), ['build'], { dryRun });
 
-  step('Deploy (auto-provisions D1 + R2 on first deploy)');
-  const initialConfigArgs = getWranglerConfigArgs();
-  const deployArgs = [...initialConfigArgs, 'deploy', ...WRANGLER_ARGS];
+  step('Deploy Worker & static assets');
+  const deployArgs = [...configArgs, 'deploy', ...WRANGLER_ARGS];
   if (domain) deployArgs.push('--domains', domain);
   const deploy = run(bin('wrangler'), deployArgs, { dryRun, capture: true });
   const url = domain
@@ -103,25 +136,19 @@ async function main() {
   const origin = url ?? 'https://<deployed-url>';
   console.log(`deployed: ${origin}`);
 
-  step('Ensure D1 database id is configured');
-  const d1Id = ensureDatabaseId(dryRun);
-  const configArgs = getWranglerConfigArgs(d1Id);
-
-  step('Apply migrations to remote D1');
-  run(bin('wrangler'), [...configArgs, 'd1', 'migrations', 'apply', 'burrow', '--remote'], {
-    dryRun,
-    // skip the interactive confirmation; migrations are expand-only (rule 13)
-    env: { CI: '1' },
-  });
-
-  step('Upload secrets (skip existing)');
+  step('Provision Worker secrets');
   const originForAuth = domain ? `https://${domain}` : origin;
   const generated = {};
+  const activeBootstrapToken =
+    process.env.BOOTSTRAP_TOKEN && process.env.BOOTSTRAP_TOKEN !== 'dev-bootstrap-token'
+      ? process.env.BOOTSTRAP_TOKEN
+      : crypto.randomBytes(16).toString('hex');
+
   if (!dryRun) {
     const existing = new Set(
       (
         parseFirstJson(
-          run(bin('wrangler'), ['secret', 'list', '--format', 'json'], {
+          run(bin('wrangler'), [...configArgs, 'secret', 'list', '--format', 'json'], {
             capture: true,
             allowFail: true,
             quiet: true,
@@ -132,31 +159,28 @@ async function main() {
     if (!existing.has('BETTER_AUTH_SECRET')) {
       generated.BETTER_AUTH_SECRET = crypto.randomBytes(32).toString('base64url');
     }
-    if (!existing.has('BOOTSTRAP_TOKEN')) {
-      generated.BOOTSTRAP_TOKEN =
-        process.env.BOOTSTRAP_TOKEN || crypto.randomBytes(16).toString('hex');
+    generated.BOOTSTRAP_TOKEN = activeBootstrapToken;
+    generated.BETTER_AUTH_URL = originForAuth;
+
+    if (process.env.RESEND_API_KEY) {
+      generated.RESEND_API_KEY = process.env.RESEND_API_KEY;
     }
-    if (!existing.has('BETTER_AUTH_URL')) {
-      generated.BETTER_AUTH_URL = originForAuth;
+    if (process.env.EMAIL_FROM) {
+      generated.EMAIL_FROM = process.env.EMAIL_FROM;
     }
-    if (Object.keys(generated).length > 0) {
-      const tmp = path.join(root, '.secrets.tmp.json');
-      fs.writeFileSync(tmp, JSON.stringify(generated, null, 2));
-      try {
-        run(bin('wrangler'), ['secret', 'bulk', tmp], { dryRun });
-      } finally {
-        fs.rmSync(tmp, { force: true });
-      }
-    } else {
-      console.log('  all secrets already set — nothing to do');
+
+    const tmp = path.join(root, '.secrets.tmp.json');
+    fs.writeFileSync(tmp, JSON.stringify(generated, null, 2));
+    try {
+      run(bin('wrangler'), [...configArgs, 'secret', 'bulk', tmp], { dryRun });
+    } finally {
+      fs.rmSync(tmp, { force: true });
     }
   } else {
+    generated.BETTER_AUTH_SECRET = '<generated-32-byte-base64url>';
+    generated.BOOTSTRAP_TOKEN = activeBootstrapToken;
+    generated.BETTER_AUTH_URL = originForAuth;
     run(bin('wrangler'), ['secret', 'bulk', '.secrets.tmp.json'], { dryRun });
-  }
-
-  if (!dryRun) {
-    // Only used in-memory during setup run
-    process.env.BOOTSTRAP_TOKEN = generated.BOOTSTRAP_TOKEN || process.env.BOOTSTRAP_TOKEN;
   }
 
   step('Smoke test');
@@ -168,28 +192,26 @@ async function main() {
   }
 
   console.log('\n======================================================');
-  console.log('Setup complete!');
-  console.log(`  Production URL: ${origin}`);
-  if (d1Id) {
-    console.log(`  D1_DATABASE_ID: ${d1Id}`);
+  console.log('✅ Remote Cloudflare Setup complete!');
+  console.log(`  Production URL:     ${origin}`);
+  console.log(`  D1 Database:        ${dbName} (${d1Id})`);
+  if (bucketName) {
+    console.log(`  R2 Bucket:          ${bucketName}`);
   }
-  if (generated.BOOTSTRAP_TOKEN) {
-    console.log(`  BOOTSTRAP_TOKEN: ${generated.BOOTSTRAP_TOKEN}`);
+  console.log(`  BETTER_AUTH_URL:    ${originForAuth}`);
+  if (generated.BETTER_AUTH_SECRET) {
+    console.log(`  BETTER_AUTH_SECRET: ${generated.BETTER_AUTH_SECRET}`);
+  } else {
+    console.log('  BETTER_AUTH_SECRET: (preserved existing secret on Worker)');
   }
+  console.log(`  BOOTSTRAP_TOKEN:    ${generated.BOOTSTRAP_TOKEN}`);
   console.log('======================================================\n');
-  console.log('Add these to your .env or .dev.vars file:');
-  if (d1Id) console.log(`  D1_DATABASE_ID=${d1Id}`);
-  if (generated.BOOTSTRAP_TOKEN) console.log(`  BOOTSTRAP_TOKEN=${generated.BOOTSTRAP_TOKEN}`);
-  console.log('\nOpen the URL and register the initial Owner account with the BOOTSTRAP_TOKEN.');
+  console.log(
+    'Open the Production URL above and register the initial Owner account with BOOTSTRAP_TOKEN.',
+  );
 }
 
-function ensureDatabaseId(dryRun) {
-  loadEnv();
-  const envId = process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID;
-  if (envId) {
-    console.log(`  database_id found from environment: ${envId}`);
-    return envId;
-  }
+function ensureCloudflareResources(dryRun) {
   const configPath = path.join(root, 'wrangler.jsonc');
   const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   const d1 = cfg.d1_databases?.[0];
@@ -197,40 +219,84 @@ function ensureDatabaseId(dryRun) {
     console.error('wrangler.jsonc has no d1_databases entry');
     process.exit(1);
   }
-  if (d1.database_id) {
-    console.log('  database_id already present in wrangler.jsonc');
-    return d1.database_id;
+  const dbName = d1.database_name;
+  const bucketName = cfg.r2_buckets?.[0]?.bucket_name ?? null;
+
+  if (bucketName) {
+    if (dryRun) {
+      run(bin('wrangler'), ['r2', 'bucket', 'create', bucketName], { dryRun });
+    } else {
+      const r2List = run(bin('wrangler'), ['r2', 'bucket', 'list'], {
+        capture: true,
+        allowFail: true,
+        quiet: true,
+      });
+      const bucketExists =
+        r2List.status === 0 && new RegExp(`\\b${bucketName}\\b`).test(r2List.stdout ?? '');
+      if (bucketExists) {
+        console.log(`  R2 bucket "${bucketName}" already exists`);
+      } else {
+        const created = run(bin('wrangler'), ['r2', 'bucket', 'create', bucketName], {
+          capture: true,
+          allowFail: true,
+          quiet: true,
+        });
+        if (
+          created.status === 0 ||
+          /already exists/i.test((created.stdout ?? '') + (created.stderr ?? ''))
+        ) {
+          console.log(`  R2 bucket "${bucketName}" ready`);
+        } else {
+          console.warn(
+            `  Warning: could not verify R2 bucket "${bucketName}": ${created.stderr || created.stdout}`,
+          );
+        }
+      }
+    }
   }
-  // Fallback path (non-interactive deploys skip config write-back): create explicitly.
-  const out = run(bin('wrangler'), ['d1', 'create', d1.database_name], {
-    dryRun,
+
+  if (dryRun) {
+    run(bin('wrangler'), ['d1', 'create', dbName], { dryRun });
+    return { d1Id: 'pending-d1-uuid', dbName, bucketName };
+  }
+
+  const list = run(bin('wrangler'), ['d1', 'list', '--json'], {
     capture: true,
     allowFail: true,
     quiet: true,
   });
-  const id = /database_id[:\s]+([0-9a-f-]{36})/i.exec(out.stdout)?.[1];
-  let resolvedId = id;
-  if (dryRun) {
-    console.log(
-      `  [dry-run] discovered D1_DATABASE_ID (parsed: ${id ?? 'pending'})`,
-    );
-    return id ?? 'pending-id';
-  }
-  if (!resolvedId) {
-    // Create may have failed because it already exists — look it up by name.
-    const list = run(bin('wrangler'), ['d1', 'list', '--json'], { capture: true, quiet: true });
+  if (list.status === 0) {
     const dbs = parseFirstJson(list.stdout) ?? [];
-    const found = dbs.find(
-      (d) => d.database_name === d1.database_name || d.name === d1.database_name,
-    );
+    const found = dbs.find((d) => d.database_name === dbName || d.name === dbName);
+    if (found) {
+      const existingId = found.uuid ?? found.database_id;
+      console.log(`  D1 database "${dbName}" found on Cloudflare: ${existingId}`);
+      return { d1Id: existingId, dbName, bucketName };
+    }
+  }
+
+  const out = run(bin('wrangler'), ['d1', 'create', dbName], {
+    capture: true,
+    allowFail: true,
+    quiet: true,
+  });
+  let resolvedId = /database_id[:\s"]+([0-9a-f-]{36})/i.exec(out.stdout)?.[1];
+  if (!resolvedId) {
+    const retryList = run(bin('wrangler'), ['d1', 'list', '--json'], {
+      capture: true,
+      quiet: true,
+    });
+    const dbs = parseFirstJson(retryList.stdout) ?? [];
+    const found = dbs.find((d) => d.database_name === dbName || d.name === dbName);
     if (!found) {
       console.error('could not create or locate the D1 database');
+      if (out.stderr) console.error(out.stderr);
       process.exit(1);
     }
     resolvedId = found.uuid ?? found.database_id;
   }
-  console.log(`  discovered D1_DATABASE_ID: ${resolvedId}`);
-  return resolvedId;
+  console.log(`  provisioned D1 database "${dbName}": ${resolvedId}`);
+  return { d1Id: resolvedId, dbName, bucketName };
 }
 
 function collectAccounts(node) {

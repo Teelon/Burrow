@@ -18,23 +18,23 @@ work from this summary alone.
 
 **In scope — create these files:**
 
-| File | Purpose |
-| --- | --- |
-| `scripts/lib.mjs` | Shared helpers: `root`, `bin`, `run`, `step`, `smoke`, `loadEnv`, `getWranglerConfigArgs`, `parseFirstJson`, `argValue`, `hasFlag` |
-| `scripts/check.mjs` | `pnpm check` gate: typecheck → design guard → lint → tests |
-| `scripts/dev.mjs` | Dual dev server (wrangler + vite) with clean shutdown |
-| `scripts/setup.mjs` | Idempotent first-time provision + deploy |
-| `scripts/deploy.mjs` | Release: check → build → time-travel bookmark → migrate → deploy → smoke |
-| `scripts/migrate-remote.mjs` | Remote D1 migrations with friendly errors |
-| `scripts/reset.mjs` | Wipe D1 back to clean state (`--local` / `--remote` / `--force`) |
-| `scripts/clean.mjs` | Deprecation shim → `reset.mjs --local` |
-| `scripts/teardown.mjs` | Delete Worker + D1 + R2 (`--force`) |
-| `scripts/seed.mjs` | Load `scripts/seed.sql` into local D1, then verify invariants |
-| `scripts/check-data.mjs` | Run `scripts/check-invariants.sql` against D1, fail on any row |
-| `scripts/check-basalt.mjs` | Design-system regex guard over the web source |
-| `scripts/seed.sql` | Demo data (new project only — see Step 5) |
-| `scripts/check-invariants.sql` | One query per invariant (new project only — see Step 5) |
-| `.dev.vars.example` | Env template; `dev.mjs` copies it to git-ignored `.dev.vars` |
+| File                           | Purpose                                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/lib.mjs`              | Shared helpers: `root`, `bin`, `run`, `step`, `smoke`, `loadEnv`, `getWranglerConfigArgs`, `parseFirstJson`, `argValue`, `hasFlag` |
+| `scripts/check.mjs`            | `pnpm check` gate: typecheck → design guard → lint → tests                                                                         |
+| `scripts/dev.mjs`              | Dual dev server (wrangler + vite) with clean shutdown                                                                              |
+| `scripts/setup.mjs`            | Idempotent first-time provision + deploy                                                                                           |
+| `scripts/deploy.mjs`           | Release: check → build → time-travel bookmark → migrate → deploy → smoke                                                           |
+| `scripts/migrate-remote.mjs`   | Remote D1 migrations with friendly errors                                                                                          |
+| `scripts/reset.mjs`            | Wipe D1 back to clean state (`--local` / `--remote` / `--force`)                                                                   |
+| `scripts/clean.mjs`            | Deprecation shim → `reset.mjs --local`                                                                                             |
+| `scripts/teardown.mjs`         | Delete Worker + D1 + R2 (`--force`)                                                                                                |
+| `scripts/seed.mjs`             | Load `scripts/seed.sql` into local D1, then verify invariants                                                                      |
+| `scripts/check-data.mjs`       | Run `scripts/check-invariants.sql` against D1, fail on any row                                                                     |
+| `scripts/check-basalt.mjs`     | Design-system regex guard over the web source                                                                                      |
+| `scripts/seed.sql`             | Demo data (new project only — see Step 5)                                                                                          |
+| `scripts/check-invariants.sql` | One query per invariant (new project only — see Step 5)                                                                            |
+| `.dev.vars.example`            | Env template; `dev.mjs` copies it to git-ignored `.dev.vars`                                                                       |
 
 **Also in scope — edit these:**
 
@@ -54,16 +54,16 @@ Before writing, decide the new project's names and substitute them everywhere. G
 finished result for leftover `burrow` (case-insensitive) — there must be zero hits except
 inside comments that are obviously generic.
 
-| Burrow value | Replace with |
-| --- | --- |
-| Worker name `burrow` | `<worker>` |
-| D1 `database_name: "burrow"` | `<db>` (no spaces; this is the identifier in every `d1 execute` / `migrations apply` call) |
-| R2 bucket `burrow-files` | `<bucket>` |
-| `BOOTSTRAP_TOKEN` | keep the name, or your own first-owner token |
-| wrangler dev port `8787` | pick a free pair, keep 8787 unless taken |
-| vite port `5173` | keep unless taken |
-| `src/web` (basalt guard scan root) | your web source dir |
-| `dist/web` (assets dir) | must match `wrangler.jsonc` `assets.directory` |
+| Burrow value                       | Replace with                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| Worker name `burrow`               | `<worker>`                                                                                 |
+| D1 `database_name: "burrow"`       | `<db>` (no spaces; this is the identifier in every `d1 execute` / `migrations apply` call) |
+| R2 bucket `burrow-files`           | `<bucket>`                                                                                 |
+| `BOOTSTRAP_TOKEN`                  | keep the name, or your own first-owner token                                               |
+| wrangler dev port `8787`           | pick a free pair, keep 8787 unless taken                                                   |
+| vite port `5173`                   | keep unless taken                                                                          |
+| `src/web` (basalt guard scan root) | your web source dir                                                                        |
+| `dist/web` (assets dir)            | must match `wrangler.jsonc` `assets.directory`                                             |
 
 `"burrow"` appears as a hardcoded literal in `setup.mjs`, `deploy.mjs`,
 `migrate-remote.mjs`, `reset.mjs`, `seed.mjs`, `check-data.mjs`, plus inside the error
@@ -91,7 +91,7 @@ real Windows/Cloudflare failures:
      discovered UUID back into `.dev.vars` if `D1_DATABASE_ID=` is present but blank;
    - generate a **git-ignored** `wrangler.local.jsonc` (base config with only
      `database_id` overridden) and return `['--config', 'wrangler.local.jsonc']`.
-   This exists so no personal UUID or account id is ever committed to `wrangler.jsonc`.
+     This exists so no personal UUID or account id is ever committed to `wrangler.jsonc`.
 5. **`loadEnv()`** parses both `.env` and `.dev.vars`, strips matching quotes, and never
    overwrites an already-set `process.env` key.
 6. **`smoke(url)`** polls `GET <url>/api/health`, 3 attempts / 2s apart, prints the body
@@ -201,7 +201,7 @@ Basalt design system, and Burrow's list is already at zero matches.
 
 Pick one and justify it in your report:
 
-1. **Port and recalibrate** — keep the script, but first run the *unmodified* list over the
+1. **Port and recalibrate** — keep the script, but first run the _unmodified_ list over the
    new project's web source, then trim patterns to only those the new codebase actually
    honours, so the guard starts green. Set the scan root to the real web source dir.
 2. **Port as-is** — only correct if the new project adopts the same design system.

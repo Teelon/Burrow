@@ -7,12 +7,12 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
-[![Cloudflare D1](https://img.shields.io/badge/Cloudflare-D1_(SQLite)-F38020?logo=sqlite&logoColor=white)](https://developers.cloudflare.com/d1/)
+[![Cloudflare D1](<https://img.shields.io/badge/Cloudflare-D1_(SQLite)-F38020?logo=sqlite&logoColor=white>)](https://developers.cloudflare.com/d1/)
 [![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/r2/)
 [![BlockNote](https://img.shields.io/badge/Editor-BlockNote-7C3AED)](https://www.blocknotejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type. 
+A lightweight Notion-style workspace with **project separation**, **Kanban boards**, and **notepads** for taking and organising notes, plus a **slash-command menu (`/`)** and **mentions (`@`)** everywhere you type.
 
 Built with **Hono** as the core web framework. Currently optimized to run serverless on Cloudflare Workers, Cloudflare D1 (SQLite), Cloudflare R2, and React SPA, with an adapter-driven foundation already laid for standalone Node.js and PostgreSQL self-hosting.
 
@@ -36,9 +36,9 @@ Built with **Hono** as the core web framework. Currently optimized to run server
 
 Burrow follows an adapter-driven (hexagonal) architecture where core business logic interacts strictly through unified interfaces:
 
-* **Cloudflare (Current Primary Target):** Production builds run natively on Cloudflare Workers, D1 (distributed SQLite), R2 (object storage), and Worker static assets for SPA delivery.
-* **Node.js & PostgreSQL (Groundwork Laid):** Concrete adapter implementations for PostgreSQL (`src/core/adapters/db/postgres/`) and filesystem/S3 storage already exist. The app factory (`createCoreApp`) compiles identically for Node (`src/server/index.ts`), paving the way for containerized Docker deployments.
-* **Pluggable Transactional Email:** Email sending is completely abstract (`IEmailProvider` in `src/core/adapters/email.ts`). It is wired for **Resend** by default (with a zero-config local console fallback), but swapping to Postmark, Amazon SES, SendGrid, or custom SMTP only requires writing a single adapter file—zero core app or route changes needed.
+- **Cloudflare (Current Primary Target):** Production builds run natively on Cloudflare Workers, D1 (distributed SQLite), R2 (object storage), and Worker static assets for SPA delivery.
+- **Node.js & PostgreSQL (Groundwork Laid):** Concrete adapter implementations for PostgreSQL (`src/core/adapters/db/postgres/`) and filesystem/S3 storage already exist. The app factory (`createCoreApp`) compiles identically for Node (`src/server/index.ts`), paving the way for containerized Docker deployments.
+- **Pluggable Transactional Email:** Email sending is completely abstract (`IEmailProvider` in `src/core/adapters/email.ts`). It is wired for **Resend** by default (with a zero-config local console fallback), but swapping to Postmark, Amazon SES, SendGrid, or custom SMTP only requires writing a single adapter file—zero core app or route changes needed.
 
 ---
 
@@ -50,44 +50,41 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
 - `pnpm`
 - Cloudflare Wrangler CLI logged into your account (`pnpm exec wrangler login`)
 
-### Setup & Local Development
+### Local Development (One-Command Setup)
 
 1. **Install dependencies:**
+
    ```bash
    pnpm install
    ```
 
-2. **Configure local environment variables:**
-   Copy the example environment file to create your git-ignored `.dev.vars` (or `.env`):
-   ```bash
-   cp .dev.vars.example .dev.vars
-   ```
-   For local development, sensible defaults are already pre-filled. Note that:
-   - `BETTER_AUTH_SECRET`: Can remain any 32+ character dummy string locally (e.g. `dev-secret-change-me-32-bytes-minimum!!`).
-   - `BETTER_AUTH_URL`: Must match your local web origin (`http://localhost:3005`).
-   - `BOOTSTRAP_TOKEN`: Used to claim the initial owner account (defaults to `dev-bootstrap-token`).
-   - `D1_DATABASE_ID` and `CLOUDFLARE_ACCOUNT_ID`: Not needed for local dev (Miniflare handles SQLite locally).
-   - `RESEND_API_KEY` & `EMAIL_FROM` (optional): To test live email delivery locally, provide a Resend API key and set `EMAIL_FROM=Burrow <onboarding@resend.dev>`. If omitted, invites log directly to your terminal console with zero external setup.
-
-3. **Run local migrations:**
-   ```bash
-   pnpm db:migrate:local
-   ```
-
-4. **Start local dev server:**
+2. **Start local dev server:**
    ```bash
    pnpm dev
    ```
-   Open [http://localhost:3005](http://localhost:3005) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` defined in your `.dev.vars`.
+   `pnpm dev` is a complete one-command local setup:
+   - Automatically applies all pending local D1 migrations (`migrations/`).
+   - Injects sensible local development defaults in memory without writing to `.env` or `.dev.vars`.
+   - Prints your active local URLs and `BOOTSTRAP_TOKEN` directly to the console:
+     ```text
+     ======================================================
+     Burrow Local Development
+       Web App (Vite):     http://localhost:3005
+       Worker API:         http://127.0.0.1:8787
+       BOOTSTRAP_TOKEN:    dev-bootstrap-token
+       Email Delivery:     Console log fallback
+     ======================================================
+     ```
+   - Open [http://localhost:3005](http://localhost:3005) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` printed in your terminal.
 
 > [!NOTE]
-> The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, you can run `pnpm seed:local`. To wipe test data and return to a clean state at any time, run `pnpm run reset --local`.
+> The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, run `pnpm seed:local`. To wipe test data and return to a clean state at any time, run `pnpm run reset --local`.
 
 ---
 
 ## Deployment & Cloudflare Setup
 
-Burrow deploys entirely on Cloudflare Workers, Cloudflare D1 (SQLite), and Cloudflare R2 using the Wrangler CLI.
+Burrow deploys entirely on Cloudflare Workers, Cloudflare D1 (SQLite), and Cloudflare R2 using the Wrangler CLI. All scripts auto-discover remote resources and output generated credentials directly to the console—no `.env` or `.dev.vars` files are written or required.
 
 > [!NOTE]
 > **Use `pnpm run` for scripts**: `setup` and `deploy` are reserved built-in commands in the `pnpm` CLI (`pnpm setup` installs PATH binaries and `pnpm deploy` deploys monorepo workspaces). To run the project's scripts, always invoke them as **`pnpm run setup`** and **`pnpm run deploy`**.
@@ -96,7 +93,7 @@ Burrow deploys entirely on Cloudflare Workers, Cloudflare D1 (SQLite), and Cloud
 
 Before deploying to Cloudflare Workers for the first time, your Cloudflare account must have a registered `*.workers.dev` subdomain:
 
-1. **Log in to Cloudflare Wrangler**:
+1. **Log in to Cloudflare Wrangler** (or let `pnpm run setup` prompt you automatically):
    ```bash
    pnpm exec wrangler login
    ```
@@ -106,32 +103,36 @@ Before deploying to Cloudflare Workers for the first time, your Cloudflare accou
    - On the right-hand panel under **Account details**, locate **Subdomain** (or click **Create application** > **Create Worker** to trigger the subdomain setup prompt).
    - Enter your preferred subdomain (e.g., `yourname.workers.dev`) and click **Save**.
 
-### 2. First-Time Provisioning (`pnpm run setup`)
+### 2. One-Command Provisioning & Deployment (`pnpm run setup`)
 
-To automatically provision the remote D1 database, R2 bucket, upload secrets, run remote migrations, and deploy the worker:
+To automatically install dependencies, migrate local D1, provision or discover the remote D1 database and R2 bucket, apply remote migrations, build, deploy the Worker, upload secrets, and run a live health check in a single command:
 
 ```bash
 pnpm run setup
 ```
 
-> [!IMPORTANT]
-> **Clean Setup Requirement**: Ensure `D1_DATABASE_ID` is blank (`D1_DATABASE_ID=`) in your `.dev.vars` or `.env` file before running setup. If an old ID remains (e.g. after a teardown), `pnpm run setup` will abort to prevent binding to non-existent databases.
-
 Flags available:
-- `--dry-run`: Print commands without running them.
+
+- `--dry-run`: Print every command without executing it.
+- `--local`: Run local-only setup (installs dependencies, migrates local D1, and outputs local credentials to the console).
 - `--domain <domain>`: Deploy to a custom domain already configured on Cloudflare DNS.
 - `--name <worker-name>`: Deploy under a custom Worker name.
 
-Upon completion, `pnpm run setup` will output your deployed URL, your provisioned `D1_DATABASE_ID`, and a one-time `BOOTSTRAP_TOKEN`:
+Upon completion, `pnpm run setup` outputs all URLs, resource IDs, and generated secrets directly to the console (nothing is written to `.env` or `.dev.vars`):
+
 ```text
 ======================================================
-Setup complete!
-  Production URL: https://burrow.<your-subdomain>.workers.dev
-  D1_DATABASE_ID: <database-uuid>
-  BOOTSTRAP_TOKEN: <one-time-token>
+Setup complete! (All values output to console only)
+  Production URL:     https://burrow.<your-subdomain>.workers.dev
+  D1 Database:        burrow (<database-uuid>)
+  R2 Bucket:          burrow-files
+  BETTER_AUTH_URL:    https://burrow.<your-subdomain>.workers.dev
+  BETTER_AUTH_SECRET: <generated-secret>
+  BOOTSTRAP_TOKEN:    <one-time-token>
 ======================================================
 ```
-Copy `D1_DATABASE_ID` and `BOOTSTRAP_TOKEN` into your `.env` or `.dev.vars` file for future deployments, then open your deployed URL to register your initial Owner account.
+
+Open the Production URL and register your initial Owner account using the `BOOTSTRAP_TOKEN` printed in the console.
 
 ### 3. Subsequent Deployments (`pnpm run deploy`)
 
@@ -142,6 +143,7 @@ pnpm run deploy
 ```
 
 This release pipeline automatically:
+
 1. Executes the verification gate (`typecheck`, `check-basalt`, `eslint`, and all unit/API test suites).
 2. Builds the production SPA bundle (`vite build`).
 3. Captures a Cloudflare D1 Time Travel snapshot bookmark to `.deploy-log/rollbacks.log` as a safe rollback point.
@@ -153,8 +155,8 @@ This release pipeline automatically:
 
 Burrow features a provider-agnostic email adapter architecture (`src/core/adapters/email.ts`). While wired for **Resend** by default (with native `fetch` and zero SDK bloat), swapping or adding new providers (such as Postmark, Amazon SES, SendGrid, or custom SMTP) only requires implementing `IEmailProvider` and registering it in the factory—no route handlers or business logic ever touch provider-specific code:
 
-* **Zero-config fallback:** If `RESEND_API_KEY` is not set, invites log to the terminal console (`[email:console]`) and remain instantly shareable via the 1-click **Copy Link** button in the UI.
-* **Production delivery:** Emails are sent asynchronously via Resend with responsive HTML buttons, copyable link fallbacks, and plain-text multipart alternatives.
+- **Zero-config fallback:** If `RESEND_API_KEY` is not set, invites log to the terminal console (`[email:console]`) and remain instantly shareable via the 1-click **Copy Link** button in the UI.
+- **Production delivery:** Emails are sent asynchronously via Resend with responsive HTML buttons, copyable link fallbacks, and plain-text multipart alternatives.
 
 To enable live email delivery on your production deployment:
 
@@ -169,7 +171,7 @@ To enable live email delivery on your production deployment:
      "EMAIL_FROM": "Burrow <notify@yourverifieddomain.com>"
    }
    ```
-3. **Verify domain DNS:** Ensure your sending domain has active SPF and DKIM records verified at [resend.com/domains](https://resend.com/domains). *(For initial testing before domain verification, you can set `EMAIL_FROM=Burrow <onboarding@resend.dev>`, which delivers to your Resend account email).*
+3. **Verify domain DNS:** Ensure your sending domain has active SPF and DKIM records verified at [resend.com/domains](https://resend.com/domains). _(For initial testing before domain verification, you can set `EMAIL_FROM=Burrow <onboarding@resend.dev>`, which delivers to your Resend account email)._
 
 ### 5. Rollback Procedure
 
@@ -183,29 +185,24 @@ Every execution of `pnpm run deploy` records the active D1 Time Travel bookmark 
    ```bash
    wrangler d1 time-travel restore <db-name> --bookmark=<BOOKMARK_FROM_DEPLOY_LOG>
    ```
-   *(Replace `<db-name>` with your database name, defaulting to `burrow` or whatever `--name` was configured).*
+   _(Replace `<db-name>` with your database name, defaulting to `burrow` or whatever `--name` was configured)._
 
 ### 6. Troubleshooting & Common Deployment Errors
 
 #### `Authentication error [code: 10000]` on D1 API endpoints
+
 - **Symptom:** When running `pnpm run deploy` or remote migrations, Wrangler outputs:
   ```
   X [ERROR] A request to the Cloudflare API (/accounts/.../d1/database/burrow) failed.
     Authentication error [code: 10000]
   ```
-- **Cause:** Cloudflare D1 requires a 36-character database UUID for remote API calls. When `D1_DATABASE_ID` is missing from your environment or `.dev.vars`, Wrangler attempts to use the database name (`burrow`) as the ID in the URL, which Cloudflare's API rejects.
+- **Cause:** Cloudflare D1 requires a 36-character database UUID for remote API calls. If the database has not been created yet or Wrangler is not logged into the owning Cloudflare account, auto-discovery cannot resolve the UUID.
 - **Solution:**
-  1. Retrieve your database UUID with:
-     ```bash
-     pnpm exec wrangler d1 list
-     ```
-  2. Add it to your `.dev.vars` (or `.env`) file:
-     ```bash
-     D1_DATABASE_ID=<your-database-uuid>
-     ```
-  3. Re-run `pnpm run deploy`.
+  1. Run `pnpm run setup` to automatically provision or discover the D1 database and generate the git-ignored `wrangler.local.jsonc` binding.
+  2. Or verify your database list with `pnpm exec wrangler d1 list`.
 
 #### Expired Wrangler OAuth Token
+
 - **Symptom:** API requests return authentication or authorization errors even with correct IDs.
 - **Solution:** Refresh your OAuth session by running:
   ```bash
@@ -215,20 +212,36 @@ Every execution of `pnpm run deploy` records the active D1 Time Travel bookmark 
 
 ---
 
-## Scripts
+## Scripts & Environment Targeting
 
-| Script                | Purpose                                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`            | Vite dev server with local Worker and local D1 (Miniflare)                                                                    |
-| `pnpm build`          | Production build of the React SPA to `dist/web`                                                                               |
-| `pnpm check`          | Full local CI replacement: typecheck (`tsc -b`), Basalt CSS design guard, linting (`eslint`), and API tests (`vitest`)          |
-| `pnpm check:data`     | Verifies that all 10 database invariants hold (`scripts/check-invariants.sql`) against local D1, or `--remote` for production |
-| `pnpm run reset`      | Resets database back to clean initial default state: requires `--local` (no prompt) or `--remote` (requires confirmation)    |
-| `pnpm run teardown`   | Permanently tears down all Burrow resources on Cloudflare (Worker, D1, R2) with confirmation prompt                          |
-| `pnpm seed:local`     | (Optional developer demo only) Seeds local D1 database with sample workspace, projects, and Kanban cards                     |
-| `pnpm run setup`      | First-time provision and deployment (`--dry-run` available)                                                                   |
-| `pnpm run deploy`     | Production release: checks, builds, captures D1 Time Travel bookmark, applies remote migrations, and deploys                  |
-| `pnpm logs`           | Streams live Worker logs via `wrangler tail`                                                                                  |
+All environment-aware scripts follow a **safe-by-default (local)** convention:
+
+- **Default (no flag)**: Targets **local** Miniflare SQLite / localhost. Safe to run at any time.
+- **`-r` or `--remote`**: Targets **remote** Cloudflare production.
+
+Every command prints a prominent startup banner confirming its target:
+
+```text
+======================================================
+ACTION: RESET DATABASE
+TARGET: 💻 LOCAL (Miniflare SQLite)
+======================================================
+```
+
+| Script              | Local Default (`pnpm run <cmd>`)                                      | Remote Production (`-r` or `--remote`)                              |
+| :------------------ | :-------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| `pnpm dev`          | Starts Vite (`:3005`) and Worker (`:8787`) with auto D1 migrations    | _(Local only)_                                                      |
+| `pnpm run setup`    | Installs deps, migrates local D1, prints dev URLs & token             | Provisions remote D1/R2, deploys Worker, uploads secrets            |
+| `pnpm run deploy`   | —                                                                     | Checks, builds, records D1 Time Travel snapshot, migrates & deploys |
+| `pnpm run reset`    | Wipes local D1 database without prompt                                | Prompts `"RESET-PRODUCTION"`, then wipes remote D1                  |
+| `pnpm run teardown` | Cleans `.wrangler` local state and build artifacts                    | Prompts `"TEARDOWN"`, then deletes Worker, D1, and R2               |
+| `pnpm check:data`   | Verifies the 10 data invariants against local D1                      | Verifies the 10 data invariants against remote Cloudflare D1        |
+| `pnpm seed`         | Seeds local D1 database with demo workspace & cards                   | _(Local only to protect production)_                                |
+| `pnpm check`        | Full local CI gate: `tsc -b`, Basalt design guard, ESLint, and Vitest | —                                                                   |
+| `pnpm test`         | Runs all Vitest test suites (supports `pnpm test <path>`)             | —                                                                   |
+| `pnpm build`        | Production Vite bundle to `dist/web`                                  | —                                                                   |
+| `pnpm logs`         | Streams live Worker logs via `wrangler tail`                          | _(Remote only)_                                                     |
+| `pnpm format`       | Formats all code with Prettier                                        | —                                                                   |
 
 > **Basalt Design Guard (`check-basalt`)**: A fast repository linter (`scripts/check-basalt.mjs`) included in `pnpm check` that enforces design system integrity by prohibiting raw arbitrary Tailwind utility values and ensuring only curated Basalt semantic tokens are used.
 
@@ -241,3 +254,26 @@ Every execution of `pnpm run deploy` records the active D1 Time Travel bookmark 
 - Mutating endpoints require `editor` or `owner` roles; viewers receive 403 on all mutating operations.
 - Invite tokens are stored only as SHA-256 hashes and expire after 7 days.
 - Content size is strictly validated and capped (1.5 MB limit per notepad), and D1 bound parameters are chunked under the 100-parameter threshold.
+
+---
+
+## License & Commercial Use
+
+Burrow is open-source software licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
+
+- **Open-Source & Self-Hosting**: You are free to inspect, modify, and self-host Burrow for personal, non-profit, or internal organizational use under the terms of the AGPL-3.0.
+- **Network Copyleft Requirement**: In accordance with Section 13 of the AGPL-3.0, if you modify Burrow and run it as a network service or SaaS, you must make the complete source code of your modified version available to all network users under the AGPL-3.0.
+- **Commercial Cloud / SaaS**: A hosted cloud service is provided by the project authors. If you require a commercial license without AGPL-3.0 copyleft obligations, please contact the maintainers.
+- **Third-Party Libraries**: Core editor capabilities are powered by [BlockNote](https://www.blocknotejs.org/), licensed under the Mozilla Public License 2.0 (MPL-2.0).
+
+---
+
+## License & Commercial Use
+
+Burrow is open-source software licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
+
+* **Open-Source & Self-Hosting**: You are free to inspect, modify, and self-host Burrow for personal, non-profit, or internal organizational use under the terms of the AGPL-3.0.
+* **Network Copyleft Requirement**: In accordance with Section 13 of the AGPL-3.0, if you modify Burrow and run it as a network service or SaaS, you must make the complete source code of your modified version available to all network users under the AGPL-3.0.
+* **Commercial Cloud / SaaS**: A hosted cloud service is provided by the project authors. If you require a commercial license without AGPL-3.0 copyleft obligations, please contact the maintainers.
+* **Third-Party Libraries**: Core editor capabilities are powered by [BlockNote](https://www.blocknotejs.org/), licensed under the Mozilla Public License 2.0 (MPL-2.0).
+

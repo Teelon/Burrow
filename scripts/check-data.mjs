@@ -1,16 +1,42 @@
+#!/usr/bin/env node
 import path from 'node:path';
-import { bin, parseFirstJson, root, run } from './lib.mjs';
+import {
+  bin,
+  getWranglerConfigArgs,
+  isRemoteTarget,
+  parseFirstJson,
+  printTargetBanner,
+  root,
+  run,
+} from './lib.mjs';
 
 /**
  * Run scripts/check-invariants.sql (one query per invariant I1..I10) against D1.
- * Usage: pnpm check:data [--remote]
+ *
+ * Targets:
+ *   (default)              Local Miniflare D1 database
+ *   --remote, --r, -r      Remote Cloudflare D1 database
  */
-const remote = process.argv.includes('--remote');
+const isRemote = isRemoteTarget();
+printTargetBanner('Check Data Invariants', isRemote);
+
 const sqlFile = path.join(root, 'scripts', 'check-invariants.sql');
+const configArgs = isRemote
+  ? getWranglerConfigArgs({ required: true, purpose: 'remote data check' })
+  : [];
 
 const res = run(
   bin('wrangler'),
-  ['d1', 'execute', 'burrow', remote ? '--remote' : '--local', '--file', sqlFile, '--json'],
+  [
+    ...configArgs,
+    'd1',
+    'execute',
+    'burrow',
+    isRemote ? '--remote' : '--local',
+    '--file',
+    sqlFile,
+    '--json',
+  ],
   { capture: true, allowFail: true, quiet: true },
 );
 
@@ -43,5 +69,5 @@ if (offenders.length > 0) {
 }
 
 console.log(
-  `check:data OK — all invariants hold (${queryIndex} queries, ${remote ? 'remote' : 'local'})`,
+  `check:data OK — all invariants hold (${queryIndex} queries, ${isRemote ? 'remote Cloudflare' : 'local Miniflare'})`,
 );

@@ -567,7 +567,8 @@ function NotepadEditorInner({
     setData((prev) => ({ ...prev, isFavorite: next }));
     queryClient.setQueryData<Array<{ id: string; isFavorite: boolean }>>(
       ['notepads', initialData.projectId],
-      (old) => (old ? old.map((n) => (n.id === initialData.id ? { ...n, isFavorite: next } : n)) : old),
+      (old) =>
+        old ? old.map((n) => (n.id === initialData.id ? { ...n, isFavorite: next } : n)) : old,
     );
     try {
       const res = await fetch(`/api/notepads/${initialData.id}`, {
@@ -600,7 +601,9 @@ function NotepadEditorInner({
           body: JSON.stringify({ title: newTitle }),
         });
         if (!res.ok) {
-          const err = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+          const err = (await res.json().catch(() => null)) as {
+            error?: { message?: string };
+          } | null;
           throw new Error(err?.error?.message || 'Failed to save title');
         }
         queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] });
@@ -1378,7 +1381,9 @@ function NotepadEditorInner({
           <div className="flex items-center gap-1.5 shrink-0">
             <span>Notepads</span>
             <span className="opacity-50">/</span>
-            <span className="text-[var(--text)] truncate max-w-[200px]">{data.title || 'Untitled'}</span>
+            <span className="text-[var(--text)] truncate max-w-[200px]">
+              {data.title || 'Untitled'}
+            </span>
           </div>
           {tagsNode}
         </div>
@@ -1523,9 +1528,7 @@ export function NotepadEditor({
     return (
       <div
         className={
-          hideTitle
-            ? 'w-full space-y-4'
-            : 'w-full max-w-4xl mx-auto py-8 px-6 sm:px-14 space-y-6'
+          hideTitle ? 'w-full space-y-4' : 'w-full max-w-4xl mx-auto py-8 px-6 sm:px-14 space-y-6'
         }
       >
         <div className="h-8 w-48 bg-[var(--surface2)] animate-pulse" />

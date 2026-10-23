@@ -32,7 +32,15 @@ interface Env {
  * This factory can be called from both Worker and Node entrypoints.
  */
 export function createCoreApp(infra: Infrastructure) {
-  const { repositories, storage, search, locks, auth, email: emailProvider, bootstrapToken } = infra;
+  const {
+    repositories,
+    storage,
+    search,
+    locks,
+    auth,
+    email: emailProvider,
+    bootstrapToken,
+  } = infra;
   const projects = new ProjectService({
     projects: repositories.projects,
     notepads: repositories.notepads,
@@ -241,11 +249,7 @@ export function createCoreApp(infra: Infrastructure) {
     // which throws if the request body is empty. Fall back gracefully to {} if body is empty.
     const req = c.req.raw;
     const contentType = req.headers.get('content-type') || '';
-    if (
-      req.method !== 'GET' &&
-      req.method !== 'HEAD' &&
-      contentType.includes('application/json')
-    ) {
+    if (req.method !== 'GET' && req.method !== 'HEAD' && contentType.includes('application/json')) {
       const cloned = req.clone();
       const text = await cloned.text();
       if (!text || text.trim() === '') {

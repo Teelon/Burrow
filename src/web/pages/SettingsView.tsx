@@ -21,15 +21,7 @@ import { Select } from '../components/ui/Select';
 import { StatusDiamond } from '../components/ui/StatusDiamond';
 
 const ICON_PRESETS = ['📁', '🚀', '⚡', '🎯', '🛠️', '💡', '📊', '📝', '📦', '✨'];
-const COLOR_PRESETS = [
-  '#6366f1',
-  '#059669',
-  '#d97706',
-  '#dc2626',
-  '#9333ea',
-  '#0284c7',
-  '#64748b',
-];
+const COLOR_PRESETS = ['#6366f1', '#059669', '#d97706', '#dc2626', '#9333ea', '#0284c7', '#64748b'];
 
 export function SettingsView() {
   const navigate = useNavigate();

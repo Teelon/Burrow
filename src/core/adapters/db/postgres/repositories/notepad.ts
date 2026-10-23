@@ -12,7 +12,17 @@ import type {
 } from '../../../../infrastructure/types';
 import { eq, and, inArray, desc, sql, isNull, isNotNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
-import { notepads, notepadTags, notepadLinks, notifications, projects, cards, boards, user, editLocks } from '../schema';
+import {
+  notepads,
+  notepadTags,
+  notepadLinks,
+  notifications,
+  projects,
+  cards,
+  boards,
+  user,
+  editLocks,
+} from '../schema';
 import { positionAfterLast } from '../../../../services/utils/ordering';
 import { extractPlainText } from '../../../../shared/extract';
 
@@ -320,7 +330,9 @@ export class PostgresNotepadRepository implements INotepadRepository {
     }
   }
 
-  async listBacklinks(notepadId: string): Promise<{ id: string; title: string; icon?: string | null }[]> {
+  async listBacklinks(
+    notepadId: string,
+  ): Promise<{ id: string; title: string; icon?: string | null }[]> {
     const rows = await this.db
       .select({ id: notepads.id, title: notepads.title, icon: notepads.icon })
       .from(notepadLinks)
@@ -329,8 +341,8 @@ export class PostgresNotepadRepository implements INotepadRepository {
         and(
           eq(notepadLinks.targetId, notepadId),
           eq(notepadLinks.targetType, 'notepad'),
-          isNull(notepads.deletedAt)
-        )
+          isNull(notepads.deletedAt),
+        ),
       );
     return rows;
   }

@@ -7,6 +7,7 @@ This document tracks tightly coupled, high-risk areas across the Burrow codebase
 ## 1. Drag-and-Drop & Spatial Math in JSX Components
 
 ### A. Notepad Hierarchy (`src/web/components/notepads/NotepadTree.tsx`)
+
 - **Symptoms / Incident**: Drag-and-drop tree rearrangement broke due to `computeProjection` math, sensitive collision bounds, and silent mutation failures.
 - **Coupling**:
   - 200+ lines of coordinate math (`relY`, `ROOT_EDGE_PX`, `px`/`py`), cycle detection, depth cap checking, and drop mode calculation (`before` | `after` | `inside`) are closures inside the React component.
@@ -16,6 +17,7 @@ This document tracks tightly coupled, high-risk areas across the Burrow codebase
   - Add co-located unit test `treeProjection.test.ts` testing every boundary (before, after, inside, cycle rejection, depth rejection).
 
 ### B. Kanban Board & Column Dragging (`src/web/components/boards/views/KanbanView.tsx`)
+
 - **Status**: 959 lines in a single file.
 - **Coupling**:
   - Contains ~150 lines of drag-and-drop math in `handleDragEnd` (lines 640–780) computing:
@@ -29,6 +31,7 @@ This document tracks tightly coupled, high-risk areas across the Burrow codebase
   - Add unit tests for `kanbanReorder.test.ts`.
 
 ### C. Subtask Reordering (`src/web/components/boards/SubtasksSection.tsx`)
+
 - **Coupling**: Lines 184–190 compute `afterId` inline using duplicate `reordered.findIndex` calls without unit test coverage.
 - **Refactor Target**:
   - Extract sibling index resolution helper `getReorderedAfterId(items, activeId, overId)`.
@@ -121,12 +124,12 @@ This document tracks tightly coupled, high-risk areas across the Burrow codebase
 
 ## Prioritized Session Backlog
 
-| Priority | Session Item | Status | Primary Files |
-| :--- | :--- | :--- | :--- |
-| **P1** | Add missing `toast.error` to `useMoveCard`, `useMoveColumn`, delete mutations | ✅ **Done** | `src/web/lib/queries.ts` |
-| **P1** | Replace `window.prompt` & `window.confirm` with `PromptDialog` & `ConfirmDialog` | ✅ **Done** | `src/web/components/layout/Sidebar.tsx`, `ProjectHome.tsx`, `TrashView.tsx`, `CommentsFeed.tsx` |
-| **P2** | Extract pure `treeProjection.ts` and add unit test suite (16 tests) | ✅ **Done** | `src/web/components/notepads/treeProjection.ts`, `treeProjection.test.ts` |
-| **P2** | Extract pure `kanbanReorder.ts` and add unit test suite (19 tests) | ✅ **Done** | `src/web/components/boards/kanbanReorder.ts`, `kanbanReorder.test.ts`, `KanbanView.tsx`, `SubtasksSection.tsx` |
-| **P3** | Add `card.contract.test.ts` and `board.contract.test.ts` | Backlog | `tests/adapters/` |
-| **P3** | Split `queries.ts` into domain-specific modules | Backlog | `src/web/lib/queries/` |
-| **P4** | Decompose `NotepadEditor.tsx` into custom hooks | Backlog | `src/web/editor/` |
+| Priority | Session Item                                                                     | Status      | Primary Files                                                                                                  |
+| :------- | :------------------------------------------------------------------------------- | :---------- | :------------------------------------------------------------------------------------------------------------- |
+| **P1**   | Add missing `toast.error` to `useMoveCard`, `useMoveColumn`, delete mutations    | ✅ **Done** | `src/web/lib/queries.ts`                                                                                       |
+| **P1**   | Replace `window.prompt` & `window.confirm` with `PromptDialog` & `ConfirmDialog` | ✅ **Done** | `src/web/components/layout/Sidebar.tsx`, `ProjectHome.tsx`, `TrashView.tsx`, `CommentsFeed.tsx`                |
+| **P2**   | Extract pure `treeProjection.ts` and add unit test suite (16 tests)              | ✅ **Done** | `src/web/components/notepads/treeProjection.ts`, `treeProjection.test.ts`                                      |
+| **P2**   | Extract pure `kanbanReorder.ts` and add unit test suite (19 tests)               | ✅ **Done** | `src/web/components/boards/kanbanReorder.ts`, `kanbanReorder.test.ts`, `KanbanView.tsx`, `SubtasksSection.tsx` |
+| **P3**   | Add `card.contract.test.ts` and `board.contract.test.ts`                         | Backlog     | `tests/adapters/`                                                                                              |
+| **P3**   | Split `queries.ts` into domain-specific modules                                  | Backlog     | `src/web/lib/queries/`                                                                                         |
+| **P4**   | Decompose `NotepadEditor.tsx` into custom hooks                                  | Backlog     | `src/web/editor/`                                                                                              |

@@ -24,9 +24,7 @@ export function inviteEmail(
     ? `${escapeHtml(safeInviter)} has invited you to collaborate`
     : `You have been invited to collaborate`;
 
-  const workspaceContext = safeWorkspace
-    ? ` on <b>${escapeHtml(safeWorkspace)}</b>`
-    : '';
+  const workspaceContext = safeWorkspace ? ` on <b>${escapeHtml(safeWorkspace)}</b>` : '';
 
   const html = [
     `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#18181b;">`,

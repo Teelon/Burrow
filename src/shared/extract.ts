@@ -45,13 +45,7 @@ function parseDoc(content: string): unknown[] {
 function readMentionProps(props: unknown): MentionProps | null {
   if (!isRecord(props)) return null;
   const kind = props.kind;
-  if (
-    kind !== 'user' &&
-    kind !== 'notepad' &&
-    kind !== 'card' &&
-    kind !== 'date' &&
-    kind !== 'tag'
-  )
+  if (kind !== 'user' && kind !== 'notepad' && kind !== 'card' && kind !== 'date' && kind !== 'tag')
     return null;
   return {
     kind,

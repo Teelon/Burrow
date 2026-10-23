@@ -55,11 +55,7 @@ export function buildTreeStructure(notepads: NotepadNode[]): TreeStructure {
   return { roots, childrenMap, parentById, nodeById };
 }
 
-export function depthOf(
-  structure: TreeStructure,
-  id: string,
-  maxDepth = MAX_DEPTH,
-): number {
+export function depthOf(structure: TreeStructure, id: string, maxDepth = MAX_DEPTH): number {
   let depth = 1;
   let p = structure.parentById.get(id) ?? null;
   while (p !== null && depth <= maxDepth + 1) {
@@ -87,11 +83,7 @@ export function currentDropPlacement(
   return { parentId, afterId: prev ? prev.id : null };
 }
 
-export function rootAncestorOf(
-  structure: TreeStructure,
-  id: string,
-  maxDepth = MAX_DEPTH,
-): string {
+export function rootAncestorOf(structure: TreeStructure, id: string, maxDepth = MAX_DEPTH): string {
   let cur = id;
   let guard = 0;
   while (guard <= maxDepth + 1) {

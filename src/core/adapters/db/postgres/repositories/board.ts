@@ -109,10 +109,7 @@ export class PostgresBoardRepository implements IBoardRepository {
         }
       }
 
-      await tx
-        .update(boards)
-        .set({ deletedAt: null, updatedAt: now })
-        .where(eq(boards.id, id));
+      await tx.update(boards).set({ deletedAt: null, updatedAt: now }).where(eq(boards.id, id));
     });
   }
 

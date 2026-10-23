@@ -58,9 +58,7 @@ export function PromptDialog({
   return (
     <ModalShell open={open} onClose={busy ? undefined : onCancel} title={title}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {message && (
-          <p className="text-xs leading-relaxed text-[var(--muted)]">{message}</p>
-        )}
+        {message && <p className="text-xs leading-relaxed text-[var(--muted)]">{message}</p>}
         <Input
           ref={inputRef}
           value={value}

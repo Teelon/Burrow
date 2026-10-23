@@ -529,7 +529,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                     boards.map((b) => {
                       const isActive = b.id === currentBoardId;
                       return (
-                        <div key={b.id} className="group relative flex items-center justify-between">
+                        <div
+                          key={b.id}
+                          className="group relative flex items-center justify-between"
+                        >
                           <Link
                             to="/p/$projectId/boards/$boardId"
                             params={{
@@ -1363,7 +1366,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                         title={t.title}
                         className="block px-3 py-2 text-xs hover:bg-hi text-ink-muted hover:text-text transition border-b border-hair/50"
                       >
-                        <div className="font-semibold text-text truncate" title={t.title}>{t.title}</div>
+                        <div className="font-semibold text-text truncate" title={t.title}>
+                          {t.title}
+                        </div>
                         <div className="flex items-center justify-between gap-1 text-[11px] text-ink-muted mt-0.5">
                           <span className="truncate">{t.boardName}</span>
                           {t.dueDate && (

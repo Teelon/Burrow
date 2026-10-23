@@ -465,7 +465,9 @@ export class NotepadService {
     }
 
     if (args.clientId) {
-      await this.locks.acquire(args.notepadId, args.actorId, args.clientId, LOCK_TTL_MS).catch(() => false);
+      await this.locks
+        .acquire(args.notepadId, args.actorId, args.clientId, LOCK_TTL_MS)
+        .catch(() => false);
     }
 
     return { version: after.version };

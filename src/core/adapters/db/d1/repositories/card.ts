@@ -66,12 +66,7 @@ export function createCardRepository(db: DB): ICardRepository {
         })
         .from(t.cards)
         .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-        .where(
-          and(
-            eq(t.cards.id, id),
-            eq(t.notepads.workspaceId, workspaceId),
-          ),
-        );
+        .where(and(eq(t.cards.id, id), eq(t.notepads.workspaceId, workspaceId)));
       return row ? mapCard(row) : null;
     },
 

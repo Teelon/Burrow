@@ -29,6 +29,20 @@ export function hasFlag(flag) {
   return process.argv.slice(2).some((a) => a === flag || a.startsWith(`${flag}=`));
 }
 
+/** Check if the command was invoked with any remote flag: --remote, --r, or -r. */
+export function isRemoteTarget() {
+  return hasFlag('--remote') || hasFlag('--r') || hasFlag('-r');
+}
+
+/** Print a loud, prominent target banner at the start of a command. */
+export function printTargetBanner(action, isRemote) {
+  const target = isRemote ? '☁️  REMOTE (Cloudflare Production)' : '💻 LOCAL (Miniflare SQLite)';
+  console.log('======================================================');
+  console.log(`ACTION: ${action.toUpperCase()}`);
+  console.log(`TARGET: ${target}`);
+  console.log('======================================================\n');
+}
+
 /**
  * Run a command. Honors --dry-run globally via `dryRun`.
  * Uses shell only where required (Windows .cmd shims such as pnpm).
@@ -137,24 +151,26 @@ export function loadEnv() {
 
 /**
  * Returns wrangler CLI config args (--config wrangler.local.jsonc).
- * Uses git-ignored wrangler.local.jsonc if D1_DATABASE_ID is set in .env / .dev.vars,
- * ensuring no personal UUIDs or account identifiers are committed to wrangler.jsonc.
+ * Auto-discovers D1_DATABASE_ID from Cloudflare if not provided in process.env,
+ * and writes only to git-ignored ephemeral wrangler.local.jsonc (never mutates .env or .dev.vars).
  */
 export function getWranglerConfigArgs(options = {}) {
   const {
     d1IdOverride = null,
     required = false,
     purpose = 'deployment',
+    ignoreCached = false,
   } = typeof options === 'string' ? { d1IdOverride: options } : options;
 
   loadEnv();
   let d1Id =
-    d1IdOverride || process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID;
+    d1IdOverride ||
+    (!ignoreCached ? process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID : null);
   const configPath = path.join(root, 'wrangler.jsonc');
   const baseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   const localConfigPath = path.join(root, 'wrangler.local.jsonc');
 
-  if (!d1Id && fs.existsSync(localConfigPath)) {
+  if (!d1Id && !ignoreCached && fs.existsSync(localConfigPath)) {
     try {
       const existingLocal = JSON.parse(fs.readFileSync(localConfigPath, 'utf8'));
       if (existingLocal.d1_databases?.[0]?.database_id) {
@@ -176,13 +192,10 @@ export function getWranglerConfigArgs(options = {}) {
         });
         if (list.status === 0) {
           const dbs = parseFirstJson(list.stdout) ?? [];
-          const found = dbs.find(
-            (d) => d.database_name === dbName || d.name === dbName,
-          );
+          const found = dbs.find((d) => d.database_name === dbName || d.name === dbName);
           if (found) {
             d1Id = found.uuid ?? found.database_id;
             console.log(`  💡 Auto-discovered remote D1 database "${dbName}" (${d1Id})`);
-            syncD1IdToDevVars(d1Id);
           }
         }
       }
@@ -199,28 +212,13 @@ export function getWranglerConfigArgs(options = {}) {
     return [];
   }
 
-  // Create or update git-ignored wrangler.local.jsonc
+  // Create or update git-ignored ephemeral wrangler.local.jsonc for Wrangler CLI
   const localConfig = JSON.parse(JSON.stringify(baseConfig));
   if (localConfig.d1_databases?.[0]) {
     localConfig.d1_databases[0].database_id = d1Id;
   }
   fs.writeFileSync(localConfigPath, JSON.stringify(localConfig, null, 2) + '\n');
   return ['--config', 'wrangler.local.jsonc'];
-}
-
-function syncD1IdToDevVars(d1Id) {
-  const devVarsPath = path.join(root, '.dev.vars');
-  if (!fs.existsSync(devVarsPath)) return;
-  try {
-    const content = fs.readFileSync(devVarsPath, 'utf8');
-    if (/^D1_DATABASE_ID=\s*$/m.test(content)) {
-      const updated = content.replace(/^D1_DATABASE_ID=\s*$/m, `D1_DATABASE_ID=${d1Id}`);
-      fs.writeFileSync(devVarsPath, updated);
-      console.log(`  💾 Saved D1_DATABASE_ID=${d1Id} to .dev.vars`);
-    }
-  } catch (_err) {
-    void _err;
-  }
 }
 
 function printMissingD1Error(purpose) {
@@ -230,22 +228,13 @@ function printMissingD1Error(purpose) {
   console.error('Could not resolve your Cloudflare D1 Database ID.\n');
   console.error('🔍 Why this happens:');
   console.error('  Cloudflare D1 requires a 36-character database UUID for remote operations');
-  console.error('  (migrations, time-travel, deployments). Without it, Cloudflare API requests fail');
-  console.error('  with a cryptic "Authentication error [code: 10000]" because Wrangler passes the');
-  console.error('  database name ("burrow") as an ID.\n');
+  console.error('  (migrations, time-travel, deployments). Either the database has not been');
+  console.error('  provisioned yet, or your Wrangler CLI session is not logged in.\n');
   console.error('🛠️ How to fix:');
-  console.error('  Option 1: If you haven\'t provisioned Cloudflare resources yet:');
-  console.error('    Run: pnpm run setup');
-  console.error('    (This automatically provisions the D1 database, R2 bucket, and sets up secrets.)\n');
-  console.error('  Option 2: If the D1 database already exists on your Cloudflare account:');
-  console.error('    1. List your account databases:');
-  console.error('         pnpm exec wrangler d1 list');
-  console.error('    2. Copy the UUID for "burrow" and set it in your .dev.vars (or .env) file:');
-  console.error('         D1_DATABASE_ID=<your-database-uuid>');
-  console.error('    3. Re-run:');
-  console.error(`         pnpm run ${purpose.includes('deploy') ? 'deploy' : 'db:migrate:remote'}\n`);
-  console.error('  Option 3: If your Cloudflare login session has expired:');
-  console.error('    Run: pnpm exec wrangler login');
+  console.error('  Option 1: Run the one-command setup to provision all Cloudflare resources:');
+  console.error('    pnpm run setup\n');
+  console.error('  Option 2: If your Cloudflare login session has expired:');
+  console.error('    pnpm exec wrangler login');
   console.error('='.repeat(80) + '\n');
 }
 
@@ -255,18 +244,14 @@ function printWranglerTroubleshooting(printable) {
   console.error('='.repeat(80));
   if (printable.includes('d1')) {
     console.error('• D1 "Authentication error [code: 10000]":');
-    console.error('  - Cloudflare D1 requires the database UUID (36 characters), NOT the name "burrow".');
-    console.error('  - Ensure D1_DATABASE_ID is set in your .dev.vars (or .env) file.');
-    console.error('  - Run `pnpm exec wrangler d1 list` to view your account databases and copy the UUID.');
+    console.error('  - Cloudflare D1 requires a valid 36-character database UUID.');
+    console.error('  - Run `pnpm run setup` to provision or auto-discover the database.');
+    console.error('  - Or run `pnpm exec wrangler d1 list` to inspect your account databases.');
   }
   console.error('• Authentication or Permission errors:');
   console.error('  - Verify active login and account: `pnpm exec wrangler whoami`');
   console.error('  - Re-authenticate if session expired: `pnpm exec wrangler login`');
   console.error('• First-time setup:');
-  console.error('  - Run `pnpm run setup` for automatic first-time provisioning.');
-  console.error('• Documentation:');
-  console.error('  - See README.md (#deployment--cloudflare-setup) for troubleshooting and deployment guides.');
+  console.error('  - Run `pnpm run setup` for automatic one-command provisioning.');
   console.error('='.repeat(80) + '\n');
 }
-
-

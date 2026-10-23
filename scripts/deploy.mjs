@@ -5,9 +5,20 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { bin, root, run, smoke, step, parseFirstJson, getWranglerConfigArgs } from './lib.mjs';
+import {
+  bin,
+  getWranglerConfigArgs,
+  parseFirstJson,
+  printTargetBanner,
+  root,
+  run,
+  smoke,
+  step,
+} from './lib.mjs';
 
 async function main() {
+  printTargetBanner('Production Deploy', true);
+
   step('Preflight check (Cloudflare D1 configuration)');
   const configArgs = getWranglerConfigArgs({ required: true, purpose: 'deploying' });
 
@@ -18,11 +29,15 @@ async function main() {
   run(bin('vite'), ['build']);
 
   step('Record D1 Time Travel bookmark (rollback point)');
-  const tt = run(bin('wrangler'), [...configArgs, 'd1', 'time-travel', 'info', 'burrow', '--remote', '--json'], {
-    capture: true,
-    allowFail: true,
-    quiet: true,
-  });
+  const tt = run(
+    bin('wrangler'),
+    [...configArgs, 'd1', 'time-travel', 'info', 'burrow', '--remote', '--json'],
+    {
+      capture: true,
+      allowFail: true,
+      quiet: true,
+    },
+  );
   if (tt.status === 0) {
     const info = parseFirstJson(tt.stdout) ?? {};
     const bookmark = info.bookmark ?? info;
@@ -36,7 +51,9 @@ async function main() {
   }
 
   step('Apply pending migrations to remote D1 (before uploading code)');
-  run(bin('wrangler'), [...configArgs, 'd1', 'migrations', 'apply', 'burrow', '--remote'], { env: { CI: '1' } });
+  run(bin('wrangler'), [...configArgs, 'd1', 'migrations', 'apply', 'burrow', '--remote'], {
+    env: { CI: '1' },
+  });
 
   step('Deploy');
   const deploy = run(bin('wrangler'), [...configArgs, 'deploy'], { capture: true });

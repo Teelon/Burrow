@@ -92,7 +92,6 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
         </button>
       )}
 
-
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-64 bg-surface border border-line py-1.5 z-50">
           <div className="px-3 py-1.5 text-xs font-semibold text-muted uppercase tracking-wider">

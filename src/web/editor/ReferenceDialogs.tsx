@@ -38,7 +38,10 @@ export function NotepadPickerModal({
         body: JSON.stringify({ title: newTitle.trim() }),
       });
       if (!res.ok) {
-        const err = (await res.json().catch(() => ({}))) as { error?: { message?: string }; message?: string };
+        const err = (await res.json().catch(() => ({}))) as {
+          error?: { message?: string };
+          message?: string;
+        };
         throw new Error(err.error?.message || err.message || 'Failed to create notepad');
       }
       const data = (await res.json()) as { id: string };

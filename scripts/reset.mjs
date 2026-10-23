@@ -1,26 +1,27 @@
 #!/usr/bin/env node
 /**
  * Reset all Burrow resources back to a clean initial default state.
- * Works on local (--local) or remote (--remote).
- * Wipes all tables and resets schema to fresh initial state.
- * Usage:
- *   pnpm run reset --local     (wipes local D1, no prompt)
- *   pnpm run reset --remote    (wipes remote D1, requires confirmation)
+ *
+ * Targets:
+ *   (default)              Local Miniflare D1 database (wipes without prompt)
+ *   --remote, --r, -r      Remote Cloudflare D1 database (requires confirmation phrase)
+ *
+ * Flags:
+ *   --force                Bypass interactive confirmation on remote
  */
 import readline from 'node:readline/promises';
-import { bin, hasFlag, run, step, getWranglerConfigArgs } from './lib.mjs';
+import {
+  bin,
+  hasFlag,
+  isRemoteTarget,
+  printTargetBanner,
+  run,
+  step,
+  getWranglerConfigArgs,
+} from './lib.mjs';
 
-const isRemote = hasFlag('--remote');
-const isLocal = hasFlag('--local');
+const isRemote = isRemoteTarget();
 const force = hasFlag('--force');
-
-if (!isRemote && !isLocal) {
-  console.error('\n❌ Error: Target flag required.');
-  console.error('Usage:');
-  console.error('  pnpm run reset --local     # Wipes local D1 database without prompt');
-  console.error('  pnpm run reset --remote    # Wipes remote Cloudflare D1 (requires confirmation)\n');
-  process.exit(1);
-}
 
 const cleanSql = [
   'DELETE FROM notepads_fts;',
@@ -47,22 +48,26 @@ const cleanSql = [
 ].join(' ');
 
 async function main() {
+  printTargetBanner('Reset Database', isRemote);
+
   const targetName = isRemote ? 'REMOTE Cloudflare Production' : 'LOCAL Miniflare';
 
   // Remote requires explicit confirmation unless --force is given.
   // Local runs unprompted for a fast dev loop.
   if (isRemote && !force) {
-    console.log('\n======================================================');
+    console.log('======================================================');
     console.log(`⚠️  DANGER: RESET REMOTE PRODUCTION DATABASE (${targetName})`);
     console.log('======================================================');
-    console.log(`This will WIPE ALL DATA from your remote Cloudflare D1 database:`);
+    console.log('This will WIPE ALL DATA from your remote Cloudflare D1 database:');
     console.log('  - All users, accounts, sessions, and workspaces');
     console.log('  - All projects, boards, cards, and notepads');
     console.log('  - Returns the production database to a completely clean, initial slate.');
     console.log('======================================================\n');
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await rl.question('Type "RESET-PRODUCTION" to confirm resetting remote production: ');
+    const answer = await rl.question(
+      'Type "RESET-PRODUCTION" to confirm resetting remote production: ',
+    );
     rl.close();
 
     if (answer.trim() !== 'RESET-PRODUCTION') {

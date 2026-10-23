@@ -42,7 +42,11 @@ const server = serve(
     port: config.PORT,
   },
   (info) => {
-    console.log(`burrow node server listening on http://localhost:${info.port}`);
+    console.log('\n======================================================');
+    console.log('Burrow Node Server');
+    console.log(`  Listening URL:      http://localhost:${info.port}`);
+    console.log(`  BOOTSTRAP_TOKEN:    ${config.BOOTSTRAP_TOKEN}`);
+    console.log('======================================================\n');
   },
 );
 

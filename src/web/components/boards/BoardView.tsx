@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { CalendarDays, Filter, Kanban, List, Plus, Search, Trash2, X } from 'lucide-react';
-import { useBoard, useDeleteBoard, useMembers, useProjectTags, useUpdateBoard } from '../../lib/queries';
+import {
+  useBoard,
+  useDeleteBoard,
+  useMembers,
+  useProjectTags,
+  useUpdateBoard,
+} from '../../lib/queries';
 import { CardPanel } from './CardPanel';
 import { KanbanView } from './views/KanbanView';
 import { ListView } from './views/ListView';
@@ -333,11 +339,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           onCardClick={(id) => openCard(id)}
         />
       ) : viewMode === 'list' ? (
-        <ListView
-          boardId={boardId}
-          columns={filteredColumns}
-          onCardClick={(id) => openCard(id)}
-        />
+        <ListView boardId={boardId} columns={filteredColumns} onCardClick={(id) => openCard(id)} />
       ) : (
         <CalendarView
           boardId={boardId}

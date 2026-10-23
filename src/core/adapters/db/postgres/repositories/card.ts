@@ -78,7 +78,9 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
-      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)))
+      .where(
+        and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)),
+      )
       .limit(1);
     return result[0] ?? null;
   }
@@ -104,7 +106,9 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
-      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)))
+      .where(
+        and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)),
+      )
       .limit(1);
 
     if (!card) return null;

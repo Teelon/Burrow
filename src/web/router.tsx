@@ -22,7 +22,9 @@ const rootRoute = createRootRoute({
     <div className="flex h-screen flex-col items-center justify-center p-8 text-center bg-[var(--bg)] text-[var(--text)]">
       <div className="text-4xl mb-4">⚠️</div>
       <h2 className="text-lg font-bold mb-2">Something went wrong</h2>
-      <p className="text-xs text-[var(--muted)] max-w-md mb-6">{error instanceof Error ? error.message : 'An unexpected error occurred.'}</p>
+      <p className="text-xs text-[var(--muted)] max-w-md mb-6">
+        {error instanceof Error ? error.message : 'An unexpected error occurred.'}
+      </p>
       <button
         onClick={() => {
           reset();

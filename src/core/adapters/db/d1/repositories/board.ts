@@ -36,12 +36,7 @@ export function createBoardRepository(db: DB): IBoardRepository {
       const [row] = await db
         .select()
         .from(t.boards)
-        .where(
-          and(
-            eq(t.boards.id, id),
-            eq(t.boards.workspaceId, workspaceId),
-          ),
-        );
+        .where(and(eq(t.boards.id, id), eq(t.boards.workspaceId, workspaceId)));
       return row ? mapBoard(row) : null;
     },
 

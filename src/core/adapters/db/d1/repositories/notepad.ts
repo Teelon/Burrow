@@ -261,7 +261,7 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         .select({ content: t.notepads.content, version: t.notepads.version })
         .from(t.notepads)
         .where(eq(t.notepads.id, id));
-        
+
       if (!after || after.content !== content) {
         throw new Error('version_conflict');
       }
@@ -419,7 +419,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       if (statements.length > 0) await runBatch(db, statements);
     },
 
-    async listBacklinks(notepadId: string): Promise<{ id: string; title: string; icon?: string | null }[]> {
+    async listBacklinks(
+      notepadId: string,
+    ): Promise<{ id: string; title: string; icon?: string | null }[]> {
       const rows = await db
         .select({ id: t.notepads.id, title: t.notepads.title, icon: t.notepads.icon })
         .from(t.notepadLinks)
@@ -428,8 +430,8 @@ export function createNotepadRepository(db: DB): INotepadRepository {
           and(
             eq(t.notepadLinks.targetId, notepadId),
             eq(t.notepadLinks.targetType, 'notepad'),
-            isNull(t.notepads.deletedAt)
-          )
+            isNull(t.notepads.deletedAt),
+          ),
         );
       return rows;
     },
@@ -527,7 +529,6 @@ export function createNotepadRepository(db: DB): INotepadRepository {
     },
   };
 }
-
 
 function mapNotepad(row: typeof t.notepads.$inferSelect): Notepad {
   return {

@@ -1,18 +1,54 @@
 #!/usr/bin/env node
 /**
- * Completely tear down and remove Burrow resources from Cloudflare.
- * Deletes: Cloudflare Worker, D1 Database, R2 Bucket.
- * Usage: pnpm run teardown [--force]
+ * Completely tear down Burrow resources.
+ *
+ * Targets:
+ *   (default)              Local cleanup (clears .wrangler local state, dist/ bundles, ephemeral configs)
+ *   --remote, --r, -r      Remote Cloudflare teardown (permanently deletes Worker, D1, R2 on Cloudflare)
+ *
+ * Flags:
+ *   --force                Bypass interactive confirmation on remote
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline/promises';
-import { bin, hasFlag, run, step } from './lib.mjs';
+import { bin, hasFlag, isRemoteTarget, printTargetBanner, root, run, step } from './lib.mjs';
 
+const isRemote = isRemoteTarget();
 const force = hasFlag('--force');
 
 async function main() {
+  printTargetBanner('Teardown', isRemote);
 
-  console.log('\n======================================================');
-  console.log('⚠️  DANGER: CLOUDFLARE RESOURCE TEARDOWN');
+  if (!isRemote) {
+    step('Cleaning local development state');
+    const localConfigPath = path.join(root, 'wrangler.local.jsonc');
+    if (fs.existsSync(localConfigPath)) {
+      fs.rmSync(localConfigPath, { force: true });
+      console.log('  Removed wrangler.local.jsonc');
+    }
+    const wranglerDir = path.join(root, '.wrangler');
+    if (fs.existsSync(wranglerDir)) {
+      fs.rmSync(wranglerDir, { recursive: true, force: true });
+      console.log('  Removed .wrangler/ local state');
+    }
+    const distDir = path.join(root, 'dist');
+    if (fs.existsSync(distDir)) {
+      fs.rmSync(distDir, { recursive: true, force: true });
+      console.log('  Removed dist/ build directory');
+    }
+    console.log('\n======================================================');
+    console.log('✅ Local cleanup complete. Local state reset.');
+    console.log('Run `pnpm dev` or `pnpm run setup` to initialize fresh.');
+    console.log('To tear down remote Cloudflare production resources, run:');
+    console.log('  pnpm run teardown -r\n');
+    console.log('======================================================\n');
+    return;
+  }
+
+  // --- Remote Cloudflare Teardown ---
+  console.log('======================================================');
+  console.log('⚠️  DANGER: CLOUDFLARE PRODUCTION RESOURCE TEARDOWN');
   console.log('======================================================');
   console.log('This will PERMANENTLY delete the following remote resources:');
   console.log('  1. Cloudflare Worker: "burrow"');
@@ -22,7 +58,9 @@ async function main() {
 
   if (!force) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await rl.question('Type "TEARDOWN" to confirm and permanently delete these resources: ');
+    const answer = await rl.question(
+      'Type "TEARDOWN" to confirm and permanently delete these resources: ',
+    );
     rl.close();
 
     if (answer.trim() !== 'TEARDOWN') {
@@ -41,12 +79,18 @@ async function main() {
 
   // 3. Delete R2 Bucket
   step('Deleting Cloudflare R2 bucket ("burrow-files")');
-  // First check or empty if needed, then delete bucket
   run(bin('wrangler'), ['r2', 'bucket', 'delete', 'burrow-files'], { allowFail: true });
+
+  // 4. Clean up ephemeral wrangler.local.jsonc
+  const localConfigPath = path.join(root, 'wrangler.local.jsonc');
+  if (fs.existsSync(localConfigPath)) {
+    fs.rmSync(localConfigPath, { force: true });
+    console.log('  Removed ephemeral wrangler.local.jsonc');
+  }
 
   console.log('\n======================================================');
   console.log('✅ Teardown complete. All remote Burrow resources deleted.');
-  console.log('Remember to remove D1_DATABASE_ID from your .env or .dev.vars if present.');
+  console.log('Run `pnpm run setup -r` at any time to provision a fresh deployment.');
   console.log('======================================================\n');
 }
 

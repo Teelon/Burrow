@@ -36,10 +36,7 @@ export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure
   // Create adapters (stateless, can be shared)
   const search = new SqliteFtsSearchAdapter(db);
   const locks = new SqlLockAdapter(db, async (userId) => {
-    const [u] = await db
-      .select({ name: t.user.name })
-      .from(t.user)
-      .where(eq(t.user.id, userId));
+    const [u] = await db.select({ name: t.user.name }).from(t.user).where(eq(t.user.id, userId));
     return u?.name ?? null;
   });
   const storage = createStorageFromEnv(env);

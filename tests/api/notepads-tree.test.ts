@@ -299,4 +299,3 @@ describe('Notepad tree excludes soft-deleted and card-kind notepads', () => {
     await expectInvariantsHold(env.DB);
   });
 });
-

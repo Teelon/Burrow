@@ -136,7 +136,9 @@ function CardTile({
 
   // Prioritize card priority color for the left accent stripe so it matches the priority badge;
   // fall back to column status color only when no priority is set.
-  const activeStatus = card.priority ? priorityStatusColor(card.priority) : statusColor || undefined;
+  const activeStatus = card.priority
+    ? priorityStatusColor(card.priority)
+    : statusColor || undefined;
 
   return (
     <Card
@@ -898,51 +900,52 @@ export function KanbanView({
       />
 
       {/* Delete Column Confirm Dialog */}
-      {columnToDelete && (() => {
-        const otherCols = columns.filter((c) => c.id !== columnToDelete.id);
-        const moveToCol = otherCols[0];
-        const hasCards = columnToDelete.cardCount > 0;
-        return (
-          <ConfirmDialog
-            open={true}
-            title="Delete column"
-            message={
-              hasCards && moveToCol
-                ? `Column "${columnToDelete.name}" has ${columnToDelete.cardCount} card(s). They will be moved to "${moveToCol.name}". Are you sure you want to delete this column?`
-                : `Are you sure you want to delete column "${columnToDelete.name}"?`
-            }
-            confirmLabel="Delete"
-            danger={true}
-            busy={deleteColumnMutation.isPending}
-            onConfirm={() => {
-              deleteColumnMutation.mutate(
-                {
-                  boardId,
-                  columnId: columnToDelete.id,
-                  moveTo: hasCards && moveToCol ? moveToCol.id : undefined,
-                },
-                {
-                  onSuccess: () => {
-                    if (hasCards && moveToCol) {
-                      toast.success(
-                        `Column deleted — ${columnToDelete.cardCount} cards moved to ${moveToCol.name}`,
-                      );
-                    } else {
-                      toast.success('Column deleted');
-                    }
-                    setColumnToDelete(null);
+      {columnToDelete &&
+        (() => {
+          const otherCols = columns.filter((c) => c.id !== columnToDelete.id);
+          const moveToCol = otherCols[0];
+          const hasCards = columnToDelete.cardCount > 0;
+          return (
+            <ConfirmDialog
+              open={true}
+              title="Delete column"
+              message={
+                hasCards && moveToCol
+                  ? `Column "${columnToDelete.name}" has ${columnToDelete.cardCount} card(s). They will be moved to "${moveToCol.name}". Are you sure you want to delete this column?`
+                  : `Are you sure you want to delete column "${columnToDelete.name}"?`
+              }
+              confirmLabel="Delete"
+              danger={true}
+              busy={deleteColumnMutation.isPending}
+              onConfirm={() => {
+                deleteColumnMutation.mutate(
+                  {
+                    boardId,
+                    columnId: columnToDelete.id,
+                    moveTo: hasCards && moveToCol ? moveToCol.id : undefined,
                   },
-                  onError: (err: any) => {
-                    toast.error(err?.message || 'Failed to delete column');
-                    setColumnToDelete(null);
+                  {
+                    onSuccess: () => {
+                      if (hasCards && moveToCol) {
+                        toast.success(
+                          `Column deleted — ${columnToDelete.cardCount} cards moved to ${moveToCol.name}`,
+                        );
+                      } else {
+                        toast.success('Column deleted');
+                      }
+                      setColumnToDelete(null);
+                    },
+                    onError: (err: any) => {
+                      toast.error(err?.message || 'Failed to delete column');
+                      setColumnToDelete(null);
+                    },
                   },
-                },
-              );
-            }}
-            onCancel={() => setColumnToDelete(null)}
-          />
-        );
-      })()}
+                );
+              }}
+              onCancel={() => setColumnToDelete(null)}
+            />
+          );
+        })()}
 
       {/* Keyboard quick modals (Space / P / M) */}
       {peekCard && (

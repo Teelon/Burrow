@@ -1,5 +1,6 @@
-# Copy to .dev.vars (git-ignored) for local development and deployment.
-# Never commit real values. Production secrets go through `wrangler secret put`.
+# Optional overrides for local development (git-ignored).
+# `pnpm dev` and `pnpm run setup` work out-of-the-box without creating this file
+# and output all credentials and IDs directly to the console.
 D1_DATABASE_ID=
 CLOUDFLARE_ACCOUNT_ID=
 

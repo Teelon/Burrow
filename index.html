@@ -16,9 +16,7 @@
         try {
           var stored = localStorage.getItem('burrow-theme');
           var theme =
-            stored === 'light' || stored === 'modern' || stored === 'basalt'
-              ? stored
-              : 'basalt';
+            stored === 'light' || stored === 'modern' || stored === 'basalt' ? stored : 'basalt';
           if (theme === 'light') {
             document.documentElement.classList.remove('dark');
             document.documentElement.style.colorScheme = 'light';

@@ -4,10 +4,7 @@ import { createReactInlineContentSpec, createReactBlockSpec } from '@blocknote/r
 import { Calendar, FileText, Kanban, Layout, Tag } from 'lucide-react';
 
 function getInitials(name?: string | null): string {
-  const parts = (name || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
   const first = parts[0];
   if (!first) return '?';
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
@@ -323,9 +320,7 @@ function LiveBoardLink({ boardId }: { boardId: string }) {
         if (!res.ok) throw new Error();
         return res.json();
       })
-      .then((json: any) =>
-        setData({ name: json.name, deleted: false }),
-      )
+      .then((json: any) => setData({ name: json.name, deleted: false }))
       .catch(() => setData({ name: 'Deleted Board', deleted: true }));
   }, [boardId]);
 

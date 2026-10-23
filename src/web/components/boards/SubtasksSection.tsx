@@ -7,11 +7,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { computeLinearReorderAfterId } from './kanbanReorder';
 import { CheckSquare, GripVertical, Plus, X } from 'lucide-react';
 import {

@@ -48,8 +48,6 @@ function RootList({ children }: { children: ReactNode }) {
   );
 }
 
-
-
 interface TreeRowProps {
   node: NotepadNode;
   depth: number;

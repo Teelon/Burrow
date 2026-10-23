@@ -59,9 +59,7 @@ export function AppShell() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="font-semibold text-sm tracking-tight">
-              Burrow
-            </span>
+            <span className="font-semibold text-sm tracking-tight">Burrow</span>
           </div>
         </header>
 
