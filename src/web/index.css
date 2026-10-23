@@ -46,15 +46,8 @@
   --r-sm: 0px;
   --r-md: 0px;
   --r-pill: 0px;
-  --clip-card: polygon(
-    14px 0,
-    100% 0,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    0 100%,
-    0 14px
-  );
-  --clip-btn: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  --clip-card: none;
+  --clip-btn: none;
   --clip-hex: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
 
   /* Legacy shadcn aliases → Basalt values */

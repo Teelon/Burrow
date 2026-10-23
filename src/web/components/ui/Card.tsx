@@ -12,10 +12,10 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       style={{
         ...style,
-        ...(statusColor ? { boxShadow: `inset 4px 0 0 ${statusColor}` } : undefined),
+        ...(statusColor ? { borderLeft: `3px solid ${statusColor}` } : undefined),
       }}
       className={cn(
-        'chamfer-sm border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] transition-colors hover:bg-[var(--hi)]/30',
+        'border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] transition-colors hover:bg-[var(--hi)]/30 theme-radius-md',
         className,
       )}
       {...props}

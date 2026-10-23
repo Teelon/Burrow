@@ -87,12 +87,16 @@ function priorityStatusColor(priority?: string | null): string {
 function CountPill({ count, wipLimit }: { count: number; wipLimit?: number | null }) {
   const over = wipLimit != null && wipLimit > 0 && count > wipLimit;
   return (
-    <Badge
-      tone={over ? 'danger' : 'neutral'}
+    <span
+      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 border shrink-0 ${
+        over
+          ? 'bg-[var(--danger)]/15 text-[var(--danger)] border-[var(--danger)]/30'
+          : 'bg-[var(--surface)] text-[var(--ink-muted)] border-[var(--hair)]'
+      }`}
       title={wipLimit != null && wipLimit > 0 ? `${count} of ${wipLimit} WIP limit` : undefined}
     >
       {wipLimit != null && wipLimit > 0 ? `${count}/${wipLimit}` : count}
-    </Badge>
+    </span>
   );
 }
 
@@ -138,84 +142,82 @@ function CardTile({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`p-3 pl-4 cursor-grab active:cursor-grabbing space-y-2 select-none ${
-        isOverlay ? 'rotate-1 scale-105' : ''
-      } ${focused && !isOverlay ? 'outline-2 outline-[var(--accent)] outline-offset-2' : ''}`}
+      className={`p-2.5 pl-3.5 cursor-grab active:cursor-grabbing space-y-2 select-none ${
+        isOverlay ? 'rotate-1 scale-105 z-50' : ''
+      } ${focused && !isOverlay ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg)]' : ''}`}
     >
-      <div className="text-sm font-medium text-[var(--text)] leading-snug">
+      <div className="text-[13px] font-semibold text-[var(--text)] leading-snug tracking-tight">
         {card.title || 'Untitled'}
       </div>
 
       {/* Meta tags & priority */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {card.priority && PRIORITY_BADGES[card.priority] && (
-          <Badge tone={priorityBadgeTone(card.priority)}>
-            {PRIORITY_BADGES[card.priority]!.label}
-          </Badge>
-        )}
+      {((card.priority && PRIORITY_BADGES[card.priority]) || (card.tags && card.tags.length > 0)) && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {card.priority && PRIORITY_BADGES[card.priority] && (
+            <Badge tone={priorityBadgeTone(card.priority)}>
+              {PRIORITY_BADGES[card.priority]!.label}
+            </Badge>
+          )}
 
-        {(card.tags || []).map((tag) => (
-          <Badge
-            key={tag.id}
-            tone="neutral"
-            style={{
-              backgroundColor: `${tag.color || '#64748b'}20`,
-              color: tag.color || '#64748b',
-              borderColor: `${tag.color || '#64748b'}40`,
-            }}
-          >
-            #{tag.name}
-          </Badge>
-        ))}
-      </div>
+          {(card.tags || []).map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[var(--surface2)] text-[var(--ink-muted)] border border-[var(--hair)]"
+            >
+              <StatusDiamond color={tag.color || '#a855f7'} size={6} />
+              <span>#{tag.name}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Footer: Due date, subtask progress & Assignees */}
-      <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--hair)] text-[11px] text-[var(--muted)]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {formattedDueDate ? (
-            <div
-              className={`flex items-center gap-1 ${
-                isOverdue ? 'text-[var(--danger)] font-medium' : ''
-              }`}
-            >
-              <Calendar className="w-3 h-3" />
-              <span>{formattedDueDate}</span>
-            </div>
-          ) : (
-            <div />
-          )}
+      {(formattedDueDate || (card.totalSubtasks ?? 0) > 0 || (card.assignees || []).length > 0) && (
+        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[var(--hair)] text-[11px] text-[var(--ink-muted)]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {formattedDueDate && (
+              <div
+                className={`flex items-center gap-1 ${
+                  isOverdue ? 'text-[var(--danger)] font-bold' : ''
+                }`}
+              >
+                <Calendar className="w-3 h-3" />
+                <span>{formattedDueDate}</span>
+              </div>
+            )}
 
-          {(card.totalSubtasks ?? 0) > 0 && (
-            <div
-              className="flex items-center gap-1 font-medium"
-              title={`${card.completedSubtasks ?? 0}/${card.totalSubtasks} subtasks done`}
-            >
-              <CheckSquare className="w-3 h-3" />
-              <span className="tabular-nums">
-                {card.completedSubtasks ?? 0}/{card.totalSubtasks}
-              </span>
-              <span className="w-8 h-1 bg-[var(--surface2)] overflow-hidden inline-block">
-                <span
-                  className="block h-full bg-[var(--accent)]"
-                  style={{
-                    width: `${Math.round(
-                      ((card.completedSubtasks ?? 0) / (card.totalSubtasks || 1)) * 100,
-                    )}%`,
-                  }}
-                />
-              </span>
-            </div>
+            {(card.totalSubtasks ?? 0) > 0 && (
+              <div
+                className="flex items-center gap-1 font-medium"
+                title={`${card.completedSubtasks ?? 0}/${card.totalSubtasks} subtasks done`}
+              >
+                <CheckSquare className="w-3 h-3" />
+                <span className="tabular-nums">
+                  {card.completedSubtasks ?? 0}/{card.totalSubtasks}
+                </span>
+                <span className="w-7 h-1 bg-[var(--surface2)] overflow-hidden inline-block border border-[var(--hair)]">
+                  <span
+                    className="block h-full bg-[var(--accent)]"
+                    style={{
+                      width: `${Math.round(
+                        ((card.completedSubtasks ?? 0) / (card.totalSubtasks || 1)) * 100,
+                      )}%`,
+                    }}
+                  />
+                </span>
+              </div>
+            )}
+          </div>
+
+          {(card.assignees || []).length > 0 && (
+            <AvatarGroup max={4}>
+              {(card.assignees || []).map((a) => (
+                <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} className="w-5 h-5 text-[9px]" />
+              ))}
+            </AvatarGroup>
           )}
         </div>
-
-        {(card.assignees || []).length > 0 && (
-          <AvatarGroup max={8}>
-            {(card.assignees || []).map((a) => (
-              <Avatar key={a.userId} name={a.name || 'U'} size="xs" title={a.name} />
-            ))}
-          </AvatarGroup>
-        )}
-      </div>
+      )}
     </Card>
   );
 }
@@ -287,9 +289,9 @@ function ColumnComponent({
         style={style}
         {...attributes}
         {...listeners}
-        className={`chamfer-lg w-10 h-80 shrink-0 snap-start border bg-[var(--surface2)] flex flex-col items-center gap-3 py-3 transition-all duration-150 cursor-grab active:cursor-grabbing touch-none ${
+        className={`w-10 h-80 shrink-0 snap-start border bg-[var(--side)] flex flex-col items-center gap-3 py-3 transition-all duration-150 cursor-grab active:cursor-grabbing touch-none theme-radius-md ${
           isDragging ? 'z-10 relative opacity-50' : ''
-        } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--line)]'}`}
+        } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--hair)]'}`}
         title={`${column.name} (click to expand)`}
         onDoubleClick={() => setIsCollapsed(false)}
       >
@@ -300,16 +302,14 @@ function ColumnComponent({
             setIsCollapsed(false);
           }}
           aria-label="Expand column"
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--muted)] hover:bg-[var(--hi)] hover:text-[var(--text)]"
+          className="h-7 w-7 flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--hi)] hover:text-[var(--text)] theme-radius-xs cursor-pointer"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
         <span
-          className="flex-1 min-h-0 overflow-hidden text-xs font-semibold text-[var(--text)] whitespace-nowrap cursor-pointer uppercase tracking-wider"
+          className="flex-1 min-h-0 overflow-hidden text-xs font-eyebrow text-[var(--side-text)] whitespace-nowrap cursor-pointer uppercase tracking-wider"
           style={{
             writingMode: 'vertical-rl',
-            fontFamily: 'Archivo, sans-serif',
-            fontVariationSettings: "'wdth' 122, 'wght' 800",
           }}
           onClick={() => setIsCollapsed(false)}
         >
@@ -324,14 +324,14 @@ function ColumnComponent({
     <div
       ref={setNodeRef}
       style={style}
-      className={`chamfer-lg w-72 md:w-72 w-[85vw] max-w-72 shrink-0 snap-start self-start bg-[var(--surface2)] p-3 flex flex-col border transition-all duration-150 ${
-        isDragging ? 'z-10 relative' : ''
-      } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]' : 'border-[var(--line)]'}`}
+      className={`group/column w-[300px] md:w-[320px] shrink-0 snap-start self-start bg-[var(--side)] border p-2.5 flex flex-col transition-all duration-150 theme-radius-md ${
+        isDragging ? 'z-10 relative opacity-60' : ''
+      } ${isOver ? 'border-[var(--accent)] bg-[var(--hi)]/30' : 'border-[var(--hair)]'}`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 mb-2 relative">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <StatusDiamond color={column.color || 'var(--c1)'} size={9} />
+      <div className="flex items-center justify-between px-1 py-1 mb-2 pb-2 border-b border-[var(--hair)] relative">
+        <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
+          <StatusDiamond color={column.color || 'var(--c1)'} size={8} />
           {isEditingName ? (
             <Input
               autoFocus
@@ -359,12 +359,8 @@ function ColumnComponent({
           ) : (
             <h3
               onDoubleClick={() => setIsEditingName(true)}
-              className="text-sm text-[var(--text)] truncate cursor-pointer hover:opacity-80 uppercase tracking-wider"
-              style={{
-                fontFamily: 'Archivo, sans-serif',
-                fontVariationSettings: "'wdth' 122, 'wght' 800",
-              }}
-              title="Double-click to rename"
+              className="text-xs font-eyebrow text-[var(--side-text)] uppercase tracking-wider truncate cursor-pointer hover:text-[var(--text)]"
+              title={`${column.name} (double-click to rename)`}
             >
               {column.name}
             </h3>
@@ -372,15 +368,15 @@ function ColumnComponent({
           <CountPill count={column.cards.length} wipLimit={column.wipLimit} />
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/column:opacity-100 transition-opacity">
           <button
             type="button"
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse column"
             title="Collapse column"
-            className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)]"
+            className="h-6 w-6 flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--text)] hover:bg-[var(--hi)] theme-radius-xs transition cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -390,29 +386,29 @@ function ColumnComponent({
             {...listeners}
             aria-label="Drag to reorder column"
             title="Drag to reorder"
-            className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)] cursor-grab active:cursor-grabbing touch-none"
+            className="h-6 w-6 flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--text)] hover:bg-[var(--hi)] theme-radius-xs cursor-grab active:cursor-grabbing touch-none transition"
           >
-            <GripVertical className="w-4 h-4" />
+            <GripVertical className="w-3.5 h-3.5" />
           </button>
 
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
               aria-label="Column menu"
-              className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)]"
+              className="h-6 w-6 flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--text)] hover:bg-[var(--hi)] theme-radius-xs transition cursor-pointer"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--surface)] border border-[var(--line)] p-1 z-20 text-xs">
+              <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--surface)] border border-[var(--line)] p-1 z-20 text-xs theme-radius-md">
                 <button
                   onClick={() => {
                     setShowMenu(false);
                     setColumnName(column.name);
                     setIsEditingName(true);
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--text)] hover:bg-[var(--hi)] theme-radius-xs cursor-pointer text-left"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Rename</span>
@@ -426,7 +422,7 @@ function ColumnComponent({
                       wipLimit: column.wipLimit,
                     });
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--text)] hover:bg-[var(--hi)] theme-radius-xs cursor-pointer text-left"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   <span>WIP limit…</span>
@@ -436,7 +432,7 @@ function ColumnComponent({
                     setShowMenu(false);
                     onDeleteColumn(column.id, column.cards.length);
                   }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--danger)] hover:bg-[var(--hi)]"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[var(--danger)] hover:bg-[var(--hi)] theme-radius-xs cursor-pointer text-left"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete</span>
@@ -448,7 +444,7 @@ function ColumnComponent({
       </div>
 
       {/* Cards Scroll Container */}
-      <div className="space-y-2 pr-1 min-h-[60px]">
+      <div className="space-y-2 pr-0.5 min-h-[60px]">
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {column.cards.map((card) => (
             <CardTile
@@ -462,10 +458,10 @@ function ColumnComponent({
         </SortableContext>
         {column.cards.length === 0 && (
           <div
-            className={`h-24 border border-dashed flex items-center justify-center text-xs font-medium transition-colors select-none ${
+            className={`h-20 border border-dashed flex items-center justify-center text-xs font-medium transition-colors select-none ${
               isOver
-                ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--hi)]'
-                : 'border-[var(--line)] text-[var(--muted)]'
+                ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--hi)]/30'
+                : 'border-[var(--hair)] text-[var(--ink-muted)]/70'
             }`}
           >
             Drop cards here
@@ -474,7 +470,7 @@ function ColumnComponent({
       </div>
 
       {/* Add Card Bottom Button / Form */}
-      <div className="mt-2 pt-1 border-t border-[var(--hair)]">
+      <div className="mt-2.5 pt-2 border-t border-[var(--hair)]">
         {isAdding ? (
           <QuickAddCard
             boardId={boardId}
@@ -484,8 +480,9 @@ function ColumnComponent({
           />
         ) : (
           <button
+            type="button"
             onClick={() => setIsAdding(true)}
-            className="w-full py-1.5 px-2 min-h-[44px] text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--hi)] transition flex items-center justify-center gap-1.5"
+            className="w-full flex items-center justify-center gap-1.5 h-8 px-2 border border-dashed border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--text)] hover:border-[var(--accent)] text-xs font-semibold transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add card</span>
@@ -794,7 +791,7 @@ export function KanbanView({
 
         {/* Add Column Button & Inline Card on the Kanban Board */}
         {isAddingColumn ? (
-          <Card className="w-[85vw] max-w-72 md:w-72 shrink-0 snap-start bg-[var(--surface2)] p-3 flex flex-col gap-2.5 border-[var(--accent)]">
+          <div className="w-[300px] md:w-[320px] shrink-0 snap-start bg-[var(--side)] p-3 flex flex-col gap-2.5 border border-[var(--accent)] theme-radius-md">
             <Input
               autoFocus
               type="text"
@@ -829,18 +826,18 @@ export function KanbanView({
                   setNewColumnName('');
                 }}
                 aria-label="Cancel"
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--hi)] text-[var(--muted)] hover:text-[var(--text)] transition cursor-pointer"
+                className="h-8 w-8 flex items-center justify-center hover:bg-[var(--hi)] text-[var(--ink-muted)] hover:text-[var(--text)] transition cursor-pointer theme-radius-xs"
                 title="Cancel"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-          </Card>
+          </div>
         ) : (
           <button
             type="button"
             onClick={() => setIsAddingColumn(true)}
-            className="w-[85vw] max-w-72 md:w-72 shrink-0 snap-start h-12 min-h-[44px] border-2 border-dashed border-[var(--line)] hover:border-[var(--accent)] hover:bg-[var(--hi)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--accent)] transition flex items-center justify-center gap-2 cursor-pointer select-none"
+            className="w-[300px] md:w-[320px] shrink-0 snap-start h-12 border border-dashed border-[var(--line)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-xs font-semibold text-[var(--ink-muted)] transition flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <Plus className="w-4 h-4" />
             <span>Add Column</span>

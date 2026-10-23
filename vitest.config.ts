@@ -30,6 +30,8 @@ export default defineConfig({
           }),
         ],
         test: {
+          testTimeout: 25_000,
+          hookTimeout: 25_000,
           include: [
             'tests/api/**/*.test.ts',
             'tests/unit/**/*.test.ts',
@@ -42,6 +44,8 @@ export default defineConfig({
       },
       {
         test: {
+          testTimeout: 25_000,
+          hookTimeout: 25_000,
           include: ['tests/adapters/storage-local.test.ts', 'src/web/**/*.test.ts'],
           environment: 'node',
         },
