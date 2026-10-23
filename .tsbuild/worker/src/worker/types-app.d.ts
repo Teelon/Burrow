@@ -1142,7 +1142,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    status?: "all" | "completed" | "open" | undefined;
+                    status?: "all" | "open" | "completed" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -1157,7 +1157,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    status?: "all" | "completed" | "open" | undefined;
+                    status?: "all" | "open" | "completed" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -1653,7 +1653,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1669,7 +1669,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1686,7 +1686,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1702,7 +1702,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };
@@ -1719,7 +1719,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    type: "user" | "notepad" | "card" | "tag";
+                    type: "notepad" | "card" | "user" | "tag";
                     q?: string | undefined;
                     projectId?: string | undefined;
                 };

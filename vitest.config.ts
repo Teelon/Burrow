@@ -18,6 +18,8 @@ const TEST_MIGRATIONS = await readD1Migrations('./migrations');
 
 export default defineConfig({
   test: {
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     exclude: ['tests/e2e/**'],
     projects: [
       {

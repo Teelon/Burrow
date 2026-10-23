@@ -30,8 +30,12 @@ export function createMemberRepository(db: DB): IMemberRepository {
           userId: t.members.userId,
           role: t.members.role,
           joinedAt: t.members.joinedAt,
+          name: t.user.name,
+          email: t.user.email,
+          image: t.user.image,
         })
         .from(t.members)
+        .leftJoin(t.user, eq(t.user.id, t.members.userId))
         .where(and(eq(t.members.workspaceId, workspaceId), eq(t.members.userId, userId)));
       return row ? mapMember(row) : null;
     },
@@ -43,8 +47,12 @@ export function createMemberRepository(db: DB): IMemberRepository {
           userId: t.members.userId,
           role: t.members.role,
           joinedAt: t.members.joinedAt,
+          name: t.user.name,
+          email: t.user.email,
+          image: t.user.image,
         })
         .from(t.members)
+        .leftJoin(t.user, eq(t.user.id, t.members.userId))
         .where(eq(t.members.userId, userId));
       return row ? mapMember(row) : null;
     },

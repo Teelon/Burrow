@@ -1,5 +1,5 @@
 import type { ILockAdapter, LockAcquireResult, LockAcquireOptions } from '../../../adapters/lock';
-import { eq, and, lt } from 'drizzle-orm';
+import { eq, and, lte, gt, or } from 'drizzle-orm';
 import type { PostgresDb } from './index';
 import { editLocks, user } from './schema';
 
@@ -12,12 +12,13 @@ export class PostgresLockAdapter implements ILockAdapter {
     clientId: string,
     ttlMs: number,
     options?: LockAcquireOptions,
+    _retryCount = 0,
   ): Promise<LockAcquireResult> {
     const now = Date.now();
     const expiresAt = now + ttlMs;
 
-    // Try to acquire the lock
-    // If lock doesn't exist or is expired, or belongs to same user+client, take it
+    // Try to acquire the lock atomically:
+    // If lock doesn't exist, is expired, belongs to same user+client, or is same-user takeover
     const result = await this.db
       .insert(editLocks)
       .values({
@@ -33,7 +34,11 @@ export class PostgresLockAdapter implements ILockAdapter {
           clientId,
           expiresAt,
         },
-        where: lt(editLocks.expiresAt, now),
+        where: or(
+          lte(editLocks.expiresAt, now),
+          and(eq(editLocks.userId, userId), eq(editLocks.clientId, clientId)),
+          ...(options?.takeover ? [eq(editLocks.userId, userId)] : []),
+        ),
       })
       .returning({
         notepadId: editLocks.notepadId,
@@ -43,10 +48,10 @@ export class PostgresLockAdapter implements ILockAdapter {
       });
 
     if (result.length > 0) {
-      return { acquired: true };
+      return { acquired: true, expiresAt };
     }
 
-    // Lock exists and is not expired, check who holds it
+    // Lock exists and is held by a live rival (or same user without takeover)
     const existing = await this.db
       .select({ userId: editLocks.userId, expiresAt: editLocks.expiresAt })
       .from(editLocks)
@@ -54,28 +59,22 @@ export class PostgresLockAdapter implements ILockAdapter {
       .limit(1);
 
     if (existing.length === 0) {
+      if (_retryCount < 1) {
+        return this.acquire(resourceId, userId, clientId, ttlMs, options, _retryCount + 1);
+      }
       return { acquired: false };
     }
 
-    // TypeScript doesn't narrow the type properly, so we use a const assertion
     const lock = existing[0] as { userId: string; expiresAt: number };
     if (lock.expiresAt <= now) {
       // Race condition: lock expired between our check and now
-      // Try again
-      return this.acquire(resourceId, userId, clientId, ttlMs, options);
+      if (_retryCount < 1) {
+        return this.acquire(resourceId, userId, clientId, ttlMs, options, _retryCount + 1);
+      }
     }
 
     // Get holder name from user table
     const holderName = await this.getUserName(lock.userId);
-
-    if (options?.takeover) {
-      // Force take over the lock
-      await this.db
-        .update(editLocks)
-        .set({ userId, clientId, expiresAt })
-        .where(eq(editLocks.notepadId, resourceId));
-      return { acquired: true };
-    }
 
     return {
       acquired: false,
@@ -92,7 +91,13 @@ export class PostgresLockAdapter implements ILockAdapter {
     const result = await this.db
       .update(editLocks)
       .set({ expiresAt })
-      .where(and(eq(editLocks.notepadId, resourceId), eq(editLocks.clientId, clientId)))
+      .where(
+        and(
+          eq(editLocks.notepadId, resourceId),
+          eq(editLocks.clientId, clientId),
+          gt(editLocks.expiresAt, now),
+        ),
+      )
       .returning({ notepadId: editLocks.notepadId });
 
     return result.length > 0;

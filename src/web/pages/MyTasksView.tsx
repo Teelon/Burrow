@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { AlarmClock, Calendar, CheckCircle2, Circle, Inbox, ListTodo } from 'lucide-react';
 import {
   useBoard,
@@ -184,6 +186,7 @@ export function MyTasksView() {
   const { data: projects = [] } = useProjects();
   const moveCardMutation = useMoveCard();
   const updateCardMutation = useUpdateCard();
+  const queryClient = useQueryClient();
 
   // Columns for the open CardPanel (needed for the status dropdown).
   const { data: openBoard } = useBoard(selected?.boardId);
@@ -231,60 +234,68 @@ export function MyTasksView() {
     return { overdue, today, upcoming, later, completed };
   }, [tasks]);
 
-  const handleComplete = (task: MyTaskItem) => {
+  const handleComplete = async (task: MyTaskItem) => {
     if (task.isCompleted) {
       // Re-open: move back to the first non-done column on its board.
-      (async () => {
-        try {
-          const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
-          if (!res.ok) return;
-          const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
-          const openCol = board.columns.find((c) => !/done|completed|closed|shipped/i.test(c.name));
-          if (openCol) {
-            moveCardMutation.mutate({
-              cardId: task.id,
-              boardId: task.boardId,
-              columnId: openCol.id,
-            });
-          }
-        } catch {
-          /* ignore */
+      try {
+        const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
+        if (!res.ok) throw new Error('Failed to load board details');
+        const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
+        const openCol = board.columns.find((c) => !/done|completed|closed|shipped/i.test(c.name));
+        if (!openCol) {
+          toast.error('No open column found on this board');
+          return;
         }
-      })();
+        await moveCardMutation.mutateAsync({
+          cardId: task.id,
+          boardId: task.boardId,
+          columnId: openCol.id,
+        });
+        queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+        toast.success('Task re-opened');
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to update task');
+      }
       return;
     }
 
     // Complete: move into the board's Done/Completed column.
-    (async () => {
-      try {
-        const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
-        if (!res.ok) return;
-        const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
-        const doneCol = board.columns.find((c) => /done|completed|closed|shipped/i.test(c.name));
-        if (!doneCol) {
-          window.alert(`"${task.boardName}" has no Done/Completed column to move this card into.`);
-          return;
-        }
-        moveCardMutation.mutate({
-          cardId: task.id,
-          boardId: task.boardId,
-          columnId: doneCol.id,
-        });
-      } catch {
-        /* ignore */
+    try {
+      const res = await api.api.boards[':id'].$get({ param: { id: task.boardId } });
+      if (!res.ok) throw new Error('Failed to load board details');
+      const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
+      const doneCol = board.columns.find((c) => /done|completed|closed|shipped/i.test(c.name));
+      if (!doneCol) {
+        toast.error(`"${task.boardName}" has no Done/Completed column to move this card into.`);
+        return;
       }
-    })();
+      await moveCardMutation.mutateAsync({
+        cardId: task.id,
+        boardId: task.boardId,
+        columnId: doneCol.id,
+      });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+      toast.success('Task marked as complete');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update task');
+    }
   };
 
-  const handleSnooze = (task: MyTaskItem) => {
+  const handleSnooze = async (task: MyTaskItem) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    updateCardMutation.mutate({
-      cardId: task.id,
-      boardId: task.boardId,
-      dueDate: tomorrow.getTime(),
-    });
+    try {
+      await updateCardMutation.mutateAsync({
+        cardId: task.id,
+        boardId: task.boardId,
+        dueDate: tomorrow.getTime(),
+      });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+      toast.success('Task snoozed until tomorrow');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update task');
+    }
   };
 
   return (

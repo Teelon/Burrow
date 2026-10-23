@@ -8,6 +8,7 @@ export interface PromptDialogProps {
     confirmLabel?: string;
     cancelLabel?: string;
     busy?: boolean;
+    allowEmpty?: boolean;
     onConfirm: (value: string) => void;
     onCancel: () => void;
 }
@@ -15,4 +16,4 @@ export interface PromptDialogProps {
  * Basalt-native prompt dialog.
  * Replaces native `window.prompt`, which is silently ignored in sandboxed / embedded contexts.
  */
-export declare function PromptDialog({ open, title, message, defaultValue, placeholder, confirmLabel, cancelLabel, busy, onConfirm, onCancel, }: PromptDialogProps): React.JSX.Element;
+export declare function PromptDialog({ open, title, message, defaultValue, placeholder, confirmLabel, cancelLabel, busy, allowEmpty, onConfirm, onCancel, }: PromptDialogProps): React.JSX.Element;

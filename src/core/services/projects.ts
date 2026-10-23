@@ -134,7 +134,14 @@ export class ProjectService {
     const liveNotepads = await this.repos.notepads.listByProject(projectId);
     const trashedNotepads = await this.repos.notepads.listDeletedByProject(projectId);
     for (const np of [...liveNotepads, ...trashedNotepads]) {
-      await this.repos.notepads.hardDelete(np.id);
+      try {
+        const exists = await this.repos.notepads.findById(np.id);
+        if (exists) {
+          await this.repos.notepads.hardDelete(np.id);
+        }
+      } catch (err: any) {
+        if (!err?.message?.includes('not found')) throw err;
+      }
     }
 
     // 2. Hard delete all boards in the project

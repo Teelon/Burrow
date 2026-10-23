@@ -54,7 +54,7 @@ export interface CardPlan {
   assigneeIds: string[];
   tagIds: string[];
   cardPosition: string;
-  linkedNotepad: { id: string; position: string; title: string } | null;
+  linkedNotepad: { id: string; position: string; title: string; mode?: 'existing' | 'new' } | null;
   now: number;
 }
 
@@ -109,13 +109,19 @@ export class CardService {
       ) {
         throw notFound('not_found', 'Notepad not found');
       }
-      linkedNotepad = { id: linked.id, position: linked.position, title: linked.title };
+      linkedNotepad = {
+        id: linked.id,
+        position: linked.position,
+        title: linked.title,
+        mode: 'existing',
+      };
       content = linkBlockBody(linked.id);
     } else if (input.notepad?.mode === 'new') {
       linkedNotepad = {
         id: nanoid(),
         position: await this.repos.notepads.getLastRootNotepadPosition(board.projectId),
         title: input.title.trim() || 'Untitled',
+        mode: 'new',
       };
       content = linkBlockBody(linkedNotepad.id);
     }
@@ -156,7 +162,7 @@ export class CardService {
     // This should be a single atomic batch in the repository
     // For now, we call individual methods - the repository impl should batch them
 
-    if (plan.linkedNotepad) {
+    if (plan.linkedNotepad && plan.linkedNotepad.mode === 'new') {
       await this.repos.notepads.create({
         id: plan.linkedNotepad.id,
         workspaceId: plan.workspaceId,
@@ -191,6 +197,16 @@ export class CardService {
       updatedAt: plan.now,
     });
     await this.repos.notepads.insertFts(plan.notepadId, plan.title, plan.plainText);
+
+    if (plan.linkedNotepad) {
+      await this.repos.notepads.replaceLinks(
+        plan.notepadId,
+        [{ targetType: 'notepad', targetId: plan.linkedNotepad.id }],
+        [],
+        1,
+        plan.content,
+      );
+    }
 
     await this.repos.cards.create({
       id: plan.cardId,
@@ -360,6 +376,7 @@ export class CardService {
     // Invariant I5: Card and its notepad always have the same soft-delete state
     await this.repos.notepads.softDelete(card.notepadId, now);
     await this.repos.notepads.deleteFts(card.notepadId);
+    await this.repos.notepads.deleteLock(card.notepadId);
 
     return { ok: true, cardId };
   }

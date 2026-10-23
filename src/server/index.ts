@@ -17,16 +17,19 @@ async function buildInfrastructure(config: ServerConfig) {
   }
   const { db } = openNodeDb(config.SQLITE_PATH, `${process.cwd()}/migrations`);
   const { createD1Infrastructure } = await import('../core/adapters/db/d1');
-  const { wrapNodeDb } = await import('../worker/db/client');
+  const { wrapNodeDb, createDb } = await import('../worker/db/client');
+  const d1Db = createDb(wrapNodeDb(db));
   const env = {
-    DB: wrapNodeDb(db),
+    DB: d1Db,
     FILES: null,
     LOCAL_STORAGE_PATH: config.LOCAL_STORAGE_PATH,
     BETTER_AUTH_SECRET: config.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: config.BETTER_AUTH_URL,
     BOOTSTRAP_TOKEN: config.BOOTSTRAP_TOKEN,
+    RESEND_API_KEY: config.RESEND_API_KEY,
+    EMAIL_FROM: config.EMAIL_FROM,
   } as any;
-  return createD1Infrastructure(env.DB, env);
+  return createD1Infrastructure(d1Db as any, env);
 }
 
 const infrastructurePromise = buildInfrastructure(config);

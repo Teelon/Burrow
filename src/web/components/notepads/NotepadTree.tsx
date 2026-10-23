@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, ChevronRight, FileText, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -18,9 +18,8 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { useMoveNotepad } from '../../lib/queries';
+import { useMoveNotepad, useNotepads } from '../../lib/queries';
 import type { NotepadNode } from '../../lib/queries';
-import { StatusDiamond } from '../ui/StatusDiamond';
 
 import {
   buildTreeStructure,
@@ -99,14 +98,15 @@ function TreeRow({
     <div>
       <div
         ref={setRefs}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        className={`group relative flex items-center justify-between pr-2 text-xs transition select-none min-h-[44px] md:min-h-0 py-2 md:py-1 ${
-          isActive ? 'bg-hi text-text font-medium' : 'text-muted hover:bg-hi hover:text-text'
+        style={{ paddingLeft: `${depth * 10 + 4}px` }}
+        className={`group relative flex items-center justify-between pr-1 text-[13px] theme-radius-md transition select-none min-h-[44px] md:min-h-[32px] ${
+          isActive
+            ? 'bg-hi text-hi-ink font-semibold'
+            : 'text-ink-muted font-medium hover:bg-hi hover:text-text'
         } ${mode === 'inside' ? 'bg-accent/10 ring-2 ring-inset ring-accent' : ''} ${
           dimmed ? 'opacity-40' : ''
         }`}
       >
-        {isActive && <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />}
         {/* Primary insertion indicators (Basalt accent, no rounded pills) */}
         {mode === 'before' && (
           <span className="pointer-events-none absolute -top-px inset-x-1 z-10 h-0.5 bg-accent" />
@@ -118,7 +118,7 @@ function TreeRow({
         <Link
           to="/p/$projectId/notepads/$notepadId"
           params={{ projectId, notepadId: node.id }}
-          className="flex min-w-0 flex-1 items-center gap-1.5 px-3"
+          className="flex min-w-0 flex-1 items-center gap-1.5 pl-1 pr-2 py-1"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {hasChildren ? (
@@ -130,22 +130,26 @@ function TreeRow({
                 e.stopPropagation();
                 onToggle(node.id);
               }}
-              className="flex shrink-0 h-11 w-11 md:h-6 md:w-6 items-center justify-center hover:bg-hi"
+              className="flex shrink-0 h-11 w-11 md:h-5 md:w-5 items-center justify-center hover:bg-hi theme-radius-xs"
               aria-label={isExpanded ? 'Collapse' : 'Expand'}
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3 text-muted" />
+                <ChevronDown className="h-3.5 w-3.5 text-ink-muted" />
               ) : (
-                <ChevronRight className="h-3 w-3 text-muted" />
+                <ChevronRight className="h-3.5 w-3.5 text-ink-muted" />
               )}
             </button>
           ) : (
-            <StatusDiamond color="var(--muted)" size={8} className="mx-2" />
+            <FileText className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
           )}
-          <span className="truncate">{node.title || 'Untitled'}</span>
+          <span className="truncate flex-1" title={node.title || 'Untitled'}>
+            {node.title || 'Untitled'}
+          </span>
+          {isActive && <span className="diamond-dot group-hover:hidden" />}
         </Link>
 
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        {/* Hover action buttons — positioned absolutely so they don't squish title width when not hovered */}
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-side/95 pl-1.5 pr-0.5 py-0.5 theme-radius-xs z-10">
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
@@ -155,9 +159,9 @@ function TreeRow({
               onCreateChild(node.id);
             }}
             title="Add child notepad"
-            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-text"
+            className="flex h-6 w-6 items-center justify-center text-ink-muted hover:bg-hi hover:text-text theme-radius-xs cursor-pointer"
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -169,17 +173,17 @@ function TreeRow({
               onDelete(node.id);
             }}
             title="Delete to Trash"
-            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted hover:bg-hi hover:text-[var(--danger)] cursor-pointer disabled:opacity-40"
+            className="flex h-6 w-6 items-center justify-center text-ink-muted hover:bg-hi hover:text-[var(--danger)] cursor-pointer disabled:opacity-40 theme-radius-xs"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
           <div
             {...attributes}
             {...listeners}
-            className="flex h-11 w-11 md:h-7 md:w-7 items-center justify-center cursor-grab active:cursor-grabbing text-muted hover:text-text touch-none"
+            className="flex h-6 w-6 items-center justify-center cursor-grab active:cursor-grabbing text-ink-muted hover:text-text touch-none theme-radius-xs"
             title="Drag to reorder"
           >
-            <GripVertical className="h-3 w-3" aria-hidden />
+            <GripVertical className="h-3.5 w-3.5" aria-hidden />
           </div>
         </div>
       </div>
@@ -214,15 +218,7 @@ export function NotepadTree({ projectId }: { projectId: string }) {
   const params = useParams({ strict: false }) as { notepadId?: string };
   const activeNotepadId = params.notepadId;
 
-  const { data: notepads = [] } = useQuery<NotepadNode[]>({
-    queryKey: ['notepads', projectId],
-    queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/notepads`);
-      if (!res.ok) throw new Error('Failed to load notepads');
-      return res.json();
-    },
-    enabled: Boolean(projectId),
-  });
+  const { data: notepads = [] } = useNotepads(projectId);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notepads', projectId] });
 

@@ -258,6 +258,44 @@ describe('Notepad tree excludes soft-deleted and card-kind notepads', () => {
     const childIndex = roots.findIndex((r) => r.id === childId);
     expect(childIndex).toBe(parentIndex + 1);
 
+    // Star parentId and verify isFavorite persists across detail and tree endpoints
+    const starRes = await app.request(
+      `http://localhost/api/notepads/${parentId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ isFavorite: true }),
+      },
+      env,
+    );
+    expect(starRes.status).toBe(200);
+
+    const detailRes = await app.request(
+      `http://localhost/api/notepads/${parentId}`,
+      { headers: { Cookie: ownerCookie } },
+      env,
+    );
+    expect(detailRes.status).toBe(200);
+    const detail = (await detailRes.json()) as { isFavorite: boolean };
+    expect(Boolean(detail.isFavorite)).toBe(true);
+
+    tree = await getTree(projectId, ownerCookie);
+    expect(Boolean(tree.find((n) => n.id === parentId)?.isFavorite)).toBe(true);
+
+    // Unstar sets isFavorite back to false
+    const unstarRes = await app.request(
+      `http://localhost/api/notepads/${parentId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+        body: JSON.stringify({ isFavorite: false }),
+      },
+      env,
+    );
+    expect(unstarRes.status).toBe(200);
+    tree = await getTree(projectId, ownerCookie);
+    expect(Boolean(tree.find((n) => n.id === parentId)?.isFavorite)).toBe(false);
+
     await expectInvariantsHold(env.DB);
   });
 });

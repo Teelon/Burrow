@@ -2,10 +2,10 @@ import type { DefaultReactSuggestionItem } from '@blocknote/react';
 import type { BlockNoteEditor } from '@blocknote/core';
 import type { SlashContext } from '../../shared/slash';
 export interface SuggestionDialogState {
-    type: 'notepad' | 'task' | 'template' | null;
+    type: 'notepad' | 'task' | 'template' | 'board' | null;
     blockToReplace?: any;
 }
-export declare function getCustomSlashItems(editor: BlockNoteEditor<any, any, any>, context: SlashContext, projectId: string, onOpenDialog: (state: SuggestionDialogState) => void): DefaultReactSuggestionItem[];
+export declare function getCustomSlashItems(editor: BlockNoteEditor<any, any, any>, context: SlashContext, _projectId: string, onOpenDialog: (state: SuggestionDialogState) => void): DefaultReactSuggestionItem[];
 /**
  * Suggestions for `@` menu: People, Notepads, Cards, Dates.
  */

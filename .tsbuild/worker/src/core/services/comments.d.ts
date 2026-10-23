@@ -35,5 +35,4 @@ export declare class CommentService {
         commentId: string;
     }>;
     private requireCardForWorkspace;
-    private getUser;
 }

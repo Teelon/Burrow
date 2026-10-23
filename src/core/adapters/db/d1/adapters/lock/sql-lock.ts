@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt, lte, or } from 'drizzle-orm';
 import type { DB } from '../../client';
 import * as t from '../../schema';
 import type { ILockAdapter, LockAcquireResult } from './types';
@@ -23,36 +23,13 @@ export class SqlLockAdapter implements ILockAdapter {
     clientId: string,
     ttlMs: number,
     opts?: LockAcquireOptions,
+    _retryCount = 0,
   ): Promise<LockAcquireResult> {
     const now = Date.now();
     const expiresAt = now + ttlMs;
 
-    const [existing] = await this.db
-      .select()
-      .from(t.editLocks)
-      .where(eq(t.editLocks.notepadId, resourceId));
-
-    if (
-      existing &&
-      existing.expiresAt > now &&
-      (existing.userId !== userId || existing.clientId !== clientId)
-    ) {
-      if (!(existing.userId === userId && opts?.takeover)) {
-        let holderName: string | undefined;
-        if (this.resolveHolderName) {
-          const name = await this.resolveHolderName(existing.userId);
-          if (name) holderName = name;
-        }
-        return {
-          acquired: false,
-          holderUserId: existing.userId,
-          holderName,
-          expiresAt: existing.expiresAt,
-        };
-      }
-    }
-
-    await this.db
+    // Single atomic conditional upsert: succeeds if absent, expired, same user+client, or same-user takeover
+    const result = await this.db
       .insert(t.editLocks)
       .values({
         notepadId: resourceId,
@@ -67,28 +44,63 @@ export class SqlLockAdapter implements ILockAdapter {
           clientId,
           expiresAt,
         },
+        where: or(
+          lte(t.editLocks.expiresAt, now),
+          and(eq(t.editLocks.userId, userId), eq(t.editLocks.clientId, clientId)),
+          ...(opts?.takeover ? [eq(t.editLocks.userId, userId)] : []),
+        ),
+      })
+      .returning({
+        notepadId: t.editLocks.notepadId,
+        userId: t.editLocks.userId,
+        clientId: t.editLocks.clientId,
+        expiresAt: t.editLocks.expiresAt,
       });
 
-    return { acquired: true, expiresAt };
-  }
+    if (result.length > 0) {
+      return { acquired: true, expiresAt };
+    }
 
-  async heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean> {
-    const now = Date.now();
     const [existing] = await this.db
       .select()
       .from(t.editLocks)
       .where(eq(t.editLocks.notepadId, resourceId));
 
-    if (!existing || existing.expiresAt <= now || existing.clientId !== clientId) {
-      return false;
+    if (!existing || existing.expiresAt <= now) {
+      if (_retryCount < 1) {
+        return this.acquire(resourceId, userId, clientId, ttlMs, opts, _retryCount + 1);
+      }
     }
 
-    await this.db
+    let holderName: string | undefined;
+    if (this.resolveHolderName && existing) {
+      const name = await this.resolveHolderName(existing.userId);
+      if (name) holderName = name;
+    }
+
+    return {
+      acquired: false,
+      holderUserId: existing?.userId,
+      holderName,
+      expiresAt: existing?.expiresAt,
+    };
+  }
+
+  async heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean> {
+    const now = Date.now();
+    const result = await this.db
       .update(t.editLocks)
       .set({ expiresAt: now + ttlMs })
-      .where(eq(t.editLocks.notepadId, resourceId));
+      .where(
+        and(
+          eq(t.editLocks.notepadId, resourceId),
+          eq(t.editLocks.clientId, clientId),
+          gt(t.editLocks.expiresAt, now),
+        ),
+      )
+      .returning({ notepadId: t.editLocks.notepadId });
 
-    return true;
+    return result.length > 0;
   }
 
   async release(resourceId: string, clientId: string, opts?: LockReleaseOptions): Promise<void> {
@@ -99,10 +111,3 @@ export class SqlLockAdapter implements ILockAdapter {
     await this.db.delete(t.editLocks).where(and(...conditions));
   }
 }
-
-// NOTE (follow-up): acquire() uses check-then-upsert (read row, then
-// insert ... onConflictDoUpdate). Two concurrent acquirers can both read a
-// missing/expired row and both upsert; last writer wins. Fix with a single
-// conditional write (e.g. INSERT ... WHERE not exists live rival row, or an
-// UPDATE ... WHERE expired-or-absent with affected-row check). Left as-is to
-// preserve current Cloudflare behavior.

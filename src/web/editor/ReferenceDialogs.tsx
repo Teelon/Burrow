@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { FileText, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { FileText, Layout, Search } from 'lucide-react';
 import { useBoards, useCreateCard } from '../lib/queries';
 import { ModalShell } from '../components/ui/ModalShell';
 import { Button } from '../components/ui/Button';
@@ -18,6 +20,7 @@ export function NotepadPickerModal({
   onClose,
   onSelectNotepad,
 }: NotepadPickerModalProps) {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'new' | 'existing'>('new');
   const [newTitle, setNewTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,11 +37,16 @@ export function NotepadPickerModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle.trim() }),
       });
-      if (res.ok) {
-        const data = (await res.json()) as { id: string };
-        onSelectNotepad(data.id);
-        onClose();
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: { message?: string }; message?: string };
+        throw new Error(err.error?.message || err.message || 'Failed to create notepad');
       }
+      const data = (await res.json()) as { id: string };
+      queryClient.invalidateQueries({ queryKey: ['notepads', projectId] });
+      onSelectNotepad(data.id);
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create notepad');
     } finally {
       setIsSubmitting(false);
     }
@@ -54,12 +62,14 @@ export function NotepadPickerModal({
       const res = await fetch(
         `/api/suggest?type=notepad&projectId=${projectId}&q=${encodeURIComponent(q.trim())}`,
       );
-      if (res.ok) {
-        const data = (await res.json()) as Array<{ id: string; label: string }>;
-        setResults(data);
+      if (!res.ok) {
+        throw new Error('Failed to search notepads');
       }
-    } catch (err) {
+      const data = (await res.json()) as Array<{ id: string; label: string }>;
+      setResults(data);
+    } catch (err: any) {
       console.error(err);
+      toast.error(err?.message || 'Failed to search notepads');
     }
   };
 
@@ -171,22 +181,38 @@ export function TaskPickerModal({ projectId, onClose, onCardCreated }: TaskPicke
   const [selectedColId, setSelectedColId] = useState('');
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Load columns for selected board
   const [columns, setColumns] = useState<Array<{ id: string; name: string }>>([]);
 
-  const handleBoardChange = async (bId: string) => {
-    setSelectedBoardId(bId);
-    try {
-      const res = await fetch(`/api/boards/${bId}`);
-      if (res.ok) {
-        const board = (await res.json()) as { columns: Array<{ id: string; name: string }> };
-        setColumns(board.columns || []);
-        setSelectedColId(board.columns?.[0]?.id || '');
-      }
-    } catch (err) {
-      console.error(err);
+  // Load columns for the initially selected board on mount / when boards are loaded
+  useEffect(() => {
+    if (boards.length > 0 && !selectedBoardId) {
+      setSelectedBoardId(boards[0]?.id || '');
     }
+  }, [boards, selectedBoardId]);
+
+  useEffect(() => {
+    if (!selectedBoardId) return;
+    let cancelled = false;
+    fetch(`/api/boards/${selectedBoardId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((board: { columns?: Array<{ id: string; name: string }> } | null) => {
+        if (cancelled || !board) return;
+        const cols = board.columns || [];
+        setColumns(cols);
+        setSelectedColId((prev) => {
+          if (cols.some((c) => c.id === prev)) return prev;
+          return cols[0]?.id || '';
+        });
+      })
+      .catch((err) => console.error(err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBoardId]);
+
+  const handleBoardChange = (bId: string) => {
+    setSelectedBoardId(bId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,6 +227,8 @@ export function TaskPickerModal({ projectId, onClose, onCardCreated }: TaskPicke
       });
       onCardCreated(res.cardId);
       onClose();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create card');
     } finally {
       setIsSubmitting(false);
     }
@@ -270,13 +298,59 @@ export function TaskPickerModal({ projectId, onClose, onCardCreated }: TaskPicke
           <Button
             type="submit"
             variant="primary"
-            disabled={!title.trim() || isSubmitting}
+            disabled={!selectedColId || !title.trim() || isSubmitting}
             className="px-3 py-1.5 text-xs font-semibold min-h-[44px] sm:min-h-0"
           >
             {isSubmitting ? 'Creating…' : 'Create & Insert Link'}
           </Button>
         </div>
       </form>
+    </ModalShell>
+  );
+}
+
+interface BoardPickerModalProps {
+  projectId: string;
+  onClose: () => void;
+  onSelectBoard: (boardId: string) => void;
+}
+
+export function BoardPickerModal({ projectId, onClose, onSelectBoard }: BoardPickerModalProps) {
+  const { data: boards = [], isLoading } = useBoards(projectId);
+
+  return (
+    <ModalShell open onClose={onClose} title="Link Board" className="sm:max-w-md">
+      <div className="pt-3 space-y-2">
+        {isLoading ? (
+          <div className="p-4 text-center text-xs text-[var(--muted)]">Loading boards…</div>
+        ) : boards.length === 0 ? (
+          <div className="p-4 text-center text-xs text-[var(--muted)] italic">
+            No boards found in this project
+          </div>
+        ) : (
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {boards.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => {
+                  onSelectBoard(b.id);
+                  onClose();
+                }}
+                className="w-full p-2.5 min-h-[44px] sm:min-h-0 text-left text-xs text-[var(--text)] hover:bg-[var(--hi)] flex items-center gap-2.5 transition border border-[var(--line)]"
+              >
+                <Layout className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="font-medium truncate">{b.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end pt-2 border-t border-[var(--hair)]">
+          <Button type="button" variant="ghost" onClick={onClose} className="px-3 py-1.5 text-xs">
+            Cancel
+          </Button>
+        </div>
+      </div>
     </ModalShell>
   );
 }

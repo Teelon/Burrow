@@ -5,7 +5,7 @@ import { bin, root } from './lib.mjs';
 
 /**
  * Dev server: Vite (SPA + HMR, proxies /api) and Wrangler dev (Worker + local D1).
- * Open http://localhost:5173
+ * Open http://localhost:3005
  */
 const devVars = path.join(root, '.dev.vars');
 if (!fs.existsSync(devVars)) {
@@ -18,7 +18,7 @@ if (!fs.existsSync(path.join(assetsDir, 'index.html'))) {
   fs.mkdirSync(assetsDir, { recursive: true });
   fs.writeFileSync(
     path.join(assetsDir, 'index.html'),
-    '<!doctype html><html><body><p>Run <code>pnpm build</code> for the production bundle; use http://localhost:5173 in dev.</p></body></html>',
+    '<!doctype html><html><body><p>Run <code>pnpm build</code> for the production bundle; use http://localhost:3005 in dev.</p></body></html>',
   );
 }
 
@@ -82,7 +82,7 @@ if (process.stdin.isTTY) {
   });
 }
 
-console.log('starting wrangler dev on http://127.0.0.1:8787 and vite on http://localhost:5173');
+console.log('starting wrangler dev on http://127.0.0.1:8787 and vite on http://localhost:3005');
 console.log('press Ctrl+C or "q" at any time to stop\n');
 launch('wrangler', process.execPath, [
   bin('wrangler'),
@@ -94,7 +94,7 @@ launch('wrangler', process.execPath, [
 launch('vite', process.execPath, [
   bin('vite'),
   '--port',
-  '5173',
+  '3005',
   '--strictPort',
   '--clearScreen',
   'false',

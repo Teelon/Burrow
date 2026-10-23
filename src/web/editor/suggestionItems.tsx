@@ -14,14 +14,14 @@ import {
 import type { SlashContext } from '../../shared/slash';
 
 export interface SuggestionDialogState {
-  type: 'notepad' | 'task' | 'template' | null;
+  type: 'notepad' | 'task' | 'template' | 'board' | null;
   blockToReplace?: any;
 }
 
 export function getCustomSlashItems(
   editor: BlockNoteEditor<any, any, any>,
   context: SlashContext,
-  projectId: string,
+  _projectId: string,
   onOpenDialog: (state: SuggestionDialogState) => void,
 ): DefaultReactSuggestionItem[] {
   const items: DefaultReactSuggestionItem[] = [];
@@ -70,28 +70,8 @@ export function getCustomSlashItems(
       aliases: ['board', 'kanban'],
       group: 'Burrow References',
       icon: <Layout className="w-4 h-4 text-blue-500" />,
-      onItemClick: async () => {
-        try {
-          const res = await fetch(`/api/projects/${projectId}/boards`);
-          if (res.ok) {
-            const boards = (await res.json()) as Array<{ id: string; name: string }>;
-            if (boards.length > 0) {
-              const b = boards[0]!;
-              editor.insertInlineContent([
-                {
-                  type: 'mention',
-                  props: {
-                    kind: 'card',
-                    id: b.id,
-                    label: b.name,
-                  },
-                },
-              ]);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to link board', err);
-        }
+      onItemClick: () => {
+        onOpenDialog({ type: 'board' });
       },
     });
   }
@@ -343,7 +323,7 @@ export async function getHashMenuSuggestions(
           {
             type: 'mention',
             props: {
-              kind: 'card', // rendered as tag chip
+              kind: 'tag',
               id: tag.id,
               label: `#${tag.label}`,
             },

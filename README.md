@@ -64,7 +64,7 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
    ```
    For local development, sensible defaults are already pre-filled. Note that:
    - `BETTER_AUTH_SECRET`: Can remain any 32+ character dummy string locally (e.g. `dev-secret-change-me-32-bytes-minimum!!`).
-   - `BETTER_AUTH_URL`: Must match your local web origin (`http://localhost:5173`).
+   - `BETTER_AUTH_URL`: Must match your local web origin (`http://localhost:3005`).
    - `BOOTSTRAP_TOKEN`: Used to claim the initial owner account (defaults to `dev-bootstrap-token`).
    - `D1_DATABASE_ID` and `CLOUDFLARE_ACCOUNT_ID`: Not needed for local dev (Miniflare handles SQLite locally).
    - `RESEND_API_KEY` & `EMAIL_FROM` (optional): To test live email delivery locally, provide a Resend API key and set `EMAIL_FROM=Burrow <onboarding@resend.dev>`. If omitted, invites log directly to your terminal console with zero external setup.
@@ -78,7 +78,7 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
    ```bash
    pnpm dev
    ```
-   Open [http://localhost:5173](http://localhost:5173) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` defined in your `.dev.vars`.
+   Open [http://localhost:3005](http://localhost:3005) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` defined in your `.dev.vars`.
 
 > [!NOTE]
 > The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, you can run `pnpm seed:local`. To wipe test data and return to a clean state at any time, run `pnpm run reset --local`.

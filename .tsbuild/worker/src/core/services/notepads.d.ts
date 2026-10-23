@@ -1,4 +1,4 @@
-import type { INotepadRepository, ITagRepository, Notepad, StoredLink } from '../infrastructure/types';
+import type { IMemberRepository, INotepadRepository, ITagRepository, Notepad, StoredLink } from '../infrastructure/types';
 import type { ILockAdapter } from '../adapters/lock';
 /** Root notepads are depth 1; reject anything deeper than 8. */
 export declare const MAX_NOTEPAD_DEPTH = 8;
@@ -87,7 +87,9 @@ export declare class NotepadService {
     constructor(repos: {
         notepads: INotepadRepository;
         tags: ITagRepository;
+        members?: IMemberRepository;
     }, locks: ILockAdapter, storage?: IStorageAdapter | undefined);
+    private resolveHolderName;
     createNotepad(args: CreateNotepadArgs): Promise<CreatedNotepad>;
     moveNotepad(args: MoveNotepadArgs): Promise<{
         parentId: string | null;

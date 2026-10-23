@@ -23,6 +23,6 @@ export class PostgresWorkspaceRepository implements IWorkspaceRepository {
 
   async count(): Promise<number> {
     const result = await this.db.select({ count: sql<number>`count(*)` }).from(workspaces);
-    return result[0]?.count ?? 0;
+    return Number(result[0]?.count ?? 0);
   }
 }

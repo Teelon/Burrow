@@ -46,7 +46,9 @@ import { Avatar, AvatarGroup } from '../../ui/Avatar';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Input } from '../../ui/Input';
+import { PromptDialog } from '../../ui/PromptDialog';
 import { StatusDiamond } from '../../ui/StatusDiamond';
 import { priorityBadgeTone } from '../../ui/status';
 import { AssignPickerModal, PriorityPickerModal, QuickPeekModal } from './BoardQuickModals';
@@ -228,7 +230,7 @@ function ColumnComponent({
   onCardClick,
   onDeleteColumn,
   onRenameColumn,
-  onSetWipLimit,
+  onOpenWipDialog,
 }: {
   column: ColumnItem;
   boardId: string;
@@ -239,7 +241,7 @@ function ColumnComponent({
   onCardClick: (cardId: string) => void;
   onDeleteColumn: (columnId: string, cardCount: number) => void;
   onRenameColumn: (columnId: string, currentName: string) => void;
-  onSetWipLimit: (columnId: string, wipLimit: number | null) => void;
+  onOpenWipDialog: (column: { id: string; name: string; wipLimit?: number | null }) => void;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -418,20 +420,11 @@ function ColumnComponent({
                 <button
                   onClick={() => {
                     setShowMenu(false);
-                    const input = window.prompt(
-                      'WIP limit (empty removes the limit):',
-                      column.wipLimit != null && column.wipLimit > 0 ? String(column.wipLimit) : '',
-                    );
-                    if (input === null) return;
-                    const trimmed = input.trim();
-                    if (trimmed === '') {
-                      onSetWipLimit(column.id, null);
-                      return;
-                    }
-                    const parsed = parseInt(trimmed, 10);
-                    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 999) {
-                      onSetWipLimit(column.id, parsed);
-                    }
+                    onOpenWipDialog({
+                      id: column.id,
+                      name: column.name,
+                      wipLimit: column.wipLimit,
+                    });
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 min-h-[44px] md:min-h-0 text-[var(--text)] hover:bg-[var(--hi)]"
                 >
@@ -526,8 +519,23 @@ export function KanbanView({
   const [priorityCardId, setPriorityCardId] = useState<string | null>(null);
   const [assignCardId, setAssignCardId] = useState<string | null>(null);
   const [quickAddColumnId, setQuickAddColumnId] = useState<string | null>(null);
+  const [wipPromptColumn, setWipPromptColumn] = useState<{
+    id: string;
+    name: string;
+    wipLimit?: number | null;
+  } | null>(null);
+  const [columnToDelete, setColumnToDelete] = useState<{
+    id: string;
+    name: string;
+    cardCount: number;
+  } | null>(null);
 
-  const anyModalOpen = peekCardId !== null || priorityCardId !== null || assignCardId !== null;
+  const anyModalOpen =
+    peekCardId !== null ||
+    priorityCardId !== null ||
+    assignCardId !== null ||
+    wipPromptColumn !== null ||
+    columnToDelete !== null;
 
   const findCard = (cardId: string): CardItem | undefined =>
     filteredColumns.flatMap((c) => c.cards).find((c) => c.id === cardId) ??
@@ -714,39 +722,16 @@ export function KanbanView({
   };
 
   const handleDeleteColumn = (columnId: string, cardCount: number) => {
+    const col = columns.find((c) => c.id === columnId);
+    if (!col) return;
     if (cardCount > 0) {
       const otherCols = columns.filter((c) => c.id !== columnId);
       if (otherCols.length === 0) {
-        window.alert('Cannot delete the only column when it has cards.');
+        toast.error('Cannot delete the only column when it has cards.');
         return;
-      }
-      const destNames = otherCols.map((c, i) => `${i + 1}: ${c.name}`).join('\n');
-      const choice = window.prompt(
-        `This column has ${cardCount} cards. Select a column number to move them to:\n${destNames}`,
-        '1',
-      );
-      if (!choice) return;
-      const chosenIdx = parseInt(choice, 10) - 1;
-      const chosenCol = otherCols[chosenIdx];
-      if (!chosenCol) {
-        window.alert('Invalid selection');
-        return;
-      }
-      deleteColumnMutation.mutate(
-        { boardId, columnId, moveTo: chosenCol.id },
-        {
-          onSuccess: () =>
-            toast.success(`Column deleted — ${cardCount} cards moved to ${chosenCol.name}`),
-        },
-      );
-    } else {
-      if (window.confirm('Delete this column?')) {
-        deleteColumnMutation.mutate(
-          { boardId, columnId },
-          { onSuccess: () => toast.success('Column deleted') },
-        );
       }
     }
+    setColumnToDelete({ id: columnId, name: col.name, cardCount });
   };
 
   const handleCreateColumn = async () => {
@@ -760,7 +745,7 @@ export function KanbanView({
       setNewColumnName('');
       setIsAddingColumn(false);
     } catch (err: any) {
-      window.alert(err.message || 'Failed to create column');
+      toast.error(err?.message || 'Failed to create column');
     }
   };
 
@@ -795,7 +780,7 @@ export function KanbanView({
                 onCardClick={handleCardClick}
                 onDeleteColumn={handleDeleteColumn}
                 onRenameColumn={handleRenameColumn}
-                onSetWipLimit={handleSetWipLimit}
+                onOpenWipDialog={setWipPromptColumn}
               />
             ))}
           </SortableContext>
@@ -862,6 +847,86 @@ export function KanbanView({
           </button>
         )}
       </div>
+
+      {/* WIP Limit Prompt Dialog */}
+      <PromptDialog
+        open={!!wipPromptColumn}
+        title={`Set WIP limit for "${wipPromptColumn?.name}"`}
+        message="Enter maximum number of cards for this column (leave empty to remove limit):"
+        placeholder="e.g. 5"
+        defaultValue={
+          wipPromptColumn?.wipLimit != null && wipPromptColumn.wipLimit > 0
+            ? String(wipPromptColumn.wipLimit)
+            : ''
+        }
+        confirmLabel="Save"
+        allowEmpty={true}
+        busy={updateColumnMutation.isPending}
+        onConfirm={(val) => {
+          if (!wipPromptColumn) return;
+          const trimmed = val.trim();
+          if (!trimmed) {
+            handleSetWipLimit(wipPromptColumn.id, null);
+          } else {
+            const parsed = parseInt(trimmed, 10);
+            if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 999) {
+              handleSetWipLimit(wipPromptColumn.id, parsed);
+            } else {
+              toast.error('WIP limit must be a number between 0 and 999');
+              return;
+            }
+          }
+          setWipPromptColumn(null);
+        }}
+        onCancel={() => setWipPromptColumn(null)}
+      />
+
+      {/* Delete Column Confirm Dialog */}
+      {columnToDelete && (() => {
+        const otherCols = columns.filter((c) => c.id !== columnToDelete.id);
+        const moveToCol = otherCols[0];
+        const hasCards = columnToDelete.cardCount > 0;
+        return (
+          <ConfirmDialog
+            open={true}
+            title="Delete column"
+            message={
+              hasCards && moveToCol
+                ? `Column "${columnToDelete.name}" has ${columnToDelete.cardCount} card(s). They will be moved to "${moveToCol.name}". Are you sure you want to delete this column?`
+                : `Are you sure you want to delete column "${columnToDelete.name}"?`
+            }
+            confirmLabel="Delete"
+            danger={true}
+            busy={deleteColumnMutation.isPending}
+            onConfirm={() => {
+              deleteColumnMutation.mutate(
+                {
+                  boardId,
+                  columnId: columnToDelete.id,
+                  moveTo: hasCards && moveToCol ? moveToCol.id : undefined,
+                },
+                {
+                  onSuccess: () => {
+                    if (hasCards && moveToCol) {
+                      toast.success(
+                        `Column deleted — ${columnToDelete.cardCount} cards moved to ${moveToCol.name}`,
+                      );
+                    } else {
+                      toast.success('Column deleted');
+                    }
+                    setColumnToDelete(null);
+                  },
+                  onError: (err: any) => {
+                    toast.error(err?.message || 'Failed to delete column');
+                    setColumnToDelete(null);
+                  },
+                },
+              );
+            }}
+            onCancel={() => setColumnToDelete(null)}
+          />
+        );
+      })()}
 
       {/* Keyboard quick modals (Space / P / M) */}
       {peekCard && (

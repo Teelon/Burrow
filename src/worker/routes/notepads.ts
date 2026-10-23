@@ -373,9 +373,18 @@ export const notepadsRoutes = new Hono<Env>()
     zValidator('json', lockSchema),
     async (c) => {
       const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
       const userId = c.get('userId');
       const notepadId = c.req.param('id');
       const { clientId, takeover } = c.req.valid('json');
+
+      const [notepad] = await db
+        .select({ id: t.notepads.id, deletedAt: t.notepads.deletedAt })
+        .from(t.notepads)
+        .where(and(eq(t.notepads.id, notepadId), eq(t.notepads.workspaceId, workspaceId)));
+      if (!notepad || notepad.deletedAt !== null) {
+        throw new HttpError(404, 'not_found', 'Notepad not found');
+      }
 
       try {
         const result = await claimLock(db, {
@@ -405,9 +414,18 @@ export const notepadsRoutes = new Hono<Env>()
     zValidator('json', lockSchema),
     async (c) => {
       const db = createDb(c.env.DB);
+      const workspaceId = c.get('workspaceId');
       const userId = c.get('userId');
       const notepadId = c.req.param('id');
       const { clientId } = c.req.valid('json');
+
+      const [notepad] = await db
+        .select({ id: t.notepads.id })
+        .from(t.notepads)
+        .where(and(eq(t.notepads.id, notepadId), eq(t.notepads.workspaceId, workspaceId)));
+      if (!notepad) {
+        throw new HttpError(404, 'not_found', 'Notepad not found');
+      }
 
       await releaseLock(db, {
         notepadId,

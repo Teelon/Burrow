@@ -40,7 +40,13 @@ export function CommandPalette() {
       }
     };
 
-    const handleCustomOpen = () => setOpen(true);
+    const handleCustomOpen = (e: Event) => {
+      const customQuery = (e as CustomEvent)?.detail?.query;
+      if (typeof customQuery === 'string') {
+        setQuery(customQuery);
+      }
+      setOpen(true);
+    };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('burrow:open-palette', handleCustomOpen);
@@ -122,11 +128,19 @@ export function CommandPalette() {
                           params: { projectId: item.projectId, notepadId: item.id },
                         });
                       } else {
-                        // card: navigate to its project
-                        navigate({
-                          to: '/p/$projectId',
-                          params: { projectId: item.projectId },
-                        });
+                        // card: navigate to its board if available, else its project
+                        const cardItem = item as typeof item & { boardId?: string };
+                        if (cardItem.boardId) {
+                          navigate({
+                            to: '/p/$projectId/boards/$boardId',
+                            params: { projectId: item.projectId, boardId: cardItem.boardId },
+                          });
+                        } else {
+                          navigate({
+                            to: '/p/$projectId',
+                            params: { projectId: item.projectId },
+                          });
+                        }
                       }
                     })
                   }

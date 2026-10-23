@@ -12,8 +12,9 @@ import type {
 } from '../../../../infrastructure/types';
 import { eq, and, inArray, desc, sql, isNull, isNotNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
-import { notepads, notepadTags, notepadLinks, notifications, members, projects } from '../schema';
+import { notepads, notepadTags, notepadLinks, notifications, projects, cards, boards, user, editLocks } from '../schema';
 import { positionAfterLast } from '../../../../services/utils/ordering';
+import { extractPlainText } from '../../../../shared/extract';
 
 // Helper to safely get first element of array
 function first<T>(arr: T[]): T | undefined {
@@ -182,28 +183,33 @@ export class PostgresNotepadRepository implements INotepadRepository {
 
   // Link validation
   async isValidLink(link: { targetType: string; targetId: string }): Promise<boolean> {
-    // For now, just check if target exists based on type
     switch (link.targetType) {
       case 'notepad':
-      case 'card':
         return this.db
           .select({ id: notepads.id })
           .from(notepads)
           .where(eq(notepads.id, link.targetId))
           .limit(1)
           .then((r) => r.length > 0);
+      case 'card':
+        return this.db
+          .select({ id: cards.id })
+          .from(cards)
+          .where(eq(cards.id, link.targetId))
+          .limit(1)
+          .then((r) => r.length > 0);
       case 'board':
         return this.db
-          .select({ id: projects.id })
-          .from(projects)
-          .where(eq(projects.id, link.targetId))
+          .select({ id: boards.id })
+          .from(boards)
+          .where(eq(boards.id, link.targetId))
           .limit(1)
           .then((r) => r.length > 0);
       case 'user':
         return this.db
-          .select({ id: members.userId })
-          .from(members)
-          .where(eq(members.userId, link.targetId))
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.id, link.targetId))
           .limit(1)
           .then((r) => r.length > 0);
       default:
@@ -228,9 +234,22 @@ export class PostgresNotepadRepository implements INotepadRepository {
   }
 
   // Locks
-  async getLock(_notepadId: string): Promise<EditLock | null> {
-    // Delegated to lock adapter, but kept for interface compatibility
-    return null; // Actual lock reading is in lock adapter
+  async getLock(notepadId: string): Promise<EditLock | null> {
+    const result = await this.db
+      .select({
+        notepadId: editLocks.notepadId,
+        userId: editLocks.userId,
+        clientId: editLocks.clientId,
+        expiresAt: editLocks.expiresAt,
+      })
+      .from(editLocks)
+      .where(eq(editLocks.notepadId, notepadId))
+      .limit(1);
+    return first(result) ?? null;
+  }
+
+  async deleteLock(notepadId: string): Promise<void> {
+    await this.db.delete(editLocks).where(eq(editLocks.notepadId, notepadId));
   }
 
   // FTS
@@ -301,9 +320,9 @@ export class PostgresNotepadRepository implements INotepadRepository {
     }
   }
 
-  async listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]> {
+  async listBacklinks(notepadId: string): Promise<{ id: string; title: string; icon?: string | null }[]> {
     const rows = await this.db
-      .select({ id: notepads.id, title: notepads.title })
+      .select({ id: notepads.id, title: notepads.title, icon: notepads.icon })
       .from(notepadLinks)
       .innerJoin(notepads, eq(notepads.id, notepadLinks.sourceId))
       .where(
@@ -402,29 +421,15 @@ export class PostgresNotepadRepository implements INotepadRepository {
         icon: notepads.icon,
       })
       .from(notepads)
-      .where(and(eq(notepads.projectId, projectId), sql`${notepads.title} ILIKE ${`%${pattern}%`}`))
+      .where(
+        and(
+          eq(notepads.projectId, projectId),
+          eq(notepads.kind, 'notepad'),
+          isNull(notepads.deletedAt),
+          sql`${notepads.title} ILIKE ${`%${pattern}%`}`,
+        ),
+      )
       .limit(limit);
     return result;
-  }
-}
-
-function extractPlainText(contentJson: string): string {
-  try {
-    const blocks = JSON.parse(contentJson);
-    if (!Array.isArray(blocks)) return '';
-    return blocks
-      .map((block: any) => {
-        if (block.type === 'paragraph' && block.props?.text) return block.props.text;
-        if (block.type === 'heading' && block.props?.text) return block.props.text;
-        if (block.type === 'bullet' && block.props?.text) return block.props.text;
-        if (block.type === 'numbered' && block.props?.text) return block.props.text;
-        if (block.type === 'todo' && block.props?.text) return block.props.text;
-        if (block.type === 'quote' && block.props?.text) return block.props.text;
-        if (block.type === 'code' && block.props?.text) return block.props.text;
-        return '';
-      })
-      .join(' ');
-  } catch {
-    return '';
   }
 }

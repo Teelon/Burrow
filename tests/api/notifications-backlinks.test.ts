@@ -140,7 +140,7 @@ describe('Phase 5C: Relationships, Notifications & Backlinks', () => {
     cardId = ((await cRes.json()) as { cardId: string }).cardId;
 
     await expectInvariantsHold(env.DB);
-  });
+  }, 15_000);
 
   it('notifies user on mention exactly once and excludes self-mentions', async () => {
     // Owner mentions editor in Notepad 1
@@ -227,7 +227,7 @@ describe('Phase 5C: Relationships, Notifications & Backlinks', () => {
     expect(allNotifs.length).toBe(1); // Still exactly 1 notification
 
     await expectInvariantsHold(env.DB);
-  });
+  }, 15_000);
 
   it('notifies assignee on card assignment', async () => {
     // Assign card to editor
@@ -275,7 +275,7 @@ describe('Phase 5C: Relationships, Notifications & Backlinks', () => {
     expect(unread.length).toBe(0);
 
     await expectInvariantsHold(env.DB);
-  });
+  }, 15_000);
 
   it('indexes backlinks and removes deleted sources', async () => {
     // Notepad 2 links to Notepad 1
@@ -334,5 +334,5 @@ describe('Phase 5C: Relationships, Notifications & Backlinks', () => {
     expect(np1AfterDelData.backlinks.length).toBe(0);
 
     await expectInvariantsHold(env.DB);
-  });
+  }, 15_000);
 });

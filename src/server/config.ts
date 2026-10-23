@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
 const configSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(8788),
+  PORT: z.coerce.number().int().positive().default(3005),
   SQLITE_PATH: z.string().min(1).default('./data/burrow.db'),
   LOCAL_STORAGE_PATH: z.string().min(1).default('./data/uploads'),
   BETTER_AUTH_SECRET: z.string().min(1).default('local-dev-secret-change-me'),
-  BETTER_AUTH_URL: z.string().min(1).default('http://localhost:8788'),
+  BETTER_AUTH_URL: z.string().min(1).default('http://localhost:3005'),
   BOOTSTRAP_TOKEN: z.string().default(''),
   DATABASE_URL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),

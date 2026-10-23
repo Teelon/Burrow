@@ -31,7 +31,7 @@ export declare function useProjects(): import("@tanstack/react-query").UseQueryR
 export declare function useCreateProject(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     position: string;
-}, Error, {
+}, any, {
     name: string;
     icon?: string | null;
     color?: string | null;
@@ -39,7 +39,7 @@ export declare function useCreateProject(): import("@tanstack/react-query").UseM
 export declare function useUpdateProject(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     projectId: string;
-}, Error, {
+}, any, {
     id: string;
     name?: string;
     icon?: string | null;
@@ -49,7 +49,7 @@ export declare function useUpdateProject(): import("@tanstack/react-query").UseM
 export declare function useDeleteProject(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     deletedProjectId: string;
-}, Error, {
+}, any, {
     id: string;
     confirmName: string;
 }, unknown>;
@@ -75,14 +75,14 @@ export declare function useCreateInvite(): import("@tanstack/react-query").UseMu
     token: string;
     expiresAt: number;
     url: string;
-}, Error, {
+}, any, {
     email: string;
     role: "editor" | "viewer";
 }, unknown>;
 export declare function useRevokeInvite(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     id: string;
-}, Error, string, unknown>;
+}, any, string, unknown>;
 export declare function useInviteInfo(token: string | undefined): import("@tanstack/react-query").UseQueryResult<{
     valid: boolean;
     token: string;
@@ -125,7 +125,7 @@ export declare function useBoard(boardId: string | undefined): import("@tanstack
 export declare function useCreateBoard(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     position: string;
-}, Error, {
+}, any, {
     projectId: string;
     name: string;
     icon?: string | null;
@@ -133,7 +133,7 @@ export declare function useCreateBoard(): import("@tanstack/react-query").UseMut
 export declare function useUpdateBoard(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     boardId: string;
-}, Error, {
+}, any, {
     boardId: string;
     name?: string;
     icon?: string | null;
@@ -141,11 +141,11 @@ export declare function useUpdateBoard(): import("@tanstack/react-query").UseMut
 export declare function useDeleteBoard(): import("@tanstack/react-query").UseMutationResult<{
     ok: boolean;
     deletedId: string;
-}, Error, string, unknown>;
+}, any, string, unknown>;
 export declare function useCreateColumn(): import("@tanstack/react-query").UseMutationResult<{
     id: string;
     position: string;
-}, Error, {
+}, any, {
     boardId: string;
     name: string;
     color?: string | null;
@@ -153,7 +153,7 @@ export declare function useCreateColumn(): import("@tanstack/react-query").UseMu
 export declare function useUpdateColumn(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     columnId: string;
-}, Error, {
+}, any, {
     boardId: string;
     columnId: string;
     name?: string;
@@ -181,7 +181,7 @@ export declare function useCreateCard(): import("@tanstack/react-query").UseMuta
     cardId: string;
     notepadId: string;
     linkedNotepadId: string | null;
-}, Error, {
+}, any, {
     boardId: string;
     columnId: string;
     title: string;
@@ -240,7 +240,7 @@ export declare function useCard(cardId: string | undefined): import("@tanstack/r
 export declare function useUpdateCard(): import("@tanstack/react-query").UseMutationResult<{
     ok: boolean;
     cardId: string;
-}, Error, {
+}, any, {
     cardId: string;
     boardId?: string;
     title?: string;
@@ -270,7 +270,7 @@ export declare function useDeleteCard(): import("@tanstack/react-query").UseMuta
 export declare function useRestoreCard(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
     restoredId: string;
-}, Error, {
+}, any, {
     cardId: string;
 }, unknown>;
 export interface MyTaskItem {
@@ -314,7 +314,7 @@ export declare function useCreateSubtask(): import("@tanstack/react-query").UseM
     completed: boolean;
     position: string;
     createdAt: number;
-}, Error, {
+}, any, {
     cardId: string;
     boardId?: string;
     title: string;
@@ -322,7 +322,7 @@ export declare function useCreateSubtask(): import("@tanstack/react-query").UseM
 export declare function useUpdateSubtask(): import("@tanstack/react-query").UseMutationResult<{
     ok: boolean;
     subtaskId: string;
-}, Error, {
+}, any, {
     cardId: string;
     boardId?: string;
     subtaskId: string;
@@ -333,7 +333,7 @@ export declare function useUpdateSubtask(): import("@tanstack/react-query").UseM
 export declare function useDeleteSubtask(): import("@tanstack/react-query").UseMutationResult<{
     ok: boolean;
     subtaskId: string;
-}, Error, {
+}, any, {
     cardId: string;
     boardId?: string;
     subtaskId: string;
@@ -359,14 +359,14 @@ export declare function useCreateComment(): import("@tanstack/react-query").UseM
     name: string;
     image: string | null;
     mentionedUserIds: string[];
-}, Error, {
+}, any, {
     cardId: string;
     content: string;
 }, unknown>;
 export declare function useDeleteComment(): import("@tanstack/react-query").UseMutationResult<{
     ok: boolean;
     commentId: string;
-}, Error, {
+}, any, {
     cardId: string;
     commentId: string;
 }, unknown>;
@@ -386,7 +386,7 @@ export declare function useNotifications(unreadOnly?: boolean): import("@tanstac
 }[], Error>;
 export declare function useMarkNotificationsRead(): import("@tanstack/react-query").UseMutationResult<{
     ok: true;
-}, Error, string[] | undefined, unknown>;
+}, any, string[] | undefined, unknown>;
 export interface TrashedNotepad {
     id: string;
     kind: 'notepad' | 'card';
@@ -404,7 +404,7 @@ export declare function useTrash(projectId?: string): import("@tanstack/react-qu
     notepads: TrashedNotepad[];
     boards: TrashedBoard[];
 }, Error>;
-export declare function useRestoreNotepad(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+export declare function useRestoreNotepad(): import("@tanstack/react-query").UseMutationResult<any, any, {
     notepadId: string;
     projectId: string;
 }, unknown>;
@@ -434,6 +434,7 @@ export interface NotepadNode {
     position: string;
     isFavorite: boolean;
 }
+export declare function useNotepads(projectId?: string): import("@tanstack/react-query").UseQueryResult<NotepadNode[], Error>;
 export declare function useMoveNotepad(projectId: string): import("@tanstack/react-query").UseMutationResult<{
     parentId: string | null;
     position: string;
@@ -451,12 +452,12 @@ export interface TagItem {
     color?: string | null;
 }
 export declare function useProjectTags(projectId?: string): import("@tanstack/react-query").UseQueryResult<TagItem[], Error>;
-export declare function useCreateTag(): import("@tanstack/react-query").UseMutationResult<TagItem, Error, {
+export declare function useCreateTag(): import("@tanstack/react-query").UseMutationResult<TagItem, any, {
     projectId: string;
     name: string;
     color?: string | null;
 }, unknown>;
-export declare function useDeleteTag(): import("@tanstack/react-query").UseMutationResult<any, Error, {
+export declare function useDeleteTag(): import("@tanstack/react-query").UseMutationResult<any, any, {
     tagId: string;
     projectId: string;
 }, unknown>;

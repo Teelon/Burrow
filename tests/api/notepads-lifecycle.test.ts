@@ -381,6 +381,36 @@ describe('Phase 3: Notepads, Soft Edit Locks & Restore Matrix', () => {
     );
     expect(claimResB2.status).toBe(200);
 
+    // User A attempts to release User B's lock using client-B with ownerCookie -> lock must remain held by User B
+    const unauthorizedRelease = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}/lock`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-B' }),
+      },
+      env,
+    );
+    expect(unauthorizedRelease.status).toBe(200);
+
+    // Verify User B still holds the lock by attempting to acquire from client-A (rejected 409)
+    const verifyStillHeld = await app.request(
+      `http://localhost/api/notepads/${parentNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-A' }),
+      },
+      env,
+    );
+    expect(verifyStillHeld.status).toBe(409);
+
     // User B releases
     await app.request(
       `http://localhost/api/notepads/${parentNotepadId}/lock`,
@@ -394,7 +424,102 @@ describe('Phase 3: Notepads, Soft Edit Locks & Restore Matrix', () => {
       },
       env,
     );
-  });
+  }, 15_000);
+
+  it('validates non-existent notepads, trash refusal, and lock cleanup on soft-delete', async () => {
+    // Non-existent notepad returns 404 on lock endpoints
+    const nonExistentLock = await app.request(
+      `http://localhost/api/notepads/non-existent-notepad-id/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-A' }),
+      },
+      env,
+    );
+    expect(nonExistentLock.status).toBe(404);
+
+    // User A claims lock on child notepad, then deleting it clears the edit lock
+    const claimChild = await app.request(
+      `http://localhost/api/notepads/${childNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-child' }),
+      },
+      env,
+    );
+    expect(claimChild.status).toBe(200);
+
+    // Soft delete child
+    await app.request(
+      `http://localhost/api/notepads/${childNotepadId}`,
+      {
+        method: 'DELETE',
+        headers: { Cookie: ownerCookie },
+      },
+      env,
+    );
+
+    // Lock claim on deleted notepad in trash is refused with 404
+    const lockTrash = await app.request(
+      `http://localhost/api/notepads/${childNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: ownerCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-child-2' }),
+      },
+      env,
+    );
+    expect(lockTrash.status).toBe(404);
+
+    // Restore child so matrix tests have their expected fixture
+    await app.request(
+      `http://localhost/api/notepads/${childNotepadId}/restore`,
+      {
+        method: 'POST',
+        headers: { Cookie: ownerCookie },
+      },
+      env,
+    );
+
+    // After restore, pre-delete lock is gone, so User B can claim it immediately
+    const claimRestored = await app.request(
+      `http://localhost/api/notepads/${childNotepadId}/lock`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: editorCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-child-editor' }),
+      },
+      env,
+    );
+    expect(claimRestored.status).toBe(200);
+
+    await app.request(
+      `http://localhost/api/notepads/${childNotepadId}/lock`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: editorCookie,
+        },
+        body: JSON.stringify({ clientId: 'client-child-editor' }),
+      },
+      env,
+    );
+  }, 15_000);
 
   // -------------------------------------------------------------------------
   // Restore Matrix Tests (1 to 7)

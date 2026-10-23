@@ -1,13 +1,13 @@
 import { BlockNoteSchema } from '@blocknote/core';
 /**
- * Custom inline mention content spec — Basalt angular chips on token surfaces.
+ * Custom inline mention content spec — Basalt angular chips / Modern rounded pills on token surfaces.
  */
 export declare const Mention: import("@blocknote/core").InlineContentSpec<{
     readonly type: "mention";
     readonly propSchema: {
         readonly kind: {
             readonly default: "user";
-            readonly values: readonly ["user", "notepad", "card", "date"];
+            readonly values: readonly ["user", "notepad", "card", "date", "tag"];
         };
         readonly id: {
             readonly default: "";
@@ -38,6 +38,14 @@ export declare const CardLinkBlock: (options?: undefined) => import("@blocknote/
     };
 }, "none">;
 /**
+ * Custom block for boardLink.
+ */
+export declare const BoardLinkBlock: (options?: undefined) => import("@blocknote/core").BlockSpec<"boardLink", {
+    readonly boardId: {
+        readonly default: "";
+    };
+}, "none">;
+/**
  * Burrow BlockNote schema combining default blocks with custom mentions and link blocks.
  */
 export declare const schema: BlockNoteSchema<import("@blocknote/core").BlockSchemaFromSpecs<{
@@ -48,6 +56,11 @@ export declare const schema: BlockNoteSchema<import("@blocknote/core").BlockSche
     }, "none">;
     cardLink: import("@blocknote/core").BlockSpec<"cardLink", {
         readonly cardId: {
+            readonly default: "";
+        };
+    }, "none">;
+    boardLink: import("@blocknote/core").BlockSpec<"boardLink", {
+        readonly boardId: {
             readonly default: "";
         };
     }, "none">;
@@ -245,7 +258,7 @@ export declare const schema: BlockNoteSchema<import("@blocknote/core").BlockSche
         readonly propSchema: {
             readonly kind: {
                 readonly default: "user";
-                readonly values: readonly ["user", "notepad", "card", "date"];
+                readonly values: readonly ["user", "notepad", "card", "date", "tag"];
             };
             readonly id: {
                 readonly default: "";

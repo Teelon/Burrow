@@ -3,7 +3,7 @@ export const NOTEPAD_LINK_BLOCK = 'notepadLink';
 export const CARD_LINK_BLOCK = 'cardLink';
 export const BOARD_LINK_BLOCK = 'boardLink';
 
-export type MentionKind = 'user' | 'notepad' | 'card' | 'date';
+export type MentionKind = 'user' | 'notepad' | 'card' | 'date' | 'tag';
 
 export type LinkTargetType = 'user' | 'notepad' | 'card' | 'board';
 

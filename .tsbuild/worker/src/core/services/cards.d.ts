@@ -41,6 +41,7 @@ export interface CardPlan {
         id: string;
         position: string;
         title: string;
+        mode?: 'existing' | 'new';
     } | null;
     now: number;
 }

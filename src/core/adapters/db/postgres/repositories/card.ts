@@ -15,7 +15,7 @@ import type {
   CardPriority,
   CardWithDetails,
 } from '../../../../infrastructure/types';
-import { eq, and, inArray, asc, sql } from 'drizzle-orm';
+import { eq, and, inArray, asc, sql, isNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
 import {
   cards,
@@ -78,7 +78,7 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
-      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId)))
+      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)))
       .limit(1);
     return result[0] ?? null;
   }
@@ -104,7 +104,7 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
-      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId)))
+      .where(and(eq(cards.id, id), eq(projects.workspaceId, workspaceId), isNull(notepads.deletedAt)))
       .limit(1);
 
     if (!card) return null;
@@ -366,9 +366,10 @@ export class PostgresCardRepository implements ICardRepository {
         projectId: projects.id,
       })
       .from(cards)
+      .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
-      .where(eq(cards.columnId, columnId))
+      .where(and(eq(cards.columnId, columnId), isNull(notepads.deletedAt)))
       .orderBy(cards.position);
     return result;
   }
@@ -381,10 +382,16 @@ export class PostgresCardRepository implements ICardRepository {
     const whereConditions = [
       eq(cardAssignees.userId, userId),
       eq(projects.workspaceId, workspaceId),
+      isNull(notepads.deletedAt),
+      isNull(boards.deletedAt),
+      isNull(projects.archivedAt),
     ];
     if (filters.projectId) {
       whereConditions.push(eq(projects.id, filters.projectId));
     }
+
+    const isCompletedColumn = (columnName: string) =>
+      /done|completed|closed|shipped/i.test(columnName);
 
     const result = await this.db
       .select({
@@ -396,7 +403,6 @@ export class PostgresCardRepository implements ICardRepository {
         title: notepads.title,
         dueDate: cards.dueDate,
         priority: cards.priority,
-        isCompleted: sql<boolean>`false`.as('is_completed'),
         createdAt: notepads.createdAt,
         boardName: boards.name,
         columnName: boardColumns.name,
@@ -433,8 +439,18 @@ export class PostgresCardRepository implements ICardRepository {
         projects.color,
       );
 
-    return result.map((r) => ({
+    const status = filters.status ?? 'all';
+    const filtered =
+      status === 'all'
+        ? result
+        : result.filter((r) => {
+            const completed = isCompletedColumn(r.columnName);
+            return status === 'completed' ? completed : !completed;
+          });
+
+    return filtered.map((r) => ({
       ...r,
+      isCompleted: isCompletedColumn(r.columnName),
       tags: r.tags.filter((t: { id: string | null }) => t.id !== null),
     }));
   }
@@ -463,7 +479,13 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(projects, eq(boards.projectId, projects.id))
       .leftJoin(cardAssignees, eq(cards.id, cardAssignees.cardId))
       .leftJoin(user, eq(cardAssignees.userId, user.id))
-      .where(and(inArray(cards.id, cardIds), eq(projects.workspaceId, workspaceId)))
+      .where(
+        and(
+          inArray(cards.id, cardIds),
+          eq(projects.workspaceId, workspaceId),
+          isNull(notepads.deletedAt),
+        ),
+      )
       .groupBy(
         cards.id,
         cards.notepadId,
@@ -499,7 +521,14 @@ export class PostgresCardRepository implements ICardRepository {
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(boardColumns, eq(cards.columnId, boardColumns.id))
-      .where(and(eq(boards.projectId, projectId), sql`${notepads.title} ILIKE ${`%${pattern}%`}`))
+      .where(
+        and(
+          eq(boards.projectId, projectId),
+          isNull(notepads.deletedAt),
+          isNull(boards.deletedAt),
+          sql`${notepads.title} ILIKE ${`%${pattern}%`}`,
+        ),
+      )
       .limit(limit);
   }
 }

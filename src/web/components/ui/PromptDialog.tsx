@@ -12,6 +12,7 @@ export interface PromptDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   busy?: boolean;
+  allowEmpty?: boolean;
   onConfirm: (value: string) => void;
   onCancel: () => void;
 }
@@ -29,6 +30,7 @@ export function PromptDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   busy = false,
+  allowEmpty = false,
   onConfirm,
   onCancel,
 }: PromptDialogProps) {
@@ -48,7 +50,8 @@ export function PromptDialog({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (busy || !value.trim()) return;
+    if (busy) return;
+    if (!allowEmpty && !value.trim()) return;
     onConfirm(value.trim());
   };
 
@@ -79,7 +82,7 @@ export function PromptDialog({
           <Button
             type="submit"
             variant="primary"
-            disabled={busy || !value.trim()}
+            disabled={busy || (!allowEmpty && !value.trim())}
             className="min-h-[44px] sm:min-h-0"
           >
             {busy ? 'Working…' : confirmLabel}

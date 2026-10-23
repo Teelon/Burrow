@@ -178,4 +178,28 @@ describe('createNotepadRepository contract', () => {
     expect(nextChildPos).toBeDefined();
     expect(nextChildPos! > 'a0').toBe(true);
   });
+
+  it('getLock reads active lock and deleteLock removes it', async () => {
+    const projectId = await seedProject();
+    const notepadId = await seedNotepad({ projectId, title: 'lock test', position: 'a0' });
+    const db = createD1Db(env.DB);
+
+    expect(await repo().getLock(notepadId)).toBeNull();
+
+    const expiresAt = Date.now() + 60_000;
+    await db.insert(schema.editLocks).values({
+      notepadId,
+      userId: 'lock-test-user',
+      clientId: 'lock-test-client',
+      expiresAt,
+    });
+
+    const lock = await repo().getLock(notepadId);
+    expect(lock).not.toBeNull();
+    expect(lock?.userId).toBe('lock-test-user');
+    expect(lock?.clientId).toBe('lock-test-client');
+
+    await repo().deleteLock(notepadId);
+    expect(await repo().getLock(notepadId)).toBeNull();
+  });
 });

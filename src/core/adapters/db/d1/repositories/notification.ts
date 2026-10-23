@@ -21,13 +21,16 @@ export function createNotificationRepository(db: DB): INotificationRepository {
           type: t.notifications.type,
           actorId: t.notifications.actorId,
           actorName: t.user.name,
+          actorImage: t.user.image,
           notepadId: t.notifications.notepadId,
           cardId: t.notifications.cardId,
+          notepadTitle: t.notepads.title,
           readAt: t.notifications.readAt,
           createdAt: t.notifications.createdAt,
         })
         .from(t.notifications)
         .innerJoin(t.user, eq(t.user.id, t.notifications.actorId))
+        .leftJoin(t.notepads, eq(t.notepads.id, t.notifications.notepadId))
         .where(
           and(
             eq(t.notifications.userId, userId),
@@ -37,7 +40,28 @@ export function createNotificationRepository(db: DB): INotificationRepository {
         )
         .orderBy(desc(t.notifications.createdAt))
         .limit(50);
-      return rows.map(mapNotification);
+
+      const missingCardIds = rows.filter((r) => !r.notepadTitle && r.cardId).map((r) => r.cardId!);
+      const cardTitles = new Map<string, string>();
+      if (missingCardIds.length > 0) {
+        for (const chunk of chunkInList(missingCardIds, 1)) {
+          const cardRows = await db
+            .select({ cardId: t.cards.id, title: t.notepads.title })
+            .from(t.cards)
+            .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+            .where(inArray(t.cards.id, chunk));
+          for (const cr of cardRows) {
+            cardTitles.set(cr.cardId, cr.title);
+          }
+        }
+      }
+
+      return rows.map((r) =>
+        mapNotification({
+          ...r,
+          targetTitle: r.notepadTitle ?? (r.cardId ? cardTitles.get(r.cardId) : null) ?? null,
+        }),
+      );
     },
 
     async markRead(userId: string, notificationIds: string[]): Promise<void> {
@@ -131,8 +155,10 @@ function mapNotification(row: {
   type: 'mention' | 'assigned';
   actorId: string;
   actorName: string | null;
+  actorImage?: string | null;
   notepadId: string | null;
   cardId: string | null;
+  targetTitle?: string | null;
   readAt: number | null;
   createdAt: number;
 }): Notification {
@@ -143,9 +169,11 @@ function mapNotification(row: {
     type: row.type,
     actorId: row.actorId,
     actorName: row.actorName,
+    actorImage: row.actorImage ?? null,
+    targetTitle: row.targetTitle ?? null,
     notepadId: row.notepadId,
     cardId: row.cardId,
     readAt: row.readAt ?? null,
     createdAt: row.createdAt,
-  };
+  } as any;
 }

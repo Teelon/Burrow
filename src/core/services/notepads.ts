@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import type {
+  IMemberRepository,
   INotepadRepository,
   ITagRepository,
   Notepad,
@@ -102,10 +103,21 @@ export class NotepadService {
     private readonly repos: {
       notepads: INotepadRepository;
       tags: ITagRepository;
+      members?: IMemberRepository;
     },
     private readonly locks: ILockAdapter,
     private readonly storage?: IStorageAdapter,
   ) {}
+
+  private async resolveHolderName(userId: string): Promise<string | null> {
+    if (!this.repos.members) return null;
+    try {
+      const member = await this.repos.members.findByUserIdGlobal(userId);
+      return member?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Create
@@ -279,6 +291,7 @@ export class NotepadService {
     for (const chunk of chunkByParamBudget(allIds, 1, 0)) {
       for (const id of chunk) {
         await this.repos.notepads.deleteFts(id);
+        await this.repos.notepads.deleteLock(id);
       }
     }
   }
@@ -354,7 +367,14 @@ export class NotepadService {
 
     // Hard delete (cascades via FK: notepadTags, notepadLinks, etc.)
     for (const id of allIds) {
-      await this.repos.notepads.hardDelete(id);
+      try {
+        const exists = await this.repos.notepads.findById(id);
+        if (exists) {
+          await this.repos.notepads.hardDelete(id);
+        }
+      } catch (err: any) {
+        if (!err?.message?.includes('not found')) throw err;
+      }
     }
 
     // Post-batch best-effort cleanup of R2 files
@@ -407,9 +427,9 @@ export class NotepadService {
     if (
       lock &&
       lock.expiresAt > now &&
-      (lock.userId !== args.actorId || (args.clientId && lock.clientId !== args.clientId))
+      (lock.userId !== args.actorId || lock.clientId !== args.clientId)
     ) {
-      const holderName = 'Someone'; // Would need user repo to get name
+      const holderName = (await this.resolveHolderName(lock.userId)) || 'Someone';
       throw conflict(
         'locked',
         JSON.stringify({
@@ -443,6 +463,11 @@ export class NotepadService {
     if (!after || after.content !== args.content) {
       throw conflict('version_conflict', 'This notepad changed elsewhere');
     }
+
+    if (args.clientId) {
+      await this.locks.acquire(args.notepadId, args.actorId, args.clientId, LOCK_TTL_MS).catch(() => false);
+    }
+
     return { version: after.version };
   }
 
@@ -499,13 +524,17 @@ export class NotepadService {
     );
 
     if (!result.acquired) {
+      const holderName =
+        result.holderName ||
+        (result.holderUserId ? await this.resolveHolderName(result.holderUserId) : null) ||
+        'Someone';
       throw conflict(
         'locked',
         JSON.stringify({
           code: 'locked',
           holder: {
             userId: result.holderUserId,
-            name: result.holderName || 'Someone',
+            name: holderName,
             isMe: result.holderUserId === args.userId,
           },
           expiresAt: result.expiresAt,
@@ -517,7 +546,7 @@ export class NotepadService {
   }
 
   async releaseLock(args: ClaimLockArgs): Promise<void> {
-    await this.locks.release(args.notepadId, args.clientId);
+    await this.locks.release(args.notepadId, args.clientId, { userId: args.userId });
   }
 
   // ---------------------------------------------------------------------------

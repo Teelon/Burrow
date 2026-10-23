@@ -15,6 +15,7 @@ interface NotificationItem {
   };
   notepadId?: string | null;
   cardId?: string | null;
+  boardId?: string | null;
   targetTitle?: string;
   readAt?: number | null;
   createdAt: number;
@@ -55,6 +56,15 @@ export function NotificationsBell({ projectId }: { projectId?: string }) {
         to: '/p/$projectId/notepads/$notepadId',
         params: { projectId, notepadId: notif.notepadId },
       });
+    } else if (notif.cardId) {
+      if (notif.boardId && projectId) {
+        navigate({
+          to: '/p/$projectId/boards/$boardId',
+          params: { projectId, boardId: notif.boardId },
+        });
+      } else {
+        navigate({ to: '/my-tasks' });
+      }
     }
   };
 

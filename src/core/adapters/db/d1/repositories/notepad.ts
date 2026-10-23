@@ -200,7 +200,7 @@ export function createNotepadRepository(db: DB): INotepadRepository {
 
     async hardDelete(id: string): Promise<HardDeletedNotepad[]> {
       const [notepad] = await db.select().from(t.notepads).where(eq(t.notepads.id, id));
-      if (!notepad) throw new Error('Notepad not found');
+      if (!notepad) return [];
 
       const descendants = await getDescendantIds(db, id);
       const allIds = [id, ...descendants];
@@ -357,6 +357,10 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         : null;
     },
 
+    async deleteLock(notepadId: string): Promise<void> {
+      await db.delete(t.editLocks).where(eq(t.editLocks.notepadId, notepadId));
+    },
+
     // FTS
     async deleteFts(notepadId: string): Promise<void> {
       await db.run(sql`DELETE FROM notepads_fts WHERE notepad_id = ${notepadId}`);
@@ -415,9 +419,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       if (statements.length > 0) await runBatch(db, statements);
     },
 
-    async listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]> {
+    async listBacklinks(notepadId: string): Promise<{ id: string; title: string; icon?: string | null }[]> {
       const rows = await db
-        .select({ id: t.notepads.id, title: t.notepads.title })
+        .select({ id: t.notepads.id, title: t.notepads.title, icon: t.notepads.icon })
         .from(t.notepadLinks)
         .innerJoin(t.notepads, eq(t.notepads.id, t.notepadLinks.sourceId))
         .where(
@@ -502,6 +506,7 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         .where(
           and(
             eq(t.notepads.projectId, projectId),
+            eq(t.notepads.kind, 'notepad'),
             isNull(t.notepads.deletedAt),
             sql`${t.notepads.title} LIKE ${searchPattern}`,
           ),

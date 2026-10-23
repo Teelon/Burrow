@@ -40,7 +40,7 @@ export function createCoreApp(infra: Infrastructure) {
     tags: repositories.tags,
   });
   const notepads = new NotepadService(
-    { notepads: repositories.notepads, tags: repositories.tags },
+    { notepads: repositories.notepads, tags: repositories.tags, members: repositories.members },
     locks,
     storage,
   );
@@ -267,13 +267,25 @@ export function createCoreApp(infra: Infrastructure) {
     const workspaceId = c.get('workspaceId');
     const role = c.get('role');
 
-    // Get the first project for this workspace as the default/last project
-    const projectsList = await repositories.projects.listByWorkspace(workspaceId);
+    // Fetch member, workspace, and projects in parallel
+    const [member, workspace, projectsList] = await Promise.all([
+      repositories.members.findByUserId(workspaceId, userId),
+      repositories.workspaces.findById(workspaceId),
+      repositories.projects.listByWorkspace(workspaceId),
+    ]);
     const lastProjectId = projectsList[0]?.id ?? null;
 
     return c.json({
-      user: { id: userId, name: '', email: '', image: null },
-      workspace: { id: workspaceId, name: '' },
+      user: {
+        id: userId,
+        name: member?.name ?? '',
+        email: member?.email ?? '',
+        image: member?.image ?? null,
+      },
+      workspace: {
+        id: workspaceId,
+        name: workspace?.name ?? '',
+      },
       role,
       lastProjectId,
     });
@@ -468,10 +480,11 @@ export function createCoreApp(infra: Infrastructure) {
     const lock = await repositories.notepads.getLock(notepadId);
     let lockInfo = null;
     if (lock && lock.expiresAt > Date.now()) {
+      const holder = await repositories.members.findByUserId(workspaceId, lock.userId);
       lockInfo = {
         userId: lock.userId,
         clientId: lock.clientId,
-        name: 'Someone',
+        name: holder?.name || 'Someone',
         expiresAt: lock.expiresAt,
         isMe: lock.userId === c.get('userId'),
       };
@@ -613,9 +626,16 @@ export function createCoreApp(infra: Infrastructure) {
     requireRole('editor'),
     zValidator('json', lockSchema),
     async (c) => {
+      const workspaceId = c.get('workspaceId');
       const userId = c.get('userId');
       const notepadId = c.req.param('id');
       const { clientId, takeover } = c.req.valid('json');
+
+      const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
+      if (!notepad || notepad.deletedAt !== null) {
+        throw httpError(404, 'not_found', 'Notepad not found');
+      }
+
       try {
         const result = await notepads.claimLock({ notepadId, userId, clientId, takeover });
         return c.json(result);
@@ -639,9 +659,16 @@ export function createCoreApp(infra: Infrastructure) {
     requireRole('editor'),
     zValidator('json', lockSchema),
     async (c) => {
+      const workspaceId = c.get('workspaceId');
       const userId = c.get('userId');
       const notepadId = c.req.param('id');
       const { clientId } = c.req.valid('json');
+
+      const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
+      if (!notepad) {
+        throw httpError(404, 'not_found', 'Notepad not found');
+      }
+
       await notepads.releaseLock({ notepadId, userId, clientId });
       return c.json({ ok: true });
     },
@@ -1119,10 +1146,13 @@ export function createCoreApp(infra: Infrastructure) {
 
       // Fire-and-forget invite email via waitUntil — never blocks or fails the response
       const sendPromise = (async () => {
-        const ws = await repositories.workspaces.findById(workspaceId);
+        const [ws, inviter] = await Promise.all([
+          repositories.workspaces.findById(workspaceId),
+          repositories.members.findByUserId(workspaceId, userId),
+        ]);
         return emailProvider.send({
           to: email,
-          ...inviteEmail(undefined, ws?.name, inviteUrl),
+          ...inviteEmail(inviter?.name, ws?.name, inviteUrl),
         });
       })().catch((err) => console.error('[email] invite send failed:', err));
 
@@ -1253,14 +1283,16 @@ export function createCoreApp(infra: Infrastructure) {
     const workspaceId = c.get('workspaceId');
     const unreadOnly = c.req.query('unread') === '1';
     const rows = await notifications.listNotifications(userId, workspaceId, unreadOnly);
-    const mapped = rows.map((r) => {
-      const { actorId, actorName, ...rest } = r;
+    const mapped = rows.map((r: any) => {
+      const { actorId, actorName, actorImage, targetTitle, ...rest } = r;
       return {
         ...rest,
         actor: {
           id: actorId,
           name: actorName || 'Unknown User',
+          image: actorImage ?? null,
         },
+        targetTitle: targetTitle ?? undefined,
       };
     });
     return c.json(mapped);
@@ -1319,7 +1351,7 @@ export function createCoreApp(infra: Infrastructure) {
   app.get('/api/suggest', requireSession, zValidator('query', suggestQuerySchema), async (c) => {
     const workspaceId = c.get('workspaceId');
     const { type, q, projectId } = c.req.valid('query');
-    const searchPattern = `%${q.trim()}%`;
+    const searchPattern = q.trim();
 
     if (type === 'user') {
       const rows = await repositories.members.findByPattern(workspaceId, searchPattern, 8);

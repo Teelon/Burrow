@@ -108,8 +108,7 @@ export class BoardService {
     if (!board) throw notFound('not_found', 'Board not found');
 
     const now = Date.now();
-    // The worker also soft-deleted card notepads and removed FTS entries
-    // That logic belongs in the repository or a composite operation
+    // Soft-deletes board and its card notepads, removing FTS entries
     await this.repos.boards.softDelete(boardId, now);
   }
 

@@ -1244,7 +1244,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        status?: "all" | "completed" | "open" | undefined;
+                        status?: "all" | "open" | "completed" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -1259,7 +1259,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        status?: "all" | "completed" | "open" | undefined;
+                        status?: "all" | "open" | "completed" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -1805,7 +1805,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        type: "user" | "notepad" | "card" | "tag";
+                        type: "notepad" | "card" | "user" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1821,7 +1821,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "user" | "notepad" | "card" | "tag";
+                        type: "notepad" | "card" | "user" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1838,7 +1838,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "user" | "notepad" | "card" | "tag";
+                        type: "notepad" | "card" | "user" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1854,7 +1854,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "user" | "notepad" | "card" | "tag";
+                        type: "notepad" | "card" | "user" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };
@@ -1871,7 +1871,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        type: "user" | "notepad" | "card" | "tag";
+                        type: "notepad" | "card" | "user" | "tag";
                         q?: string | undefined;
                         projectId?: string | undefined;
                     };

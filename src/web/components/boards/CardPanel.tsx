@@ -7,6 +7,7 @@ import {
   useDeleteCard,
   useMembers,
   useMoveCard,
+  useProjectTags,
   useRestoreCard,
   useUpdateCard,
 } from '../../lib/queries';
@@ -15,7 +16,6 @@ import { CommentsFeed } from './CommentsFeed';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { Badge } from '../ui/Badge';
 import { Avatar } from '../ui/Avatar';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { StatusDiamond } from '../ui/StatusDiamond';
@@ -36,9 +36,10 @@ const PRIORITIES = [
   { value: 'urgent', label: 'Urgent', colorVar: 'var(--danger)' },
 ] as const;
 
-export function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps) {
+export function CardPanel({ cardId, boardId, projectId, columns, onClose }: CardPanelProps) {
   const { data: card, isLoading } = useCard(cardId);
   const { data: members = [] } = useMembers();
+  const { data: projectTags = [] } = useProjectTags(projectId);
   const updateCardMutation = useUpdateCard();
   const moveCardMutation = useMoveCard();
   const deleteCardMutation = useDeleteCard();
@@ -114,6 +115,25 @@ export function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps)
     });
   };
 
+  const toggleTag = (tagId: string) => {
+    const currentTagIds = (tags || []).map((t: any) => t.id);
+    const nextTagIds = currentTagIds.includes(tagId)
+      ? currentTagIds.filter((id: string) => id !== tagId)
+      : [...currentTagIds, tagId];
+    updateCardMutation.mutate(
+      {
+        cardId,
+        boardId,
+        tagIds: nextTagIds,
+      },
+      {
+        onError: (err: any) => {
+          toast.error(err?.message || 'Failed to update tags');
+        },
+      },
+    );
+  };
+
   const handleDelete = () => {
     deleteCardMutation.mutate(
       { cardId, boardId },
@@ -186,7 +206,7 @@ export function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps)
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             placeholder="Card Title"
-            className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none placeholder:text-[var(--muted)] text-[var(--text)]"
+            className="w-full text-2xl md:text-2xl font-bold bg-transparent border-none focus:outline-none placeholder:text-[var(--muted)] text-[var(--text)] px-0"
           />
         </div>
 
@@ -260,21 +280,37 @@ export function CardPanel({ cardId, boardId, columns, onClose }: CardPanelProps)
           </div>
 
           {/* Tags */}
-          {tags.length > 0 && (
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-[var(--muted)] w-28">
-                <Tag className="w-3.5 h-3.5" />
-                <span>Tags</span>
-              </div>
-              <div className="flex items-center gap-1 flex-wrap">
-                {tags.map((t: any) => (
-                  <Badge key={t.id} style={{ borderLeftColor: t.color || '#64748b' }}>
-                    #{t.name}
-                  </Badge>
-                ))}
-              </div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2 text-[var(--muted)] w-28 pt-1">
+              <Tag className="w-3.5 h-3.5" />
+              <span>Tags</span>
             </div>
-          )}
+            <div className="flex items-center gap-1.5 flex-wrap justify-end flex-1">
+              {projectTags.length === 0 ? (
+                <span className="text-xs text-[var(--muted)] italic">No tags in project</span>
+              ) : (
+                projectTags.map((pt) => {
+                  const isSelected = tags.some((t: any) => t.id === pt.id);
+                  return (
+                    <button
+                      key={pt.id}
+                      type="button"
+                      onClick={() => toggleTag(pt.id)}
+                      className={`px-2 py-1 min-h-[44px] sm:min-h-0 border text-xs flex items-center gap-1.5 transition cursor-pointer select-none ${
+                        isSelected
+                          ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-ink)] font-medium'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)]'
+                      }`}
+                      title={isSelected ? `Remove #${pt.name}` : `Add #${pt.name}`}
+                    >
+                      <StatusDiamond color={pt.color || 'var(--c4)'} size={6} />
+                      <span>#{pt.name}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Subtasks / Checklist */}

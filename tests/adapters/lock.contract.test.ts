@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { SqlLockAdapter } from '../../src/worker/adapters/lock/sql-lock';
+import { SqlLockAdapter } from '../../src/core/adapters/db/d1/adapters/lock/sql-lock';
 import { createDb } from '../../src/worker/db/client';
 import * as schema from '../../src/worker/db/schema';
 
@@ -142,5 +142,39 @@ describe('SqlLockAdapter contract', () => {
     // The rightful client can still release, after which the rival acquires.
     await locks().release(resourceId, clientA);
     expect((await locks().acquire(resourceId, userB, clientB, LOCK_TTL_MS)).acquired).toBe(true);
+  });
+
+  it('same user may take over their own lock from another client, but rivals cannot', async () => {
+    const resourceId = await seedResource();
+    const userA = `user-a-${crypto.randomUUID()}`;
+    const userB = `user-b-${crypto.randomUUID()}`;
+    const clientA1 = `client-a1-${crypto.randomUUID()}`;
+    const clientA2 = `client-a2-${crypto.randomUUID()}`;
+    const clientB = `client-b-${crypto.randomUUID()}`;
+
+    // User A claims lock on client A1
+    const initial = await locks().acquire(resourceId, userA, clientA1, LOCK_TTL_MS);
+    expect(initial.acquired).toBe(true);
+    expect(initial.expiresAt).toBeDefined();
+
+    // Rival User B tries to takeover User A's lock -> rejected
+    const rivalTakeover = await locks().acquire(resourceId, userB, clientB, LOCK_TTL_MS, {
+      takeover: true,
+    });
+    expect(rivalTakeover.acquired).toBe(false);
+    expect(rivalTakeover.holderUserId).toBe(userA);
+
+    // User A in client A2 takes over lock -> succeeds
+    const sameUserTakeover = await locks().acquire(resourceId, userA, clientA2, LOCK_TTL_MS, {
+      takeover: true,
+    });
+    expect(sameUserTakeover.acquired).toBe(true);
+    expect(sameUserTakeover.expiresAt).toBeDefined();
+
+    // Old client A1 can no longer heartbeat
+    expect(await locks().heartbeat(resourceId, clientA1, LOCK_TTL_MS)).toBe(false);
+
+    // New client A2 heartbeat works
+    expect(await locks().heartbeat(resourceId, clientA2, LOCK_TTL_MS)).toBe(true);
   });
 });

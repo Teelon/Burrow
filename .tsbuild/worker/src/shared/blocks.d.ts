@@ -2,7 +2,7 @@ export declare const MENTION_INLINE = "mention";
 export declare const NOTEPAD_LINK_BLOCK = "notepadLink";
 export declare const CARD_LINK_BLOCK = "cardLink";
 export declare const BOARD_LINK_BLOCK = "boardLink";
-export type MentionKind = 'user' | 'notepad' | 'card' | 'date';
+export type MentionKind = 'user' | 'notepad' | 'card' | 'date' | 'tag';
 export type LinkTargetType = 'user' | 'notepad' | 'card' | 'board';
 export interface MentionProps {
     kind: MentionKind;

@@ -81,6 +81,9 @@ export function useCreateProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create project');
+    },
   });
 }
 
@@ -110,6 +113,9 @@ export function useUpdateProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update project');
+    },
   });
 }
 
@@ -129,6 +135,9 @@ export function useDeleteProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete project');
     },
   });
 }
@@ -182,6 +191,9 @@ export function useCreateInvite() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create invite');
+    },
   });
 }
 
@@ -200,6 +212,9 @@ export function useRevokeInvite() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invites'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to revoke invite');
     },
   });
 }
@@ -295,6 +310,9 @@ export function useCreateBoard() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['boards', vars.projectId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create board');
+    },
   });
 }
 
@@ -324,6 +342,9 @@ export function useUpdateBoard() {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
       queryClient.invalidateQueries({ queryKey: ['boards'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update board');
+    },
   });
 }
 
@@ -345,6 +366,9 @@ export function useDeleteBoard() {
     retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete board');
     },
   });
 }
@@ -373,6 +397,9 @@ export function useCreateColumn() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create column');
     },
   });
 }
@@ -405,6 +432,9 @@ export function useUpdateColumn() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update column');
     },
   });
 }
@@ -539,6 +569,10 @@ export function useCreateCard() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create card');
     },
   });
 }
@@ -589,6 +623,10 @@ export function useUpdateCard() {
       if (vars.boardId) {
         queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
       }
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update card');
     },
   });
 }
@@ -669,6 +707,7 @@ export function useMoveCard() {
     },
     onSettled: (_, __, vars) => {
       queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
     },
   });
 }
@@ -711,6 +750,9 @@ export function useRestoreCard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board'] });
       queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to restore card');
     },
   });
 }
@@ -796,6 +838,9 @@ export function useCreateSubtask() {
       queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
       if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to add subtask');
+    },
   });
 }
 
@@ -832,6 +877,9 @@ export function useUpdateSubtask() {
       if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
       queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to update subtask');
+    },
   });
 }
 
@@ -859,6 +907,10 @@ export function useDeleteSubtask() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['card', vars.cardId] });
       if (vars.boardId) queryClient.invalidateQueries({ queryKey: ['board', vars.boardId] });
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete subtask');
     },
   });
 }
@@ -911,6 +963,9 @@ export function useCreateComment() {
       queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to post comment');
+    },
   });
 }
 
@@ -929,6 +984,9 @@ export function useDeleteComment() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['comments', vars.cardId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete comment');
     },
   });
 }
@@ -963,6 +1021,9 @@ export function useMarkNotificationsRead() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to mark notifications read');
     },
   });
 }
@@ -1016,6 +1077,9 @@ export function useRestoreNotepad() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['trash', vars.projectId] });
       queryClient.invalidateQueries({ queryKey: ['notepads', vars.projectId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to restore notepad');
     },
   });
 }
@@ -1119,6 +1183,19 @@ export interface NotepadNode {
   icon?: string | null;
   position: string;
   isFavorite: boolean;
+}
+
+export function useNotepads(projectId?: string) {
+  return useQuery<NotepadNode[]>({
+    queryKey: ['notepads', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      const res = await fetch(`/api/projects/${projectId}/notepads`);
+      if (!res.ok) throw new Error('Failed to load notepads');
+      return res.json();
+    },
+    enabled: Boolean(projectId),
+  });
 }
 
 export function useMoveNotepad(projectId: string) {
@@ -1229,6 +1306,9 @@ export function useCreateTag() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] });
     },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to create tag');
+    },
   });
 }
 
@@ -1242,6 +1322,9 @@ export function useDeleteTag() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['tags', vars.projectId] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to delete tag');
     },
   });
 }

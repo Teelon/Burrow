@@ -12,6 +12,8 @@ import { createTagRepository } from './repositories/tag';
 import { createNotificationRepository } from './repositories/notification';
 import { createMemberRepository } from './repositories/member';
 import { createInviteRepository } from './repositories/invite';
+import { eq } from 'drizzle-orm';
+import * as t from './schema';
 import type { Infrastructure } from '../../../infrastructure/types';
 import type { DB } from './client';
 
@@ -33,7 +35,13 @@ interface EnvBindings {
 export function createD1Infrastructure(db: DB, env: EnvBindings): Infrastructure {
   // Create adapters (stateless, can be shared)
   const search = new SqliteFtsSearchAdapter(db);
-  const locks = new SqlLockAdapter(db);
+  const locks = new SqlLockAdapter(db, async (userId) => {
+    const [u] = await db
+      .select({ name: t.user.name })
+      .from(t.user)
+      .where(eq(t.user.id, userId));
+    return u?.name ?? null;
+  });
   const storage = createStorageFromEnv(env);
   const auth = createAuthProviderWithDB(db, env);
   const email = createEmailFromEnv(env);

@@ -66,14 +66,54 @@ export class PostgresBoardRepository implements IBoardRepository {
   }
 
   async softDelete(id: string, deletedAt: number): Promise<void> {
-    await this.db.update(boards).set({ deletedAt, updatedAt: deletedAt }).where(eq(boards.id, id));
+    await this.db.transaction(async (tx) => {
+      const cardRows = await tx
+        .select({ notepadId: cards.notepadId })
+        .from(cards)
+        .where(eq(cards.boardId, id));
+
+      const notepadIds = cardRows.map((r) => r.notepadId);
+      if (notepadIds.length > 0) {
+        await tx
+          .update(notepads)
+          .set({ deletedAt, updatedAt: deletedAt })
+          .where(inArray(notepads.id, notepadIds));
+      }
+
+      await tx.update(boards).set({ deletedAt, updatedAt: deletedAt }).where(eq(boards.id, id));
+    });
   }
 
   async restore(id: string): Promise<void> {
-    await this.db
-      .update(boards)
-      .set({ deletedAt: null, updatedAt: Date.now() })
-      .where(eq(boards.id, id));
+    await this.db.transaction(async (tx) => {
+      const [board] = await tx
+        .select({ deletedAt: boards.deletedAt })
+        .from(boards)
+        .where(eq(boards.id, id));
+      const deleteTimestamp = board?.deletedAt;
+      const now = Date.now();
+
+      if (deleteTimestamp !== null && deleteTimestamp !== undefined) {
+        const cardRows = await tx
+          .select({ id: notepads.id })
+          .from(cards)
+          .innerJoin(notepads, eq(notepads.id, cards.notepadId))
+          .where(and(eq(cards.boardId, id), eq(notepads.deletedAt, deleteTimestamp)));
+
+        const notepadIds = cardRows.map((r) => r.id);
+        if (notepadIds.length > 0) {
+          await tx
+            .update(notepads)
+            .set({ deletedAt: null, updatedAt: now })
+            .where(inArray(notepads.id, notepadIds));
+        }
+      }
+
+      await tx
+        .update(boards)
+        .set({ deletedAt: null, updatedAt: now })
+        .where(eq(boards.id, id));
+    });
   }
 
   async hardDelete(id: string): Promise<void> {

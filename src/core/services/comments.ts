@@ -93,11 +93,10 @@ export class CommentService {
       }
     }
 
-    const author = await this.getUser(actorId);
     return {
       ...comment,
-      name: author?.name || 'Someone',
-      image: author?.image ?? null,
+      name: comment.name || 'Someone',
+      image: comment.image ?? null,
       mentionedUserIds,
     };
   }
@@ -124,10 +123,5 @@ export class CommentService {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId);
     if (!card) throw notFound('not_found', 'Card not found');
     return card;
-  }
-
-  private async getUser(_userId: string): Promise<{ name: string; image: string | null } | null> {
-    // This would need a user repository - for now return null
-    return null;
   }
 }

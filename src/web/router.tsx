@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   createRootRoute,
   createRoute,
@@ -13,11 +13,8 @@ import { InviteAccept } from './pages/InviteAccept';
 import { ProjectHome } from './pages/ProjectHome';
 import { MembersSettings } from './pages/MembersSettings';
 import { MyTasksView } from './pages/MyTasksView';
-import { useMe, useProjects, useSignOut } from './lib/queries';
-import { Button } from './components/ui/Button';
-import { ConfirmDialog } from './components/ui/ConfirmDialog';
-import { toast } from 'sonner';
-import { LogOut } from 'lucide-react';
+import { SettingsView } from './pages/SettingsView';
+import { useMe, useProjects } from './lib/queries';
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -94,52 +91,6 @@ function BoardWrapper() {
   return <BoardView boardId={boardId} projectId={projectId} />;
 }
 
-function SettingsPlaceholder() {
-  const { data: me } = useMe();
-  const signOut = useSignOut();
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
-
-  return (
-    <div className="p-8 max-w-4xl mx-auto space-y-6">
-      <h2 className="text-xl font-bold">Settings</h2>
-      <div className="border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-[var(--text)]">Account Details</h3>
-        <p className="text-sm text-[var(--muted)]">
-          Signed in as: <strong className="text-[var(--text)]">{me?.user?.name || 'User'}</strong> ({me?.user?.email}) &mdash; Role: <span className="uppercase text-xs font-mono">{me?.role}</span>
-        </p>
-        <div className="pt-2">
-          <Button
-            variant="danger"
-            onClick={() => setConfirmSignOut(true)}
-            className="flex items-center gap-2 min-h-[44px] sm:min-h-0"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log out</span>
-          </Button>
-        </div>
-      </div>
-
-      <ConfirmDialog
-        open={confirmSignOut}
-        title="Log out"
-        message="Are you sure you want to log out of your account?"
-        confirmLabel="Log out"
-        danger={false}
-        busy={signOut.isPending}
-        onConfirm={async () => {
-          try {
-            await signOut.mutateAsync();
-          } catch (err: any) {
-            toast.error(err?.message || 'Failed to sign out');
-            setConfirmSignOut(false);
-          }
-        }}
-        onCancel={() => setConfirmSignOut(false)}
-      />
-    </div>
-  );
-}
-
 // Routes without shell
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -201,7 +152,7 @@ const myTasksRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
-  component: SettingsPlaceholder,
+  component: SettingsView,
 });
 
 const membersRoute = createRoute({

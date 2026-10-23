@@ -14,6 +14,7 @@ interface DocumentOutlineProps {
   editor: BlockNoteEditor<any, any, any>;
   /** Scroll container that owns the editor DOM (used for data-id lookups). */
   containerRef: React.RefObject<HTMLDivElement | null>;
+  variant?: 'floating' | 'inline';
 }
 
 function inlineText(content: unknown): string {
@@ -50,10 +51,14 @@ function collectHeadings(blocks: unknown[], out: HeadingEntry[]) {
 }
 
 /**
- * Floating table of contents: extracts heading blocks, smooth-scrolls to them
+ * Floating or inline table of contents: extracts heading blocks, smooth-scrolls to them
  * on click, and highlights the section currently in view.
  */
-export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) {
+export function DocumentOutline({
+  editor,
+  containerRef,
+  variant = 'floating',
+}: DocumentOutlineProps) {
   const [open, setOpen] = useState(false);
   const [headings, setHeadings] = useState<HeadingEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -63,6 +68,12 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
     const out: HeadingEntry[] = [];
     collectHeadings(editor.document, out);
     setHeadings(out);
+    setActiveId((prev) => {
+      const first = out[0];
+      if (!first) return null;
+      if (prev && out.some((h) => h.id === prev)) return prev;
+      return first.id;
+    });
   }, [editor]);
 
   // Recompute outline whenever the document changes.
@@ -74,7 +85,7 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
 
   // Highlight the active section while scrolling.
   useEffect(() => {
-    if (!open || headings.length === 0) return;
+    if ((!open && variant !== 'inline') || headings.length === 0) return;
     const root = containerRef.current;
     if (!root) return;
 
@@ -104,7 +115,7 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
     for (const el of elements) observer.observe(el);
     observerRef.current = observer;
     return () => observer.disconnect();
-  }, [open, headings, containerRef]);
+  }, [open, variant, headings, containerRef]);
 
   const scrollTo = (heading: HeadingEntry) => {
     const root = containerRef.current;
@@ -116,6 +127,41 @@ export function DocumentOutline({ editor, containerRef }: DocumentOutlineProps) 
   };
 
   const ordered = useMemo(() => headings, [headings]);
+
+  if (variant === 'inline') {
+    const effectiveActiveId = activeId ?? ordered[0]?.id ?? null;
+    return (
+      <div className="no-print w-32 shrink-0 pt-2 text-xs select-none">
+        <div className="font-eyebrow mb-2">On this page</div>
+        {ordered.length === 0 ? (
+          <div className="text-[11px] text-[var(--ink-muted)]/70 py-1">No headings yet</div>
+        ) : (
+          <nav className="flex flex-col">
+            {ordered.map((heading) => {
+              const isActive = effectiveActiveId === heading.id;
+              return (
+                <button
+                  key={heading.id}
+                  type="button"
+                  onClick={() => scrollTo(heading)}
+                  className={`flex items-center gap-2 py-1.5 text-left text-[12px] transition cursor-pointer truncate ${
+                    isActive
+                      ? 'text-[var(--text)] font-bold'
+                      : 'text-[var(--ink-muted)] font-medium hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span className="w-[7px] flex shrink-0">
+                    {isActive && <span className="diamond-dot" />}
+                  </span>
+                  <span className="truncate">{heading.text}</span>
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="no-print relative">

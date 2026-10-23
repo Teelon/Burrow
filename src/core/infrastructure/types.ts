@@ -154,8 +154,11 @@ export interface INotepadRepository {
   // Tags
   listTagIds(notepadId: string): Promise<string[]>;
   setTagIds(notepadId: string, tagIds: string[]): Promise<void>;
-  // Locks (delegated to lock adapter, but repo may need to read lock row)
+  // Locks (delegated to lock adapter, but repo may need to read/delete lock row)
+  /** Fetches the raw edit lock row for notepadId, or null if no lock row exists. */
   getLock(notepadId: string): Promise<EditLock | null>;
+  /** Unconditionally removes any edit lock row for notepadId (e.g. on soft-delete or cleanup). */
+  deleteLock(notepadId: string): Promise<void>;
   // FTS (delegated to search adapter, but repo may need direct FTS ops)
   deleteFts(notepadId: string): Promise<void>;
   insertFts(notepadId: string, title: string, body: string): Promise<void>;

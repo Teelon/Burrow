@@ -4,5 +4,5 @@ D1_DATABASE_ID=
 CLOUDFLARE_ACCOUNT_ID=
 
 BETTER_AUTH_SECRET=dev-secret-change-me-32-bytes-minimum!!
-BETTER_AUTH_URL=http://localhost:5173
+BETTER_AUTH_URL=http://localhost:3005
 BOOTSTRAP_TOKEN=dev-bootstrap-token

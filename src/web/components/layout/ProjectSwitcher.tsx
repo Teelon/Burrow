@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Check, ChevronDown, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useProjects, useCreateProject } from '../../lib/queries';
-import { Avatar } from '../ui/Avatar';
+import { useTheme } from '../../lib/theme';
 import { ModalShell } from '../ui/ModalShell';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -11,8 +12,18 @@ interface ProjectSwitcherProps {
   currentProjectId?: string;
 }
 
+function getProjectInitials(name?: string): string {
+  if (!name || !name.trim()) return 'MP';
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}`.toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase();
+}
+
 export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
   const navigate = useNavigate();
+  const { isModern } = useTheme();
   const { data: projects = [] } = useProjects();
   const createProject = useCreateProject();
 
@@ -43,27 +54,44 @@ export function ProjectSwitcher({ currentProjectId }: ProjectSwitcherProps) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
-    const res = await createProject.mutateAsync({
-      name: newProjectName.trim(),
-      icon: newProjectIcon,
-    });
-    setNewProjectName('');
-    setShowCreateModal(false);
-    handleSelect(res.id);
+    try {
+      const res = await createProject.mutateAsync({
+        name: newProjectName.trim(),
+        icon: newProjectIcon,
+      });
+      setNewProjectName('');
+      setShowCreateModal(false);
+      handleSelect(res.id);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create project');
+    }
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-text hover:bg-hi transition min-h-[44px] md:min-h-0"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Avatar name={currentProject?.name || 'Select Project'} size="xs" />
-          <span className="truncate text-text">{currentProject?.name || 'Select Project'}</span>
-        </div>
-        <ChevronDown className="w-4 h-4 text-muted shrink-0" />
-      </button>
+    <div className="relative min-w-0" ref={dropdownRef}>
+      {isModern ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 py-1 text-[13px] font-semibold text-side-text hover:text-text transition cursor-pointer min-w-0"
+        >
+          <span className="w-5 h-5 theme-radius-sm bg-accent text-accent-ink flex items-center justify-center text-[10px] font-bold shrink-0">
+            {getProjectInitials(currentProject?.name)}
+          </span>
+          <span className="truncate">{currentProject?.name || 'Select Project'}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-muted shrink-0 opacity-70" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-1.5 py-1 text-[14px] font-display text-side-text hover:text-text transition cursor-pointer min-w-0"
+        >
+          <span className="truncate">{currentProject?.name || 'Select Project'}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+        </button>
+      )}
+
 
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-64 bg-surface border border-line py-1.5 z-50">

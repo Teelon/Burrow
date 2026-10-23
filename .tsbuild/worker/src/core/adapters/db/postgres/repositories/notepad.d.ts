@@ -29,7 +29,8 @@ export declare class PostgresNotepadRepository implements INotepadRepository {
     }): Promise<boolean>;
     listTagIds(notepadId: string): Promise<string[]>;
     setTagIds(notepadId: string, tagIds: string[]): Promise<void>;
-    getLock(_notepadId: string): Promise<EditLock | null>;
+    getLock(notepadId: string): Promise<EditLock | null>;
+    deleteLock(notepadId: string): Promise<void>;
     deleteFts(_notepadId: string): Promise<void>;
     insertFts(notepadId: string, _title: string, body: string): Promise<void>;
     insertFtsConditional(notepadId: string, _title: string, body: string, version: number, content: string): Promise<void>;
@@ -38,6 +39,7 @@ export declare class PostgresNotepadRepository implements INotepadRepository {
     listBacklinks(notepadId: string): Promise<{
         id: string;
         title: string;
+        icon?: string | null;
     }[]>;
     insertMentions(args: MentionNotificationArgs): Promise<void>;
     getLastChildPosition(parentId: string): Promise<string | null>;

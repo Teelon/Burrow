@@ -39,11 +39,24 @@ export class PostgresMemberRepository implements IMemberRepository {
         userId: members.userId,
         role: members.role,
         joinedAt: members.joinedAt,
+        name: user.name,
+        email: user.email,
+        image: user.image,
       })
       .from(members)
+      .leftJoin(user, eq(user.id, members.userId))
       .where(and(eq(members.workspaceId, workspaceId), eq(members.userId, userId)))
       .limit(1);
-    return result[0] ?? null;
+    if (!result[0]) return null;
+    return {
+      workspaceId: result[0].workspaceId,
+      userId: result[0].userId,
+      role: result[0].role,
+      joinedAt: result[0].joinedAt,
+      name: result[0].name ?? undefined,
+      email: result[0].email ?? undefined,
+      image: result[0].image ?? null,
+    };
   }
 
   async findByUserIdGlobal(userId: string): Promise<Member | null> {
@@ -53,11 +66,24 @@ export class PostgresMemberRepository implements IMemberRepository {
         userId: members.userId,
         role: members.role,
         joinedAt: members.joinedAt,
+        name: user.name,
+        email: user.email,
+        image: user.image,
       })
       .from(members)
+      .leftJoin(user, eq(user.id, members.userId))
       .where(eq(members.userId, userId))
       .limit(1);
-    return result[0] ?? null;
+    if (!result[0]) return null;
+    return {
+      workspaceId: result[0].workspaceId,
+      userId: result[0].userId,
+      role: result[0].role,
+      joinedAt: result[0].joinedAt,
+      name: result[0].name ?? undefined,
+      email: result[0].email ?? undefined,
+      image: result[0].image ?? null,
+    };
   }
 
   async findByUserIds(workspaceId: string, userIds: string[]): Promise<{ userId: string }[]> {

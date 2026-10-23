@@ -1,7 +1,7 @@
 import type { INotificationRepository, Notification } from '../../../../infrastructure/types';
 import { eq, and, inArray, desc, isNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
-import { notifications, user } from '../schema';
+import { notifications, user, notepads, cards } from '../schema';
 
 export class PostgresNotificationRepository implements INotificationRepository {
   constructor(private db: PostgresDb) {}
@@ -18,7 +18,7 @@ export class PostgresNotificationRepository implements INotificationRepository {
     if (unreadOnly) {
       whereConditions.push(isNull(notifications.readAt));
     }
-    return this.db
+    const rows = await this.db
       .select({
         id: notifications.id,
         workspaceId: notifications.workspaceId,
@@ -26,15 +26,47 @@ export class PostgresNotificationRepository implements INotificationRepository {
         type: notifications.type,
         actorId: notifications.actorId,
         actorName: user.name,
+        actorImage: user.image,
         notepadId: notifications.notepadId,
         cardId: notifications.cardId,
+        notepadTitle: notepads.title,
         readAt: notifications.readAt,
         createdAt: notifications.createdAt,
       })
       .from(notifications)
       .innerJoin(user, eq(user.id, notifications.actorId))
+      .leftJoin(notepads, eq(notepads.id, notifications.notepadId))
       .where(and(...whereConditions))
-      .orderBy(desc(notifications.createdAt));
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+
+    const missingCardIds = rows.filter((r) => !r.notepadTitle && r.cardId).map((r) => r.cardId!);
+    const cardTitles = new Map<string, string>();
+    if (missingCardIds.length > 0) {
+      const cardRows = await this.db
+        .select({ cardId: cards.id, title: notepads.title })
+        .from(cards)
+        .innerJoin(notepads, eq(notepads.id, cards.notepadId))
+        .where(inArray(cards.id, missingCardIds));
+      for (const cr of cardRows) {
+        cardTitles.set(cr.cardId, cr.title);
+      }
+    }
+
+    return rows.map((r) => ({
+      id: r.id,
+      workspaceId: r.workspaceId,
+      userId: r.userId,
+      type: r.type,
+      actorId: r.actorId,
+      actorName: r.actorName,
+      actorImage: r.actorImage ?? null,
+      targetTitle: r.notepadTitle ?? (r.cardId ? cardTitles.get(r.cardId) : null) ?? null,
+      notepadId: r.notepadId,
+      cardId: r.cardId,
+      readAt: r.readAt ?? null,
+      createdAt: r.createdAt,
+    })) as any;
   }
 
   async markRead(userId: string, notificationIds: string[]): Promise<void> {

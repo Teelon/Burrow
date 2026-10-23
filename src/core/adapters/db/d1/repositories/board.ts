@@ -13,6 +13,8 @@ import type {
 } from '../../../../infrastructure/types';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { runBatch } from '../lib/batch';
+import { chunkByParamBudget } from '../lib/chunk';
+import { extractPlainText } from '../../../../shared/extract';
 
 export function createBoardRepository(db: DB): IBoardRepository {
   return {
@@ -63,14 +65,81 @@ export function createBoardRepository(db: DB): IBoardRepository {
     },
 
     async softDelete(id: string, deletedAt: number): Promise<void> {
-      await db.update(t.boards).set({ deletedAt, updatedAt: deletedAt }).where(eq(t.boards.id, id));
+      const cardRows = await db
+        .select({ notepadId: t.cards.notepadId })
+        .from(t.cards)
+        .where(eq(t.cards.boardId, id));
+
+      const notepadIds = cardRows.map((r) => r.notepadId);
+
+      const statements: BatchItem<any>[] = [
+        db.update(t.boards).set({ deletedAt, updatedAt: deletedAt }).where(eq(t.boards.id, id)),
+      ];
+
+      if (notepadIds.length > 0) {
+        for (const chunk of chunkByParamBudget(notepadIds, 1, 1)) {
+          statements.push(
+            db
+              .update(t.notepads)
+              .set({ deletedAt, updatedAt: deletedAt })
+              .where(inArray(t.notepads.id, chunk)),
+          );
+        }
+        for (const chunk of chunkByParamBudget(notepadIds, 1, 0)) {
+          statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
+        }
+      }
+
+      await runBatch(db, statements);
     },
 
     async restore(id: string): Promise<void> {
-      await db
-        .update(t.boards)
-        .set({ deletedAt: null, updatedAt: Date.now() })
+      const [board] = await db
+        .select({ deletedAt: t.boards.deletedAt })
+        .from(t.boards)
         .where(eq(t.boards.id, id));
+      const deleteTimestamp = board?.deletedAt;
+      const now = Date.now();
+
+      const cards =
+        deleteTimestamp !== null && deleteTimestamp !== undefined
+          ? await db
+              .select({
+                id: t.notepads.id,
+                title: t.notepads.title,
+                content: t.notepads.content,
+              })
+              .from(t.cards)
+              .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+              .where(and(eq(t.cards.boardId, id), eq(t.notepads.deletedAt, deleteTimestamp)))
+          : [];
+
+      const notepadIds = cards.map((c) => c.id);
+
+      const statements: BatchItem<any>[] = [
+        db.update(t.boards).set({ deletedAt: null, updatedAt: now }).where(eq(t.boards.id, id)),
+      ];
+
+      if (notepadIds.length > 0) {
+        for (const chunk of chunkByParamBudget(notepadIds, 1, 1)) {
+          statements.push(
+            db
+              .update(t.notepads)
+              .set({ deletedAt: null, updatedAt: now })
+              .where(inArray(t.notepads.id, chunk)),
+          );
+        }
+        for (const card of cards) {
+          const plainText = extractPlainText(card.content);
+          statements.push(
+            db.run(
+              sql`INSERT INTO notepads_fts(notepad_id, title, body) VALUES (${card.id}, ${card.title}, ${plainText})`,
+            ),
+          );
+        }
+      }
+
+      await runBatch(db, statements);
     },
 
     async hardDelete(id: string): Promise<void> {

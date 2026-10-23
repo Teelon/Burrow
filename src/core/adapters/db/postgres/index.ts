@@ -86,7 +86,7 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
   const auth = createPostgresAuthProvider(
     db,
     config.BETTER_AUTH_SECRET ?? 'local-dev-secret-change-me',
-    config.BETTER_AUTH_URL ?? 'http://localhost:8788',
+    config.BETTER_AUTH_URL ?? 'http://localhost:3005',
   );
 
   return {

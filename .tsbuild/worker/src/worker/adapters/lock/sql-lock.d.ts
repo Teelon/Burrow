@@ -10,7 +10,7 @@ export declare class SqlLockAdapter implements ILockAdapter {
     private readonly db;
     private readonly resolveHolderName?;
     constructor(db: DB, resolveHolderName?: ((userId: string) => Promise<string | null>) | undefined);
-    acquire(resourceId: string, userId: string, clientId: string, ttlMs: number, opts?: LockAcquireOptions): Promise<LockAcquireResult>;
+    acquire(resourceId: string, userId: string, clientId: string, ttlMs: number, opts?: LockAcquireOptions, _retryCount?: number): Promise<LockAcquireResult>;
     heartbeat(resourceId: string, clientId: string, ttlMs: number): Promise<boolean>;
     release(resourceId: string, clientId: string, opts?: LockReleaseOptions): Promise<void>;
 }

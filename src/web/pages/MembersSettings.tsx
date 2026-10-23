@@ -6,6 +6,8 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { toast } from 'sonner';
 
 interface CreatedInviteInfo {
   url: string;
@@ -27,6 +29,8 @@ export function MembersSettings() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const isOwner = me?.role === 'owner';
 
@@ -83,16 +87,20 @@ export function MembersSettings() {
         throw new Error(data.error?.message || 'Failed to change role');
       }
       refetchMembers();
+      toast.success('Role updated');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to change role');
+      const msg = err instanceof Error ? err.message : 'Failed to change role';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
     setError(null);
+    setIsRemoving(true);
     try {
-      const res = await fetch(`/api/members/${userId}`, {
+      const res = await fetch(`/api/members/${memberToRemove.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -101,9 +109,15 @@ export function MembersSettings() {
         };
         throw new Error(data.error?.message || 'Failed to remove member');
       }
+      toast.success('Member removed');
       refetchMembers();
+      setMemberToRemove(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to remove member');
+      const msg = err instanceof Error ? err.message : 'Failed to remove member';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -280,7 +294,7 @@ export function MembersSettings() {
               {isOwner && member.userId !== me?.user?.id && (
                 <Button
                   variant="ghost"
-                  onClick={() => handleRemoveMember(member.userId)}
+                  onClick={() => setMemberToRemove({ id: member.userId, name: member.name })}
                   className="p-1.5 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-[var(--muted)] hover:text-[var(--danger)]"
                   title="Remove member"
                 >
@@ -306,8 +320,13 @@ export function MembersSettings() {
                 <span className="ml-2 text-xs text-[var(--muted)] capitalize">({inv.role})</span>
               </div>
               <button
-                onClick={() => revokeInvite.mutate(inv.id)}
-                className="text-xs text-[var(--danger)] hover:underline min-h-[44px] sm:min-h-0"
+                onClick={() =>
+                  revokeInvite.mutate(inv.id, {
+                    onSuccess: () => toast.success('Invite revoked'),
+                    onError: (err: any) => toast.error(err?.message || 'Failed to revoke invite'),
+                  })
+                }
+                className="text-xs text-[var(--danger)] hover:underline min-h-[44px] sm:min-h-0 cursor-pointer"
               >
                 Revoke
               </button>
@@ -315,6 +334,17 @@ export function MembersSettings() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!memberToRemove}
+        title="Remove Member"
+        message={`Are you sure you want to remove "${memberToRemove?.name || 'this member'}" from the workspace?`}
+        confirmLabel="Remove"
+        danger={true}
+        busy={isRemoving}
+        onConfirm={handleRemoveMember}
+        onCancel={() => setMemberToRemove(null)}
+      />
     </div>
     </div>
   );

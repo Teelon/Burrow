@@ -262,6 +262,7 @@ export async function softDeleteNotepad(db: DB, args: SoftDeleteNotepadArgs) {
 
   for (const chunk of chunkByParamBudget(allIds, 1, 0)) {
     statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
+    statements.push(db.delete(t.editLocks).where(inArray(t.editLocks.notepadId, chunk)));
   }
 
   await runBatch(db, statements);
@@ -464,7 +465,7 @@ export async function saveContent(db: DB, args: SaveContentArgs): Promise<SaveCo
   if (
     lock &&
     lock.expiresAt > now &&
-    (lock.userId !== args.actorId || (args.clientId && lock.clientId !== args.clientId))
+    (lock.userId !== args.actorId || lock.clientId !== args.clientId)
   ) {
     const [holder] = await db
       .select({ name: t.user.name })

@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import * as chrono from 'chrono-node';
 import { Calendar, FileText, Flag, Plus, Tag, User, X } from 'lucide-react';
-import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
-import { useCreateCard, useMembers } from '../../lib/queries';
+import { useCreateCard, useCreateTag, useMembers, useProjectTags } from '../../lib/queries';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -35,18 +34,9 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
 
   const inputRef = useRef<HTMLInputElement>(null);
   const createCardMutation = useCreateCard();
+  const createTagMutation = useCreateTag();
   const { data: members = [] } = useMembers();
-
-  const [availableTags, setAvailableTags] = useState<
-    Array<{ id: string; name: string; color?: string | null }>
-  >([]);
-
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}/tags`)
-      .then((r) => r.ok && r.json())
-      .then((data) => data && setAvailableTags(data))
-      .catch(() => {});
-  }, [projectId]);
+  const { data: availableTags = [] } = useProjectTags(projectId);
 
   const cleanLastTrigger = (text: string) => {
     const lastSlash = text.lastIndexOf('/');
@@ -103,20 +93,13 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
 
   const createAndSelectTag = async (tagName: string) => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: tagName }),
+      const newTag = await createTagMutation.mutateAsync({
+        projectId,
+        name: tagName,
       });
-      if (res.ok) {
-        const newTag = await res.json();
-        setAvailableTags((prev) => [...prev, newTag]);
-        selectTag(newTag.id, newTag.name, newTag.color);
-      } else {
-        selectTag(nanoid(), tagName, null);
-      }
-    } catch {
-      selectTag(nanoid(), tagName, null);
+      selectTag(newTag.id, newTag.name, newTag.color);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create tag');
     }
   };
 
@@ -428,19 +411,12 @@ export function QuickAddCard({ boardId, columnId, projectId, onClose }: QuickAdd
       let found = availableTags.find((t) => t.name.toLowerCase() === q);
       if (!found) {
         try {
-          const res = await fetch(`/api/projects/${projectId}/tags`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: rawMatch }),
+          found = await createTagMutation.mutateAsync({
+            projectId,
+            name: rawMatch,
           });
-          if (res.ok) {
-            found = await res.json();
-            if (found) {
-              setAvailableTags((prev) => [...prev, found!]);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to create tag', err);
+        } catch (err: any) {
+          toast.error(err?.message || 'Failed to create tag');
         }
       }
       if (found && !tagIds.includes(found.id)) {
