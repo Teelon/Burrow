@@ -6,6 +6,8 @@ export interface SearchHit {
   projectId: string;
   projectName: string;
   snippet: string;
+  cardId?: string;
+  boardId?: string;
 }
 
 export interface SearchIndexDoc {

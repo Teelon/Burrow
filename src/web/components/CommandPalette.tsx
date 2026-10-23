@@ -129,11 +129,12 @@ export function CommandPalette() {
                         });
                       } else {
                         // card: navigate to its board if available, else its project
-                        const cardItem = item as typeof item & { boardId?: string };
+                        const cardItem = item as typeof item & { boardId?: string; cardId?: string };
                         if (cardItem.boardId) {
                           navigate({
                             to: '/p/$projectId/boards/$boardId',
                             params: { projectId: item.projectId, boardId: cardItem.boardId },
+                            search: { cardId: cardItem.cardId ?? item.id } as any,
                           });
                         } else {
                           navigate({

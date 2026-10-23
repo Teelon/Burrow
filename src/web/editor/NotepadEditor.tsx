@@ -18,9 +18,11 @@ import {
   LayoutTemplate,
   Lock,
   MoreHorizontal,
+  Plus,
   Printer,
   Search,
   Star,
+  Tag,
   Trash2,
   X,
 } from 'lucide-react';
@@ -40,7 +42,7 @@ import { BasaltSuggestionMenu } from './BasaltSuggestionMenu';
 import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import { useMe } from '../lib/queries';
+import { useMe, useProjectTags } from '../lib/queries';
 import { useTheme } from '../lib/theme';
 
 function getTabClientId(): string {
@@ -127,6 +129,22 @@ function NotepadEditorInner({
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { data: projectTags = [] } = useProjectTags(data.projectId);
+  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
+  const tagMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showTagMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tagMenuRef.current && !tagMenuRef.current.contains(e.target as Node)) {
+        setShowTagMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTagMenu]);
 
   const clientIdRef = useRef(getTabClientId());
   const hasLockRef = useRef<boolean>(
@@ -745,6 +763,177 @@ function NotepadEditorInner({
     </>
   );
 
+  const updateNotepadTags = async (newTagIds: string[]) => {
+    try {
+      const putRes = await fetch(`/api/notepads/${initialData.id}/tags`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagIds: newTagIds }),
+      });
+      if (!putRes.ok) {
+        const errJson = (await putRes.json().catch(() => ({}))) as {
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(errJson.error?.message || errJson.message || 'Failed to update tags');
+      }
+      const res = await fetch(`/api/notepads/${initialData.id}`);
+      if (res.ok) {
+        const json = (await res.json()) as NotepadData;
+        setData(json);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update tags');
+    }
+  };
+
+  const removeTag = async (tagId: string) => {
+    const nextTags = (data.tags || []).filter((t) => t.id !== tagId).map((t) => t.id);
+    await updateNotepadTags(nextTags);
+  };
+
+  const addTag = async (tagId: string) => {
+    const currentTags = (data.tags || []).map((t) => t.id);
+    if (!currentTags.includes(tagId)) {
+      await updateNotepadTags([...currentTags, tagId]);
+    }
+  };
+
+  const handleAddOrCreateTag = async () => {
+    const trimmed = tagSearch.trim().replace(/^#/, '');
+    if (!trimmed) return;
+    const existing = projectTags.find((pt) => pt.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      await addTag(existing.id);
+      setShowTagMenu(false);
+      setTagSearch('');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/projects/${data.projectId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const errJson = (await res.json().catch(() => ({}))) as {
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(errJson.error?.message || errJson.message || 'Failed to create tag');
+      }
+      const newTag = (await res.json()) as { id: string; name: string };
+      await queryClient.invalidateQueries({ queryKey: ['projects', data.projectId, 'tags'] });
+      await queryClient.invalidateQueries({ queryKey: ['tags', data.projectId] });
+      toast.success(`Tag #${newTag.name} created`);
+      await addTag(newTag.id);
+      setShowTagMenu(false);
+      setTagSearch('');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create tag');
+    }
+  };
+
+  const attachedTags = data.tags || [];
+  const cleanTagSearch = tagSearch.trim().replace(/^#/, '');
+  const availableTags = projectTags.filter(
+    (pt) =>
+      !attachedTags.some((t) => t.id === pt.id) &&
+      pt.name.toLowerCase().includes(cleanTagSearch.toLowerCase()),
+  );
+  const exactTagMatch = projectTags.some(
+    (pt) => pt.name.toLowerCase() === cleanTagSearch.toLowerCase(),
+  );
+
+  const tagsNode = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {attachedTags.map((tag) => (
+        <span
+          key={tag.id}
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--surface2)] border border-[var(--line)] text-[var(--text)] select-none"
+        >
+          <span className="text-[var(--muted)]">#</span>
+          <span>{tag.name}</span>
+          <button
+            type="button"
+            onClick={() => removeTag(tag.id)}
+            title={`Remove #${tag.name}`}
+            className="p-0.5 text-[var(--muted)] hover:text-[var(--danger)] cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+
+      <div className="relative" ref={tagMenuRef}>
+        <button
+          type="button"
+          onClick={() => setShowTagMenu((v) => !v)}
+          title="Add tag"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs border border-dashed border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)] bg-[var(--surface)] transition cursor-pointer select-none"
+        >
+          <Plus className="w-3 h-3" />
+          <span>Tag</span>
+        </button>
+
+        {showTagMenu && (
+          <div className="absolute left-0 top-full mt-1 w-52 bg-[var(--surface)] border border-[var(--line)] p-1.5 z-40 text-xs">
+            <div className="mb-1.5">
+              <input
+                type="text"
+                autoFocus
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await handleAddOrCreateTag();
+                  } else if (e.key === 'Escape') {
+                    setShowTagMenu(false);
+                  }
+                }}
+                placeholder="Search or new tag…"
+                className="w-full px-2 py-1 text-xs bg-[var(--surface2)] border border-[var(--line)] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+              />
+            </div>
+            <div className="max-h-36 overflow-y-auto space-y-0.5">
+              {availableTags.map((pt) => (
+                <button
+                  key={pt.id}
+                  type="button"
+                  onClick={() => {
+                    addTag(pt.id);
+                    setShowTagMenu(false);
+                    setTagSearch('');
+                  }}
+                  className="w-full text-left px-2 py-1 text-xs hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] flex items-center gap-1.5 cursor-pointer transition"
+                >
+                  <Tag className="w-3 h-3 shrink-0" style={{ color: pt.color || 'var(--c4)' }} />
+                  <span>#{pt.name}</span>
+                </button>
+              ))}
+              {cleanTagSearch && !exactTagMatch && (
+                <button
+                  type="button"
+                  onClick={handleAddOrCreateTag}
+                  className="w-full text-left px-2 py-1 text-xs hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] flex items-center gap-1.5 text-[var(--accent)] hover:text-[var(--accent-ink)] font-medium cursor-pointer transition"
+                >
+                  <Plus className="w-3 h-3 shrink-0" />
+                  <span>Create "#{cleanTagSearch}"</span>
+                </button>
+              )}
+              {!cleanTagSearch && availableTags.length === 0 && (
+                <div className="p-2 text-center text-xs text-[var(--muted)]">
+                  No other tags. Type to create.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const exportMenuNode = (
     <div className="relative">
       <Button
@@ -876,30 +1065,7 @@ function NotepadEditorInner({
             initialData.id,
             editor,
             async (tagId) => {
-              const currentTags = (data.tags || []).map((t) => t.id);
-              if (!currentTags.includes(tagId)) {
-                try {
-                  const putRes = await fetch(`/api/notepads/${initialData.id}/tags`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tagIds: [...currentTags, tagId] }),
-                  });
-                  if (!putRes.ok) {
-                    const errJson = (await putRes.json().catch(() => ({}))) as {
-                      error?: { message?: string };
-                      message?: string;
-                    };
-                    throw new Error(errJson.error?.message || errJson.message || 'Failed to attach tag');
-                  }
-                  const res = await fetch(`/api/notepads/${initialData.id}`);
-                  if (res.ok) {
-                    const json = (await res.json()) as NotepadData;
-                    setData(json);
-                  }
-                } catch (err: any) {
-                  toast.error(err?.message || 'Failed to attach tag');
-                }
-              }
+              await addTag(tagId);
             },
           );
         }}
@@ -1063,6 +1229,8 @@ function NotepadEditorInner({
                 </button>
               )}
             </span>
+
+            {tagsNode}
           </div>
 
           <div className="flex items-center gap-1.5 relative">
@@ -1122,13 +1290,16 @@ function NotepadEditorInner({
         className="w-full min-h-full flex flex-col relative"
       >
         {/* Top Header Bar */}
-        <div className="no-print h-[46px] shrink-0 flex items-center justify-between gap-4 px-6 text-[13px] text-[var(--muted)] border-b border-[var(--hair)]">
-          <div className="flex items-center gap-1.5 min-w-0 truncate">
-            <span>Notepads</span>
-            <span className="opacity-50">/</span>
-            <span className="text-[var(--text)] font-medium truncate">
-              {data.title || 'Untitled'}
-            </span>
+        <div className="no-print min-h-[46px] py-1 shrink-0 flex items-center justify-between gap-4 px-6 text-[13px] text-[var(--muted)] border-b border-[var(--hair)]">
+          <div className="flex items-center gap-3 min-w-0 flex-wrap">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span>Notepads</span>
+              <span className="opacity-50">/</span>
+              <span className="text-[var(--text)] font-medium truncate max-w-[200px]">
+                {data.title || 'Untitled'}
+              </span>
+            </div>
+            {tagsNode}
           </div>
 
           <div className="flex items-center gap-3.5 shrink-0">
@@ -1202,11 +1373,14 @@ function NotepadEditorInner({
       className="w-full min-h-full flex flex-col px-4 sm:px-5 pb-5 relative"
     >
       {/* Top Header Bar */}
-      <div className="no-print h-[60px] shrink-0 flex items-center justify-between gap-4 text-[13px] font-semibold text-[var(--ink-muted)]">
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
-          <span>Notepads</span>
-          <span className="opacity-50">/</span>
-          <span className="text-[var(--text)] truncate">{data.title || 'Untitled'}</span>
+      <div className="no-print min-h-[60px] py-2 shrink-0 flex items-center justify-between gap-4 text-[13px] font-semibold text-[var(--ink-muted)]">
+        <div className="flex items-center gap-3 min-w-0 flex-wrap">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span>Notepads</span>
+            <span className="opacity-50">/</span>
+            <span className="text-[var(--text)] truncate max-w-[200px]">{data.title || 'Untitled'}</span>
+          </div>
+          {tagsNode}
         </div>
 
         <div className="flex items-center gap-3.5 shrink-0">

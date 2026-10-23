@@ -35,6 +35,8 @@ export declare const searchRoutes: import("hono/hono-base").HonoBase<Env, {
                 projectId: string;
                 projectName: string;
                 snippet: string;
+                cardId?: string | undefined;
+                boardId?: string | undefined;
             }[];
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;

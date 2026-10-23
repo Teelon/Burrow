@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Calendar, Flag, Tag, Trash2, Users, X } from 'lucide-react';
+import { Calendar, Flag, Plus, Tag, Trash2, Users, X } from 'lucide-react';
 import { NotepadEditor } from '../../editor/NotepadEditor';
 import {
   useCard,
@@ -37,6 +38,7 @@ const PRIORITIES = [
 ] as const;
 
 export function CardPanel({ cardId, boardId, projectId, columns, onClose }: CardPanelProps) {
+  const queryClient = useQueryClient();
   const { data: card, isLoading } = useCard(cardId);
   const { data: members = [] } = useMembers();
   const { data: projectTags = [] } = useProjectTags(projectId);
@@ -46,6 +48,9 @@ export function CardPanel({ cardId, boardId, projectId, columns, onClose }: Card
   const restoreCardMutation = useRestoreCard();
 
   const [title, setTitle] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+  const [isSubmittingTag, setIsSubmittingTag] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -132,6 +137,56 @@ export function CardPanel({ cardId, boardId, projectId, columns, onClose }: Card
         },
       },
     );
+  };
+
+  const handleCreateTag = async () => {
+    const trimmed = newTagName.trim();
+    if (!trimmed) {
+      setIsCreatingTag(false);
+      setNewTagName('');
+      return;
+    }
+    setIsSubmittingTag(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const errJson = (await res.json().catch(() => ({}))) as {
+          error?: { message?: string };
+          message?: string;
+        };
+        throw new Error(errJson.error?.message || errJson.message || 'Failed to create tag');
+      }
+      const newTag = (await res.json()) as { id: string; name: string };
+      await queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'tags'] });
+      await queryClient.invalidateQueries({ queryKey: ['tags', projectId] });
+      toast.success(`Tag #${newTag.name} created`);
+
+      const currentTagIds = (tags || []).map((t: any) => t.id);
+      if (!currentTagIds.includes(newTag.id)) {
+        updateCardMutation.mutate(
+          {
+            cardId,
+            boardId,
+            tagIds: [...currentTagIds, newTag.id],
+          },
+          {
+            onError: (err: any) => {
+              toast.error(err?.message || 'Failed to attach tag');
+            },
+          },
+        );
+      }
+      setNewTagName('');
+      setIsCreatingTag(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create tag');
+    } finally {
+      setIsSubmittingTag(false);
+    }
   };
 
   const handleDelete = () => {
@@ -286,28 +341,82 @@ export function CardPanel({ cardId, boardId, projectId, columns, onClose }: Card
               <span>Tags</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap justify-end flex-1">
-              {projectTags.length === 0 ? (
+              {projectTags.length === 0 && !isCreatingTag && (
                 <span className="text-xs text-[var(--muted)] italic">No tags in project</span>
+              )}
+              {projectTags.map((pt) => {
+                const isSelected = tags.some((t: any) => t.id === pt.id);
+                return (
+                  <button
+                    key={pt.id}
+                    type="button"
+                    onClick={() => toggleTag(pt.id)}
+                    className={`px-2 py-1 min-h-[44px] sm:min-h-0 border text-xs flex items-center gap-1.5 transition cursor-pointer select-none ${
+                      isSelected
+                        ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-ink)] font-medium'
+                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)]'
+                    }`}
+                    title={isSelected ? `Remove #${pt.name}` : `Add #${pt.name}`}
+                  >
+                    <StatusDiamond color={pt.color || 'var(--c4)'} size={6} />
+                    <span>#{pt.name}</span>
+                  </button>
+                );
+              })}
+
+              {isCreatingTag ? (
+                <div className="inline-flex items-center gap-1 border border-[var(--accent)] bg-[var(--surface)] px-1.5 py-0.5">
+                  <span className="text-[var(--muted)] text-xs">#</span>
+                  <input
+                    type="text"
+                    autoFocus
+                    disabled={isSubmittingTag}
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateTag();
+                      }
+                      if (e.key === 'Escape') {
+                        setIsCreatingTag(false);
+                        setNewTagName('');
+                      }
+                    }}
+                    placeholder="tag name"
+                    className="bg-transparent border-none text-xs text-[var(--text)] focus:outline-none w-20"
+                  />
+                  <button
+                    type="button"
+                    disabled={isSubmittingTag}
+                    onClick={handleCreateTag}
+                    className="text-[var(--accent)] hover:opacity-80 p-0.5 cursor-pointer"
+                    title="Save tag"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingTag(false);
+                      setNewTagName('');
+                    }}
+                    className="text-[var(--muted)] hover:text-[var(--text)] p-0.5 cursor-pointer"
+                    title="Cancel"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               ) : (
-                projectTags.map((pt) => {
-                  const isSelected = tags.some((t: any) => t.id === pt.id);
-                  return (
-                    <button
-                      key={pt.id}
-                      type="button"
-                      onClick={() => toggleTag(pt.id)}
-                      className={`px-2 py-1 min-h-[44px] sm:min-h-0 border text-xs flex items-center gap-1.5 transition cursor-pointer select-none ${
-                        isSelected
-                          ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-ink)] font-medium'
-                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)]'
-                      }`}
-                      title={isSelected ? `Remove #${pt.name}` : `Add #${pt.name}`}
-                    >
-                      <StatusDiamond color={pt.color || 'var(--c4)'} size={6} />
-                      <span>#{pt.name}</span>
-                    </button>
-                  );
-                })
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingTag(true)}
+                  className="px-2 py-1 min-h-[44px] sm:min-h-0 border border-dashed border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)] text-xs flex items-center gap-1 transition cursor-pointer select-none"
+                  title="Create new tag"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New tag</span>
+                </button>
               )}
             </div>
           </div>

@@ -70,6 +70,58 @@ describe('SqliteFtsSearchAdapter contract', () => {
     return id;
   }
 
+  async function seedCard(
+    workspaceId: string,
+    projectId: string,
+    title: string,
+  ): Promise<{ notepadId: string; cardId: string; boardId: string }> {
+    const db = createDb(env.DB);
+    const now = Date.now();
+    const boardId = crypto.randomUUID();
+    await db.insert(schema.boards).values({
+      id: boardId,
+      workspaceId,
+      projectId,
+      name: `Board ${title}`,
+      position: 'a0',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const columnId = crypto.randomUUID();
+    await db.insert(schema.boardColumns).values({
+      id: columnId,
+      boardId,
+      name: 'Todo',
+      position: 'a0',
+    });
+
+    const notepadId = crypto.randomUUID();
+    await db.insert(schema.notepads).values({
+      id: notepadId,
+      workspaceId,
+      projectId,
+      kind: 'card',
+      title,
+      position: 'a0',
+      createdBy: 'search-contract-user',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const cardId = crypto.randomUUID();
+    await db.insert(schema.cards).values({
+      id: cardId,
+      boardId,
+      columnId,
+      notepadId,
+      position: 'a0',
+      createdAt: now,
+    });
+
+    return { notepadId, cardId, boardId };
+  }
+
   function searcher(): SqliteFtsSearchAdapter {
     return new SqliteFtsSearchAdapter(createDb(env.DB));
   }
@@ -272,5 +324,76 @@ describe('SqliteFtsSearchAdapter contract', () => {
       text: controlToken,
     });
     expect(control.some((h) => h.id === controlId)).toBe(true);
+  });
+
+  it('finds notepad or card attached to a tag when searching #tagname or tagname', async () => {
+    const db = createDb(env.DB);
+    const t = token();
+    const tagName = `tag-${t}`;
+    const tagId = crypto.randomUUID();
+
+    await db.insert(schema.tags).values({
+      id: tagId,
+      projectId: proj1,
+      name: tagName,
+      color: '#ef4444',
+    });
+
+    const npId = await seedNotepad(ws1, proj1, `Tagged Item ${t}`);
+    await db.insert(schema.notepadTags).values({
+      notepadId: npId,
+      tagId,
+    });
+
+    // Search with # prefix
+    const hitsWithHash = await searcher().search({ workspaceId: ws1, text: `#${tagName}` });
+    const hitWithHash = hitsWithHash.find((h) => h.id === npId);
+    expect(hitWithHash).toBeDefined();
+    expect(hitWithHash?.snippet).toContain(`Tag: #${tagName}`);
+
+    // Search without # prefix
+    const hitsWithoutHash = await searcher().search({ workspaceId: ws1, text: tagName });
+    const hitWithoutHash = hitsWithoutHash.find((h) => h.id === npId);
+    expect(hitWithoutHash).toBeDefined();
+  });
+
+  it('includes cardId and boardId for card search results', async () => {
+    const t = token();
+    const title = `Card Task ${t}`;
+    const { notepadId, cardId, boardId } = await seedCard(ws1, proj1, title);
+
+    await searcher().indexDocument({
+      id: notepadId,
+      workspaceId: ws1,
+      projectId: proj1,
+      kind: 'card',
+      title,
+      body: `card unique details ${t}`,
+    });
+
+    const hits = await searcher().search({ workspaceId: ws1, text: t });
+    const hit = hits.find((h) => h.id === notepadId);
+    expect(hit).toBeDefined();
+    expect(hit?.kind).toBe('card');
+    expect(hit?.cardId).toBe(cardId);
+    expect(hit?.boardId).toBe(boardId);
+
+    // Also assert regular notepad has undefined cardId and boardId
+    const npTitle = `Plain Note ${t}`;
+    const npId = await seedNotepad(ws1, proj1, npTitle);
+    await searcher().indexDocument({
+      id: npId,
+      workspaceId: ws1,
+      projectId: proj1,
+      kind: 'notepad',
+      title: npTitle,
+      body: `plain note details ${t}`,
+    });
+    const npHits = await searcher().search({ workspaceId: ws1, text: npTitle });
+    const npHit = npHits.find((h) => h.id === npId);
+    expect(npHit).toBeDefined();
+    expect(npHit?.kind).toBe('notepad');
+    expect(npHit?.cardId).toBeUndefined();
+    expect(npHit?.boardId).toBeUndefined();
   });
 });

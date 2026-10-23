@@ -13,4 +13,4 @@ export declare function getAtMenuSuggestions(query: string, projectId: string, e
 /**
  * Suggestions for `#` menu: Project Tags.
  */
-export declare function getHashMenuSuggestions(query: string, projectId: string, _notepadId: string, editor: BlockNoteEditor<any, any, any>, onAttachTag?: (tagId: string) => void): Promise<DefaultReactSuggestionItem[]>;
+export declare function getHashMenuSuggestions(query: string, projectId: string, _notepadId: string, editor: BlockNoteEditor<any, any, any>, onAttachTag?: (tagId: string) => void | Promise<void>): Promise<DefaultReactSuggestionItem[]>;

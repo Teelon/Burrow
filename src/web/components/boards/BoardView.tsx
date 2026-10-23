@@ -45,7 +45,36 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
   const updateBoardMutation = useUpdateBoard();
   const deleteBoardMutation = useDeleteBoard();
 
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(() =>
+    new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('cardId'),
+  );
+
+  const openCard = (id: string | null) => {
+    setSelectedCardId(id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set('cardId', id);
+      } else {
+        url.searchParams.delete('cardId');
+      }
+      window.history.replaceState(
+        null,
+        '',
+        url.pathname + (url.search ? url.search : '') + url.hash,
+      );
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      const cardId = new URLSearchParams(search).get('cardId');
+      setSelectedCardId(cardId);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [isEditingBoardName, setIsEditingBoardName] = useState(false);
   const [boardName, setBoardName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -301,19 +330,19 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           filteredColumns={filteredColumns}
           isAddingColumn={isAddingColumn}
           setIsAddingColumn={setIsAddingColumn}
-          onCardClick={(id) => setSelectedCardId(id)}
+          onCardClick={(id) => openCard(id)}
         />
       ) : viewMode === 'list' ? (
         <ListView
           boardId={boardId}
           columns={filteredColumns}
-          onCardClick={(id) => setSelectedCardId(id)}
+          onCardClick={(id) => openCard(id)}
         />
       ) : (
         <CalendarView
           boardId={boardId}
           columns={filteredColumns}
-          onCardClick={(id) => setSelectedCardId(id)}
+          onCardClick={(id) => openCard(id)}
         />
       )}
 
@@ -324,7 +353,7 @@ export function BoardView({ boardId, projectId }: BoardViewProps) {
           boardId={boardId}
           projectId={projectId}
           columns={columns.map((c) => ({ id: c.id, name: c.name }))}
-          onClose={() => setSelectedCardId(null)}
+          onClose={() => openCard(null)}
         />
       )}
 

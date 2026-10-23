@@ -1244,7 +1244,7 @@ export declare const api: {
             $get: {
                 input: {
                     query: {
-                        status?: "all" | "open" | "completed" | undefined;
+                        status?: "completed" | "all" | "open" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -1259,7 +1259,7 @@ export declare const api: {
             } | {
                 input: {
                     query: {
-                        status?: "all" | "open" | "completed" | undefined;
+                        status?: "completed" | "all" | "open" | undefined;
                         projectId?: string | undefined;
                     };
                 };
@@ -2114,6 +2114,8 @@ export declare const api: {
                     projectId: string;
                     projectName: string;
                     snippet: string;
+                    cardId?: string | undefined;
+                    boardId?: string | undefined;
                 }[];
                 outputFormat: "json";
                 status: import("hono/utils/http-status").ContentfulStatusCode;

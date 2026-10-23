@@ -8,9 +8,11 @@ import {
   Kanban,
   Layout,
   LayoutTemplate,
+  Plus,
   Tag,
   User,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { SlashContext } from '../../shared/slash';
 
 export interface SuggestionDialogState {
@@ -297,21 +299,27 @@ export async function getHashMenuSuggestions(
   projectId: string,
   _notepadId: string,
   editor: BlockNoteEditor<any, any, any>,
-  onAttachTag?: (tagId: string) => void,
+  onAttachTag?: (tagId: string) => void | Promise<void>,
 ): Promise<DefaultReactSuggestionItem[]> {
-  const cleanQ = query.trim();
+  const cleanQ = query.trim().replace(/^#/, '');
   try {
     const res = await fetch(
       `/api/suggest?type=tag&projectId=${projectId}&q=${encodeURIComponent(cleanQ)}`,
     );
-    if (!res.ok) return [];
-    const tags = (await res.json()) as Array<{
+    let tags: Array<{
       id: string;
       label: string;
       color?: string;
-    }>;
+    }> = [];
+    if (res.ok) {
+      tags = (await res.json()) as Array<{
+        id: string;
+        label: string;
+        color?: string;
+      }>;
+    }
 
-    return tags.map((tag) => ({
+    const items: DefaultReactSuggestionItem[] = tags.map((tag) => ({
       title: tag.label,
       group: 'Tags',
       icon: <Tag className="w-4 h-4" style={{ color: tag.color || '#64748b' }} />,
@@ -331,6 +339,49 @@ export async function getHashMenuSuggestions(
         ]);
       },
     }));
+
+    const exactMatch = tags.some((t) => t.label.toLowerCase() === cleanQ.toLowerCase());
+    if (cleanQ.length > 0 && !exactMatch) {
+      items.push({
+        title: `Create #${cleanQ}`,
+        group: 'Tags',
+        icon: <Plus className="w-4 h-4 text-emerald-500" />,
+        onItemClick: async () => {
+          try {
+            const createRes = await fetch(`/api/projects/${projectId}/tags`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: cleanQ }),
+            });
+            if (!createRes.ok) {
+              const errJson = (await createRes.json().catch(() => ({}))) as {
+                error?: { message?: string };
+                message?: string;
+              };
+              throw new Error(errJson.error?.message || errJson.message || 'Failed to create tag');
+            }
+            const newTag = (await createRes.json()) as { id: string; name: string };
+            if (onAttachTag) {
+              await onAttachTag(newTag.id);
+            }
+            editor.insertInlineContent([
+              {
+                type: 'mention',
+                props: {
+                  kind: 'tag',
+                  id: newTag.id,
+                  label: `#${newTag.name}`,
+                },
+              },
+            ]);
+          } catch (err: any) {
+            toast.error(err?.message || 'Failed to create tag');
+          }
+        },
+      });
+    }
+
+    return items;
   } catch (err) {
     console.error('Failed to suggest tags', err);
     return [];

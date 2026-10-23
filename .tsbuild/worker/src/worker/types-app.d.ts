@@ -1142,7 +1142,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         $get: {
             input: {
                 query: {
-                    status?: "all" | "open" | "completed" | undefined;
+                    status?: "completed" | "all" | "open" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -1157,7 +1157,7 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
         } | {
             input: {
                 query: {
-                    status?: "all" | "open" | "completed" | undefined;
+                    status?: "completed" | "all" | "open" | undefined;
                     projectId?: string | undefined;
                 };
             };
@@ -1950,6 +1950,8 @@ declare const _typeOnlyApp: import("hono/hono-base").HonoBase<Env, {
                 projectId: string;
                 projectName: string;
                 snippet: string;
+                cardId?: string | undefined;
+                boardId?: string | undefined;
             }[];
             outputFormat: "json";
             status: import("hono/utils/http-status").ContentfulStatusCode;
