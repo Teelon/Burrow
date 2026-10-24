@@ -21,7 +21,6 @@
     "reset": "node scripts/reset.mjs",
     "teardown": "node scripts/teardown.mjs",
     "seed": "node scripts/seed.mjs",
-    "seed:local": "node scripts/seed.mjs",
     "check": "node scripts/check.mjs",
     "check:data": "node scripts/check-data.mjs",
     "db:generate": "drizzle-kit generate",

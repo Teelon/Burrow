@@ -78,7 +78,7 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
    - Open [http://localhost:3005](http://localhost:3005) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` printed in your terminal.
 
 > [!NOTE]
-> The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, run `pnpm seed:local`. To wipe test data and return to a clean state at any time, run `pnpm run reset --local`.
+> The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, run `pnpm seed`. To wipe test data and return to a clean state at any time, run `pnpm run reset`. (Both target your local Miniflare database by default).
 
 ---
 
@@ -103,18 +103,18 @@ Before deploying to Cloudflare Workers for the first time, your Cloudflare accou
    - On the right-hand panel under **Account details**, locate **Subdomain** (or click **Create application** > **Create Worker** to trigger the subdomain setup prompt).
    - Enter your preferred subdomain (e.g., `yourname.workers.dev`) and click **Save**.
 
-### 2. One-Command Provisioning & Deployment (`pnpm run setup`)
+### 2. One-Command Provisioning & Deployment (`pnpm run setup -r`)
 
-To automatically install dependencies, migrate local D1, provision or discover the remote D1 database and R2 bucket, apply remote migrations, build, deploy the Worker, upload secrets, and run a live health check in a single command:
+To automatically provision or discover your remote Cloudflare D1 database and R2 bucket, apply remote migrations, build, deploy the Worker, upload secrets, and run a live health check in a single command:
 
 ```bash
-pnpm run setup
+pnpm run setup -r
 ```
 
 Flags available:
 
+- `-r`, `--remote`: Target remote Cloudflare production (required to provision remote infrastructure).
 - `--dry-run`: Print every command without executing it.
-- `--local`: Run local-only setup (installs dependencies, migrates local D1, and outputs local credentials to the console).
 - `--domain <domain>`: Deploy to a custom domain already configured on Cloudflare DNS.
 - `--name <worker-name>`: Deploy under a custom Worker name.
 
@@ -272,8 +272,7 @@ Burrow is open-source software licensed under the **[GNU Affero General Public L
 
 Burrow is open-source software licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
 
-* **Open-Source & Self-Hosting**: You are free to inspect, modify, and self-host Burrow for personal, non-profit, or internal organizational use under the terms of the AGPL-3.0.
-* **Network Copyleft Requirement**: In accordance with Section 13 of the AGPL-3.0, if you modify Burrow and run it as a network service or SaaS, you must make the complete source code of your modified version available to all network users under the AGPL-3.0.
-* **Commercial Cloud / SaaS**: A hosted cloud service is provided by the project authors. If you require a commercial license without AGPL-3.0 copyleft obligations, please contact the maintainers.
-* **Third-Party Libraries**: Core editor capabilities are powered by [BlockNote](https://www.blocknotejs.org/), licensed under the Mozilla Public License 2.0 (MPL-2.0).
-
+- **Open-Source & Self-Hosting**: You are free to inspect, modify, and self-host Burrow for personal, non-profit, or internal organizational use under the terms of the AGPL-3.0.
+- **Network Copyleft Requirement**: In accordance with Section 13 of the AGPL-3.0, if you modify Burrow and run it as a network service or SaaS, you must make the complete source code of your modified version available to all network users under the AGPL-3.0.
+- **Commercial Cloud / SaaS**: A hosted cloud service is provided by the project authors. If you require a commercial license without AGPL-3.0 copyleft obligations, please contact the maintainers.
+- **Third-Party Libraries**: Core editor capabilities are powered by [BlockNote](https://www.blocknotejs.org/), licensed under the Mozilla Public License 2.0 (MPL-2.0).

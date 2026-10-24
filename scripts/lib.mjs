@@ -31,7 +31,13 @@ export function hasFlag(flag) {
 
 /** Check if the command was invoked with any remote flag: --remote, --r, or -r. */
 export function isRemoteTarget() {
-  return hasFlag('--remote') || hasFlag('--r') || hasFlag('-r');
+  const isRemote = hasFlag('--remote') || hasFlag('--r') || hasFlag('-r');
+  const isLocal = hasFlag('--local') || hasFlag('--l') || hasFlag('-l');
+  if (isRemote && isLocal) {
+    console.error('❌ ERROR: Cannot specify both --remote and --local target flags.');
+    process.exit(1);
+  }
+  return isRemote;
 }
 
 /** Print a loud, prominent target banner at the start of a command. */
