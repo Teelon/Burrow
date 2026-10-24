@@ -161,9 +161,21 @@ Burrow features a provider-agnostic email adapter architecture (`src/core/adapte
 To enable live email delivery on your production deployment:
 
 1. **Upload your Resend API key to Cloudflare Secrets:**
+   Obtain an API key from [resend.com/api-keys](https://resend.com/api-keys) (starts with `re_`), then run:
+
    ```bash
    pnpm exec wrangler secret put RESEND_API_KEY
    ```
+
+   Wrangler will interactively prompt you to paste your key and press <kbd>Enter</kbd>:
+
+   ```text
+   ✔ Enter a secret value: re_123456789_abcdefghijklmnopqrstuvwxyz
+   ✨ Success! Created secret RESEND_API_KEY
+   ```
+
+   _(Or pass it non-interactively in CI/scripting: `echo "re_123456789_abc..." | pnpm exec wrangler secret put RESEND_API_KEY`)_
+
 2. **Configure your verified sender address:**
    Add `EMAIL_FROM` to `wrangler.jsonc` under `vars` (or run `pnpm exec wrangler secret put EMAIL_FROM`):
    ```jsonc
