@@ -175,12 +175,19 @@ To enable live email delivery on your production deployment:
    ```
 
 2. **Configure your verified sender address:**
-   Add `EMAIL_FROM` to `wrangler.jsonc` under `vars` (or run `pnpm exec wrangler secret put EMAIL_FROM`):
-   ```jsonc
-   "vars": {
-     "EMAIL_FROM": "Burrow <notify@yourverifieddomain.com>"
-   }
+   Run:
+
+   ```bash
+   pnpm exec wrangler secret put EMAIL_FROM
    ```
+
+   Paste your sender address when prompted:
+
+   ```text
+   ✔ Enter a secret value: Burrow <notify@yourverifieddomain.com>
+   ✨ Success! Created secret EMAIL_FROM
+   ```
+
 3. **Verify domain DNS:** Ensure your sending domain has active SPF and DKIM records verified at [resend.com/domains](https://resend.com/domains). _(For initial testing before domain verification, you can set `EMAIL_FROM=Burrow <onboarding@resend.dev>`, which delivers to your Resend account email)._
 
 ### 5. Rollback Procedure
