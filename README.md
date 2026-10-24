@@ -272,16 +272,6 @@ TARGET: 💻 LOCAL (Miniflare SQLite)
 - Invite tokens are stored only as SHA-256 hashes and expire after 7 days.
 - Content size is strictly validated and capped (1.5 MB limit per notepad), and D1 bound parameters are chunked under the 100-parameter threshold.
 
----
-
-## License & Commercial Use
-
-Burrow is open-source software licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
-
-- **Open-Source & Self-Hosting**: You are free to inspect, modify, and self-host Burrow for personal, non-profit, or internal organizational use under the terms of the AGPL-3.0.
-- **Network Copyleft Requirement**: In accordance with Section 13 of the AGPL-3.0, if you modify Burrow and run it as a network service or SaaS, you must make the complete source code of your modified version available to all network users under the AGPL-3.0.
-- **Commercial Cloud / SaaS**: A hosted cloud service is provided by the project authors. If you require a commercial license without AGPL-3.0 copyleft obligations, please contact the maintainers.
-- **Third-Party Libraries**: Core editor capabilities are powered by [BlockNote](https://www.blocknotejs.org/), licensed under the Mozilla Public License 2.0 (MPL-2.0).
 
 ---
 
