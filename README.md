@@ -167,14 +167,12 @@ To enable live email delivery on your production deployment:
    pnpm exec wrangler secret put RESEND_API_KEY
    ```
 
-   Wrangler will interactively prompt you to paste your key and press <kbd>Enter</kbd>:
+   Paste your API key when prompted:
 
    ```text
    ✔ Enter a secret value: re_123456789_abcdefghijklmnopqrstuvwxyz
    ✨ Success! Created secret RESEND_API_KEY
    ```
-
-   _(Or pass it non-interactively in CI/scripting: `echo "re_123456789_abc..." | pnpm exec wrangler secret put RESEND_API_KEY`)_
 
 2. **Configure your verified sender address:**
    Add `EMAIL_FROM` to `wrangler.jsonc` under `vars` (or run `pnpm exec wrangler secret put EMAIL_FROM`):
