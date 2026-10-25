@@ -1,5 +1,5 @@
 import type { IInviteRepository, Invite, CreateInviteData } from '../../../../infrastructure/types';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, gt } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
 import { invites } from '../schema';
 
@@ -7,10 +7,17 @@ export class PostgresInviteRepository implements IInviteRepository {
   constructor(private db: PostgresDb) {}
 
   async listPending(workspaceId: string): Promise<Invite[]> {
+    const now = Date.now();
     return this.db
       .select()
       .from(invites)
-      .where(and(eq(invites.workspaceId, workspaceId), isNull(invites.acceptedAt)))
+      .where(
+        and(
+          eq(invites.workspaceId, workspaceId),
+          isNull(invites.acceptedAt),
+          gt(invites.expiresAt, now),
+        ),
+      )
       .orderBy(invites.createdAt);
   }
 
@@ -29,8 +36,13 @@ export class PostgresInviteRepository implements IInviteRepository {
     return result[0];
   }
 
-  async accept(id: string): Promise<void> {
-    await this.db.update(invites).set({ acceptedAt: Date.now() }).where(eq(invites.id, id));
+  async accept(id: string): Promise<boolean> {
+    const res = await this.db
+      .update(invites)
+      .set({ acceptedAt: Date.now() })
+      .where(and(eq(invites.id, id), isNull(invites.acceptedAt)))
+      .returning({ id: invites.id });
+    return res.length > 0;
   }
 
   async delete(id: string, workspaceId: string): Promise<void> {

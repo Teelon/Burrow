@@ -16,7 +16,7 @@ import { NotificationService } from './services/notifications';
 import { TagService } from './services/tags';
 import { InviteService } from './services/invites';
 import { nanoid } from 'nanoid';
-import { hashToken } from './shared/crypto';
+import { hashToken, timingSafeEqualString } from './shared/crypto';
 import { inviteEmail } from './services/email-templates';
 
 // Type for Hono context with our custom variables
@@ -59,6 +59,7 @@ export function createCoreApp(infra: Infrastructure) {
   const boards = new BoardService({
     boards: repositories.boards,
     cards: repositories.cards,
+    projects: repositories.projects,
   });
   const cards = new CardService({
     cards: repositories.cards,
@@ -121,11 +122,12 @@ export function createCoreApp(infra: Infrastructure) {
     } | null = null;
 
     if (isFirstWorkspace) {
-      if (
-        !providedBootstrapToken ||
-        typeof providedBootstrapToken !== 'string' ||
-        providedBootstrapToken !== bootstrapToken
-      ) {
+      const isTokenValid =
+        Boolean(bootstrapToken && bootstrapToken.length >= 16) &&
+        typeof providedBootstrapToken === 'string' &&
+        (await timingSafeEqualString(providedBootstrapToken, bootstrapToken));
+
+      if (!isTokenValid) {
         return c.json(
           {
             error: {
@@ -163,6 +165,10 @@ export function createCoreApp(infra: Infrastructure) {
           },
           403,
         );
+      }
+
+      if (body.email.trim().toLowerCase() !== invite.email.trim().toLowerCase()) {
+        throw httpError(400, 'email_mismatch', 'Sign-up email does not match invited email');
       }
 
       inviteToAccept = {
@@ -238,7 +244,10 @@ export function createCoreApp(infra: Infrastructure) {
       // Insert FTS row for the welcome notepad to satisfy invariant I7
       await repositories.notepads.insertFts(welcomeNotepadId, 'Welcome to Burrow', '');
     } else if (inviteToAccept) {
-      await repositories.invites.accept(inviteToAccept.id);
+      const accepted = await repositories.invites.accept(inviteToAccept.id);
+      if (!accepted) {
+        return c.json({ error: 'invite_already_accepted', message: 'Invite has already been accepted or expired' }, 400);
+      }
       await repositories.members.create({
         workspaceId: inviteToAccept.workspaceId,
         userId,
@@ -254,6 +263,11 @@ export function createCoreApp(infra: Infrastructure) {
   // Auth routes (delegated to auth provider handler)
   // ---------------------------------------------------------------------------
   app.all('/api/auth/*', async (c) => {
+    const path = c.req.path.replace(/\/+$/, '');
+    if (path === '/api/auth/sign-up/email' || path.startsWith('/api/auth/sign-up')) {
+      throw httpError(403, 'forbidden', 'Direct sign-up disabled; use bootstrap or invite');
+    }
+
     // Better-auth attempts to parse JSON body if content-type contains application/json,
     // which throws if the request body is empty. Fall back gracefully to {} if body is empty.
     const req = c.req.raw;
@@ -445,7 +459,10 @@ export function createCoreApp(infra: Infrastructure) {
   });
 
   app.get('/api/projects/:pid/notepads', requireSession, async (c) => {
+    const workspaceId = c.get('workspaceId');
     const projectId = c.req.param('pid');
+    const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+    if (!proj) throw httpError(404, 'not_found', 'Project not found');
     const notepadList = await notepads.listByProject(projectId);
     return c.json(
       notepadList.map((n) => ({
@@ -468,7 +485,15 @@ export function createCoreApp(infra: Infrastructure) {
       const workspaceId = c.get('workspaceId');
       const userId = c.get('userId');
       const projectId = c.req.param('pid');
+      const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+      if (!proj) throw httpError(404, 'not_found', 'Project not found');
       const body = c.req.valid('json');
+      if (body.parentId) {
+        const parent = await repositories.notepads.findByIdAndWorkspace(body.parentId, workspaceId);
+        if (!parent) {
+          throw httpError(404, 'not_found', 'Parent notepad not found in workspace');
+        }
+      }
       const result = await notepads.createNotepad({
         workspaceId,
         projectId,
@@ -503,7 +528,7 @@ export function createCoreApp(infra: Infrastructure) {
       };
     }
 
-    const backlinks = await repositories.notepads.listBacklinks(notepadId);
+    const backlinks = await repositories.notepads.listBacklinks(notepadId, workspaceId);
 
     return c.json({
       ...notepad,
@@ -525,6 +550,9 @@ export function createCoreApp(infra: Infrastructure) {
 
       const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
       if (!notepad) throw httpError(404, 'not_found', 'Notepad not found');
+      if (notepad.deletedAt !== null) {
+        return c.json({ error: 'notepad_deleted', message: 'Cannot modify a deleted notepad' }, 400);
+      }
 
       if (body.coverKey !== undefined && body.coverKey !== null) {
         let validatedCoverKey: string;
@@ -565,9 +593,14 @@ export function createCoreApp(infra: Infrastructure) {
           }
         })();
 
-        if (c.executionCtx?.waitUntil) {
+        let usedWaitUntil = false;
+        try {
           c.executionCtx.waitUntil(cleanupPromise);
-        } else {
+          usedWaitUntil = true;
+        } catch {
+          // No ExecutionContext available (e.g. Node server or tests without ExecutionContext)
+        }
+        if (!usedWaitUntil) {
           await cleanupPromise;
         }
       }
@@ -589,6 +622,9 @@ export function createCoreApp(infra: Infrastructure) {
 
       const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
       if (!notepad) throw httpError(404, 'not_found', 'Notepad not found');
+      if (notepad.deletedAt !== null) {
+        return c.json({ error: 'notepad_deleted', message: 'Cannot modify a deleted notepad' }, 400);
+      }
 
       try {
         const result = await notepads.saveContent({
@@ -662,7 +698,10 @@ export function createCoreApp(infra: Infrastructure) {
   });
 
   app.get('/api/projects/:pid/recent', requireSession, async (c) => {
+    const workspaceId = c.get('workspaceId');
     const projectId = c.req.param('pid');
+    const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+    if (!proj) throw httpError(404, 'not_found', 'Project not found');
     const notepadsList = await repositories.notepads.listByProject(projectId);
     const recent = notepadsList
       .filter((n) => n.deletedAt === null && n.kind === 'notepad')
@@ -735,6 +774,13 @@ export function createCoreApp(infra: Infrastructure) {
       const workspaceId = c.get('workspaceId');
       const notepadId = c.req.param('id');
       const { tagIds } = c.req.valid('json');
+
+      const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
+      if (!notepad) throw httpError(404, 'not_found', 'Notepad not found');
+      if (notepad.deletedAt !== null) {
+        return c.json({ error: 'notepad_deleted', message: 'Cannot modify a deleted notepad' }, 400);
+      }
+
       await notepads.setNotepadTags(notepadId, tagIds, workspaceId);
       return c.json({ ok: true, notepadId, tagIds });
     },
@@ -756,6 +802,8 @@ export function createCoreApp(infra: Infrastructure) {
   app.get('/api/projects/:pid/boards', requireSession, async (c) => {
     const workspaceId = c.get('workspaceId');
     const projectId = c.req.param('pid');
+    const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+    if (!proj) throw httpError(404, 'not_found', 'Project not found');
     const boardList = await boards.listBoards(workspaceId, projectId);
     return c.json(boardList);
   });
@@ -768,6 +816,8 @@ export function createCoreApp(infra: Infrastructure) {
     async (c) => {
       const workspaceId = c.get('workspaceId');
       const projectId = c.req.param('pid');
+      const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+      if (!proj) throw httpError(404, 'not_found', 'Project not found');
       const body = c.req.valid('json');
       const result = await boards.createBoard({
         workspaceId,
@@ -1228,7 +1278,7 @@ export function createCoreApp(infra: Infrastructure) {
   app.get('/api/invites', requireSession, requireRole('owner'), async (c) => {
     const workspaceId = c.get('workspaceId');
     const pending = await invites.listPendingInvites(workspaceId);
-    return c.json(pending);
+    return c.json(pending.map(({ tokenHash: _, ...rest }) => rest));
   });
 
   app.get('/api/invites/info/:token', async (c) => {
@@ -1259,7 +1309,19 @@ export function createCoreApp(infra: Infrastructure) {
     async (c) => {
       const userId = c.get('userId');
       const { token } = c.req.valid('json');
-      const result = await invites.acceptInvite(userId, token);
+      const member = await repositories.members.findByUserIdGlobal(userId);
+      let email = member?.email;
+      if (!email) {
+        try {
+          const session =
+            (await (auth as any).api?.getSession?.({ headers: c.req.raw.headers })) ??
+            (await auth.getSession(c.req.raw.headers));
+          email = (session as any)?.user?.email ?? (session as any)?.email;
+        } catch {
+          // ignore session retrieval error
+        }
+      }
+      const result = await invites.acceptInvite(userId, token, email);
       return c.json({ ok: true, ...result });
     },
   );
@@ -1403,6 +1465,10 @@ export function createCoreApp(infra: Infrastructure) {
   app.get('/api/suggest', requireSession, zValidator('query', suggestQuerySchema), async (c) => {
     const workspaceId = c.get('workspaceId');
     const { type, q, projectId } = c.req.valid('query');
+    if (projectId) {
+      const proj = await repositories.projects.findByIdAndWorkspace(projectId, workspaceId);
+      if (!proj) return c.json([]);
+    }
     const searchPattern = q.trim();
 
     if (type === 'user') {

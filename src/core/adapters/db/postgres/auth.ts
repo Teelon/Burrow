@@ -24,14 +24,24 @@ export function createPostgresAuthProvider(
       enabled: true,
     },
     socialProviders: {
-      github: {
-        clientId: process.env.GITHUB_CLIENT_ID ?? '',
-        clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
-      },
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      },
+      ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+        ? {
+            github: {
+              clientId: process.env.GITHUB_CLIENT_ID,
+              clientSecret: process.env.GITHUB_CLIENT_SECRET,
+              disableImplicitSignUp: true,
+            },
+          }
+        : {}),
+      ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+        ? {
+            google: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              disableImplicitSignUp: true,
+            },
+          }
+        : {}),
     },
     session: {
       expiresIn: 60 * 60 * 24 * 30, // 30 days
@@ -53,13 +63,9 @@ export function createPostgresAuthProvider(
       const session = await auth.api.getSession({ headers });
       if (!session) return null;
 
-      // Get workspace membership for this user
-      // For now, return first workspace or null
-      // In a real app, you'd resolve workspace from context/subdomain
       return {
         userId: session.user.id,
-        workspaceId: '', // Will be resolved by the calling code
-        role: 'editor',
+        email: session.user.email,
       };
     },
     async handler(req: Request) {

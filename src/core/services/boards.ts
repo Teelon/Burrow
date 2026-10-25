@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import type {
   IBoardRepository,
   ICardRepository,
+  IProjectRepository,
   Board,
   BoardColumn,
   BoardWithDetails,
@@ -21,16 +22,23 @@ export class BoardService {
     private readonly repos: {
       boards: IBoardRepository;
       cards?: ICardRepository;
+      projects?: IProjectRepository;
     },
   ) {}
 
-  async listBoards(_workspaceId: string, projectId: string): Promise<Board[]> {
-    // Filter by workspace in repository
+  async listBoards(workspaceId: string, projectId: string): Promise<Board[]> {
+    if (this.repos.projects) {
+      const proj = await this.repos.projects.findByIdAndWorkspace(projectId, workspaceId);
+      if (!proj) throw notFound('not_found', 'Project not found');
+    }
     return this.repos.boards.listByProject(projectId);
   }
 
   async createBoard(args: CreateBoardArgs): Promise<{ id: string; position: string }> {
-    // Verify project exists and is accessible (caller should validate)
+    if (this.repos.projects) {
+      const proj = await this.repos.projects.findByIdAndWorkspace(args.projectId, args.workspaceId);
+      if (!proj) throw notFound('not_found', 'Project not found');
+    }
     const boards = await this.repos.boards.listByProject(args.projectId);
     const boardPosition = positionAfterLast(boards[boards.length - 1]?.position ?? null);
     const boardId = nanoid();

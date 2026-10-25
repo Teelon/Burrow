@@ -48,10 +48,13 @@ const server = serve(
     port: config.PORT,
   },
   (info) => {
+    const isProd = process.env.NODE_ENV === 'production';
     console.log('\n======================================================');
     console.log('Burrow Node Server');
     console.log(`  Listening URL:      http://localhost:${info.port}`);
-    console.log(`  BOOTSTRAP_TOKEN:    ${config.BOOTSTRAP_TOKEN}`);
+    console.log(
+      `  BOOTSTRAP_TOKEN:    ${isProd ? '[REDACTED in production]' : config.BOOTSTRAP_TOKEN}`,
+    );
     console.log('======================================================\n');
   },
 );

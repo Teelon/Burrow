@@ -83,6 +83,7 @@ export class InviteService {
   async acceptInvite(
     userId: string,
     token: string,
+    email?: string,
   ): Promise<{ workspaceId: string; role: 'editor' | 'viewer' }> {
     // Check if user already belongs to a workspace - we need to check all workspaces
     // For now, we'll use a workaround since findByUserId requires workspaceId
@@ -94,13 +95,32 @@ export class InviteService {
       throw badRequest('invalid_invite', 'Invalid or expired invite');
     }
 
+    let userEmail = email;
+    if (!userEmail) {
+      const member = await this.repos.members.findByUserIdGlobal(userId);
+      userEmail = member?.email;
+    }
+
+    if (!userEmail || userEmail.trim().toLowerCase() !== invite.email.trim().toLowerCase()) {
+      throw badRequest('email_mismatch', 'Email does not match invite');
+    }
+
+    const currentMember = await this.repos.members.findByUserIdGlobal(userId);
+    if (currentMember && currentMember.workspaceId !== invite.workspaceId) {
+      throw badRequest('already_in_another_workspace', 'Users can only belong to one workspace');
+    }
+
     // Check if user is already a member of the invite's workspace
     const existingMember = await this.repos.members.findByUserId(invite.workspaceId, userId);
     if (existingMember) {
       throw badRequest('already_in_workspace', 'You already belong to a workspace');
     }
 
-    await this.repos.invites.accept(invite.id);
+    const accepted = await this.repos.invites.accept(invite.id);
+    if (!accepted) {
+      throw badRequest('invite_already_accepted', 'Invite has already been accepted');
+    }
+
     await this.repos.members.create({
       workspaceId: invite.workspaceId,
       userId,

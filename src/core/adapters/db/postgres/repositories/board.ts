@@ -29,7 +29,7 @@ export class PostgresBoardRepository implements IBoardRepository {
     return this.db
       .select()
       .from(boards)
-      .where(eq(boards.projectId, projectId))
+      .where(and(eq(boards.projectId, projectId), isNull(boards.deletedAt)))
       .orderBy(boards.position);
   }
 

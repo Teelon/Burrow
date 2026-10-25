@@ -1,7 +1,7 @@
 import type { IMemberRepository, Member, CreateMemberData } from '../../../../infrastructure/types';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
-import { members, user } from '../schema';
+import { members, user, cardAssignees, cards, boards, session } from '../schema';
 
 export class PostgresMemberRepository implements IMemberRepository {
   constructor(private db: PostgresDb) {}
@@ -130,9 +130,29 @@ export class PostgresMemberRepository implements IMemberRepository {
   }
 
   async remove(workspaceId: string, userId: string): Promise<void> {
-    await this.db
-      .delete(members)
-      .where(and(eq(members.workspaceId, workspaceId), eq(members.userId, userId)));
+    await this.db.transaction(async (tx) => {
+      const cardRows = await tx
+        .select({ id: cards.id })
+        .from(cards)
+        .innerJoin(boards, eq(boards.id, cards.boardId))
+        .where(eq(boards.workspaceId, workspaceId));
+
+      const cardIds = cardRows.map((r) => r.id);
+      if (cardIds.length > 0) {
+        await tx
+          .delete(cardAssignees)
+          .where(
+            and(
+              eq(cardAssignees.userId, userId),
+              inArray(cardAssignees.cardId, cardIds),
+            ),
+          );
+      }
+
+      await tx
+        .delete(members)
+        .where(and(eq(members.workspaceId, workspaceId), eq(members.userId, userId)));
+    });
   }
 
   async create(data: CreateMemberData): Promise<Member> {
@@ -141,9 +161,8 @@ export class PostgresMemberRepository implements IMemberRepository {
     return result[0];
   }
 
-  async deleteSessions(_userId: string): Promise<void> {
-    // This is handled by BetterAuth, but we provide the interface
-    // Actual session deletion would be in auth adapter
+  async deleteSessions(userId: string): Promise<void> {
+    await this.db.delete(session).where(eq(session.userId, userId));
   }
 
   async listOwners(workspaceId: string): Promise<Member[]> {

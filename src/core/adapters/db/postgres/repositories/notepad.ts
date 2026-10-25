@@ -20,7 +20,7 @@ import {
   projects,
   cards,
   boards,
-  user,
+  members,
   editLocks,
 } from '../schema';
 import { positionAfterLast } from '../../../../services/utils/ordering';
@@ -204,36 +204,72 @@ export class PostgresNotepadRepository implements INotepadRepository {
   }
 
   // Link validation
-  async isValidLink(link: { targetType: string; targetId: string }): Promise<boolean> {
+  async isValidLink(
+    slugOrId: string | { targetType: string; targetId: string },
+    workspaceId: string,
+  ): Promise<boolean> {
+    const link =
+      typeof slugOrId === 'string'
+        ? { targetType: 'notepad', targetId: slugOrId }
+        : slugOrId;
+
     switch (link.targetType) {
-      case 'notepad':
+      case 'notepad': {
         return this.db
           .select({ id: notepads.id })
           .from(notepads)
-          .where(eq(notepads.id, link.targetId))
+          .where(
+            and(
+              eq(notepads.id, link.targetId),
+              eq(notepads.workspaceId, workspaceId),
+              isNull(notepads.deletedAt),
+            ),
+          )
           .limit(1)
           .then((r) => r.length > 0);
-      case 'card':
+      }
+      case 'card': {
         return this.db
           .select({ id: cards.id })
           .from(cards)
-          .where(eq(cards.id, link.targetId))
+          .innerJoin(notepads, eq(notepads.id, cards.notepadId))
+          .where(
+            and(
+              eq(cards.id, link.targetId),
+              eq(notepads.workspaceId, workspaceId),
+              isNull(notepads.deletedAt),
+            ),
+          )
           .limit(1)
           .then((r) => r.length > 0);
-      case 'board':
+      }
+      case 'board': {
         return this.db
           .select({ id: boards.id })
           .from(boards)
-          .where(eq(boards.id, link.targetId))
+          .where(
+            and(
+              eq(boards.id, link.targetId),
+              eq(boards.workspaceId, workspaceId),
+              isNull(boards.deletedAt),
+            ),
+          )
           .limit(1)
           .then((r) => r.length > 0);
-      case 'user':
+      }
+      case 'user': {
         return this.db
-          .select({ id: user.id })
-          .from(user)
-          .where(eq(user.id, link.targetId))
+          .select({ userId: members.userId })
+          .from(members)
+          .where(
+            and(
+              eq(members.userId, link.targetId),
+              eq(members.workspaceId, workspaceId),
+            ),
+          )
           .limit(1)
           .then((r) => r.length > 0);
+      }
       default:
         return false;
     }
@@ -344,18 +380,24 @@ export class PostgresNotepadRepository implements INotepadRepository {
 
   async listBacklinks(
     notepadId: string,
-  ): Promise<{ id: string; title: string; icon?: string | null }[]> {
+    workspaceId: string,
+  ): Promise<Array<{ id: string; title: string; updatedAt: number }>> {
+    const conditions = [
+      eq(notepadLinks.targetId, notepadId),
+      eq(notepadLinks.targetType, 'notepad'),
+      isNull(notepads.deletedAt),
+      eq(notepads.workspaceId, workspaceId),
+    ];
     const rows = await this.db
-      .select({ id: notepads.id, title: notepads.title, icon: notepads.icon })
+      .select({
+        id: notepads.id,
+        title: notepads.title,
+        updatedAt: notepads.updatedAt,
+        icon: notepads.icon,
+      })
       .from(notepadLinks)
       .innerJoin(notepads, eq(notepads.id, notepadLinks.sourceId))
-      .where(
-        and(
-          eq(notepadLinks.targetId, notepadId),
-          eq(notepadLinks.targetType, 'notepad'),
-          isNull(notepads.deletedAt),
-        ),
-      );
+      .where(and(...conditions));
     return rows;
   }
 

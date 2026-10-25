@@ -9,7 +9,7 @@ import type { IEmailProvider } from '../adapters/email';
  */
 export interface AuthProvider {
   /** Resolve session from request headers. Returns userId, or null. */
-  getSession(headers: Headers): Promise<{ userId: string } | null>;
+  getSession(headers: Headers): Promise<{ userId: string; email?: string } | null>;
   /** Hono handler for auth endpoints (sign-in, sign-up, etc.). */
   handler(req: Request): Promise<Response>;
 }
@@ -155,7 +155,10 @@ export interface INotepadRepository {
    */
   countByCoverKey(coverKey: string, excludeNotepadId?: string): Promise<number>;
   // Link validation
-  isValidLink(link: { targetType: string; targetId: string }): Promise<boolean>;
+  isValidLink(
+    slugOrId: string | { targetType: string; targetId: string },
+    workspaceId: string,
+  ): Promise<boolean>;
   // Tags
   listTagIds(notepadId: string): Promise<string[]>;
   setTagIds(notepadId: string, tagIds: string[]): Promise<void>;
@@ -183,7 +186,10 @@ export interface INotepadRepository {
     version: number,
     content: string,
   ): Promise<void>;
-  listBacklinks(notepadId: string): Promise<{ id: string; title: string }[]>;
+  listBacklinks(
+    notepadId: string,
+    workspaceId: string,
+  ): Promise<Array<{ id: string; title: string; updatedAt: number }>>;
   // Mentions (notifications)
   insertMentions(args: MentionNotificationArgs): Promise<void>;
   // Position helpers
@@ -264,7 +270,7 @@ export interface IInviteRepository {
   listPending(workspaceId: string): Promise<Invite[]>;
   findByTokenHash(tokenHash: string): Promise<Invite | null>;
   create(data: CreateInviteData): Promise<Invite>;
-  accept(id: string): Promise<void>;
+  accept(id: string): Promise<boolean>;
   delete(id: string, workspaceId: string): Promise<void>;
 }
 
@@ -502,6 +508,13 @@ export interface RestoredNotepad {
 export interface HardDeletedNotepad {
   id: string;
   coverKey: string | null;
+}
+
+export interface NotepadBacklink {
+  id: string;
+  title: string;
+  updatedAt: number;
+  icon?: string | null;
 }
 
 export interface Tag {

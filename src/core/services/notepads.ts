@@ -129,6 +129,9 @@ export class NotepadService {
       if (!parent || parent.deletedAt !== null || parent.kind !== 'notepad') {
         throw notFound('not_found', 'Parent notepad not found');
       }
+      if (parent.workspaceId !== args.workspaceId || parent.projectId !== args.projectId) {
+        throw notFound('not_found', 'Parent notepad not found');
+      }
       const parentDepth = await getDepth((id) => this.repos.notepads.getParent(id), parent.id);
       if (parentDepth + 1 > MAX_NOTEPAD_DEPTH) {
         throw badRequest('too_deep', `Notepads can nest at most ${MAX_NOTEPAD_DEPTH} deep`);
@@ -280,9 +283,9 @@ export class NotepadService {
 
     // Set identical deleted_at timestamp on subtree and remove from FTS
     for (const chunk of chunkByParamBudget(allIds, 1, 1)) {
-      const id = chunk[0];
-      if (id) await this.repos.notepads.softDelete(id, now); // Simplified - need batch
-      // TODO: Proper batch soft delete for multiple IDs
+      for (const id of chunk) {
+        await this.repos.notepads.softDelete(id, now);
+      }
     }
 
     for (const chunk of chunkByParamBudget(allIds, 1, 0)) {
@@ -360,7 +363,9 @@ export class NotepadService {
 
     // Collect cover keys for R2 cleanup
     const allRows = await Promise.all(allIds.map((id) => this.repos.notepads.findById(id)));
-    const r2Keys = allRows.map((r) => r?.coverKey).filter((k): k is string => Boolean(k));
+    const items = allRows
+      .filter((r): r is NonNullable<typeof r> => Boolean(r && r.coverKey))
+      .map((r) => ({ id: r.id, coverKey: r.coverKey! }));
 
     // Hard delete (cascades via FK: notepadTags, notepadLinks, etc.)
     for (const id of allIds) {
@@ -376,9 +381,20 @@ export class NotepadService {
 
     // Post-batch best-effort cleanup of R2 files
     const storage = args.storage ?? this.storage;
-    if (storage && r2Keys.length > 0) {
+    if (storage && items.length > 0) {
       try {
-        await Promise.allSettled(r2Keys.map((k) => storage.delete(k)));
+        const id = args.notepadId;
+        const uniqueCoverKeys = Array.from(
+          new Set(items.map((i) => i.coverKey).filter((k): k is string => Boolean(k))),
+        );
+        await Promise.allSettled(
+          uniqueCoverKeys.map(async (k) => {
+            const count = await this.repos.notepads.countByCoverKey(k, id);
+            if (count === 0) {
+              await storage.delete(k);
+            }
+          }),
+        );
       } catch (err) {
         console.warn('R2 cleanup error after notepad deletion', err);
       }
@@ -395,7 +411,7 @@ export class NotepadService {
     const extraction = extractFromContent(args.content);
     const validLinks: StoredLink[] = [];
     for (const link of extraction.links as ExtractedLink[]) {
-      if (await this.repos.notepads.isValidLink(link)) {
+      if (await this.repos.notepads.isValidLink(link, row.workspaceId)) {
         validLinks.push(link);
       }
     }

@@ -22,6 +22,29 @@ export type ServerConfig = z.infer<typeof configSchema>;
 
 /** Load + validate the Node server env. Throws a zod error on bad input. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  const isProd = env.NODE_ENV === 'production';
+  if (isProd) {
+    if (
+      !env.BETTER_AUTH_SECRET ||
+      env.BETTER_AUTH_SECRET === 'dev-secret-change-me-32-bytes-minimum!!' ||
+      env.BETTER_AUTH_SECRET === 'local-dev-secret-change-me' ||
+      env.BETTER_AUTH_SECRET.length < 32
+    ) {
+      throw new Error(
+        'BETTER_AUTH_SECRET must be set to a secure string of at least 32 characters in production',
+      );
+    }
+    if (
+      !env.BOOTSTRAP_TOKEN ||
+      env.BOOTSTRAP_TOKEN === 'dev-bootstrap-token' ||
+      env.BOOTSTRAP_TOKEN.length < 16
+    ) {
+      throw new Error(
+        'BOOTSTRAP_TOKEN must be set to a secure string of at least 16 characters in production',
+      );
+    }
+  }
+
   return configSchema.parse({
     PORT: env.PORT,
     SQLITE_PATH: env.SQLITE_PATH,

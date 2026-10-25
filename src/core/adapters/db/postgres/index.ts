@@ -83,9 +83,16 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
   });
 
   // Create auth provider
+  const authSecret =
+    config.BETTER_AUTH_SECRET ||
+    (process.env.NODE_ENV === 'production' ? '' : 'local-dev-secret-change-me');
+  if (process.env.NODE_ENV === 'production' && !authSecret) {
+    throw new Error('BETTER_AUTH_SECRET must be set in production');
+  }
+
   const auth = createPostgresAuthProvider(
     db,
-    config.BETTER_AUTH_SECRET ?? 'local-dev-secret-change-me',
+    authSecret,
     config.BETTER_AUTH_URL ?? 'http://localhost:3005',
   );
 

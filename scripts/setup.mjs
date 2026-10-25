@@ -57,15 +57,13 @@ async function main() {
 
   if (!isRemote) {
     const localBootstrapToken = process.env.BOOTSTRAP_TOKEN || 'dev-bootstrap-token';
-    const localAuthSecret =
-      process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me-32-bytes-minimum!!';
     const localUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3005';
     console.log('\n======================================================');
     console.log('✅ Local setup complete!');
     console.log(`  Local Web URL:      ${localUrl}`);
     console.log('  Local Worker API:   http://127.0.0.1:8787');
     console.log(`  BETTER_AUTH_URL:    ${localUrl}`);
-    console.log(`  BETTER_AUTH_SECRET: ${localAuthSecret}`);
+    console.log('  BETTER_AUTH_SECRET: [configured]');
     console.log(`  BOOTSTRAP_TOKEN:    ${localBootstrapToken}`);
     console.log('======================================================');
     console.log('\nRun `pnpm dev` to start the local development server.');
@@ -170,9 +168,17 @@ async function main() {
     }
 
     const tmp = path.join(root, '.secrets.tmp.json');
+    process.once('exit', () => fs.rmSync(tmp, { force: true }));
     fs.writeFileSync(tmp, JSON.stringify(generated, null, 2));
     try {
-      run(bin('wrangler'), [...configArgs, 'secret', 'bulk', tmp], { dryRun });
+      const res = run(bin('wrangler'), [...configArgs, 'secret', 'bulk', tmp], {
+        dryRun,
+        allowFail: true,
+      });
+      if (res.status !== 0) {
+        fs.rmSync(tmp, { force: true });
+        process.exit(1);
+      }
     } finally {
       fs.rmSync(tmp, { force: true });
     }
@@ -200,7 +206,7 @@ async function main() {
   }
   console.log(`  BETTER_AUTH_URL:    ${originForAuth}`);
   if (generated.BETTER_AUTH_SECRET) {
-    console.log(`  BETTER_AUTH_SECRET: ${generated.BETTER_AUTH_SECRET}`);
+    console.log('  BETTER_AUTH_SECRET: [configured]');
   } else {
     console.log('  BETTER_AUTH_SECRET: (preserved existing secret on Worker)');
   }

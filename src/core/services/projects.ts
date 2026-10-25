@@ -155,7 +155,15 @@ export class ProjectService {
     }
 
     if (this.storage && coverKeys.length > 0) {
-      await Promise.allSettled(coverKeys.map((k) => this.storage!.delete(k)));
+      const uniqueCoverKeys = Array.from(new Set(coverKeys));
+      await Promise.allSettled(
+        uniqueCoverKeys.map(async (k) => {
+          const count = await this.repos.notepads.countByCoverKey(k);
+          if (count === 0) {
+            await this.storage!.delete(k);
+          }
+        }),
+      );
     }
 
     // 2. Hard delete all boards in the project

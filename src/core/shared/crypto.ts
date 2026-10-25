@@ -9,3 +9,17 @@ export async function hashToken(token: string): Promise<string> {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * Constant-time string comparison using SHA-256 hashes to prevent timing attacks.
+ */
+export async function timingSafeEqualString(a: string, b: string): Promise<boolean> {
+  const hashA = await hashToken(a ?? '');
+  const hashB = await hashToken(b ?? '');
+  let mismatch = 0;
+  for (let i = 0; i < hashA.length; i++) {
+    mismatch |= hashA.charCodeAt(i) ^ hashB.charCodeAt(i);
+  }
+  return Boolean(a && b && mismatch === 0);
+}
+

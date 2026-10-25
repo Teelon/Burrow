@@ -228,4 +228,63 @@ describe('createNotepadRepository contract', () => {
     expect(await repo().countByCoverKey(coverKey)).toBe(1);
     expect(await repo().countByCoverKey(coverKey, np2)).toBe(0);
   });
+
+  it('isValidLink checks validity strictly scoped to workspaceId', async () => {
+    const projectId = await seedProject();
+    const liveNotepadId = await seedNotepad({ projectId, title: 'target notepad', position: 'a0' });
+    const trashedNotepadId = await seedNotepad({ projectId, title: 'trashed target', position: 'a1' });
+    await repo().softDelete(trashedNotepadId, Date.now());
+
+    const otherWorkspaceId = crypto.randomUUID();
+
+    // Valid within workspace (both as string and target object)
+    expect(await repo().isValidLink(liveNotepadId, workspaceId)).toBe(true);
+    expect(
+      await repo().isValidLink({ targetType: 'notepad', targetId: liveNotepadId }, workspaceId),
+    ).toBe(true);
+
+    // Cross-workspace lookup fails
+    expect(await repo().isValidLink(liveNotepadId, otherWorkspaceId)).toBe(false);
+    expect(
+      await repo().isValidLink({ targetType: 'notepad', targetId: liveNotepadId }, otherWorkspaceId),
+    ).toBe(false);
+
+    // Trashed notepad fails
+    expect(await repo().isValidLink(trashedNotepadId, workspaceId)).toBe(false);
+
+    // Non-existent id fails
+    expect(await repo().isValidLink('non-existent-id', workspaceId)).toBe(false);
+  });
+
+  it('listBacklinks returns backlinks strictly scoped to workspaceId with updatedAt', async () => {
+    const projectId = await seedProject();
+    const targetId = await seedNotepad({ projectId, title: 'target', position: 'a0' });
+    const source1Id = await seedNotepad({ projectId, title: 'source 1', position: 'a1' });
+    const source2Id = await seedNotepad({ projectId, title: 'source 2', position: 'a2' });
+
+    const db = createD1Db(env.DB);
+    await db.insert(schema.notepadLinks).values([
+      { sourceId: source1Id, targetType: 'notepad', targetId },
+      { sourceId: source2Id, targetType: 'notepad', targetId },
+    ]);
+
+    const backlinks = await repo().listBacklinks(targetId, workspaceId);
+    expect(backlinks).toHaveLength(2);
+    expect(backlinks.map((b) => b.id).sort()).toEqual([source1Id, source2Id].sort());
+    for (const link of backlinks) {
+      expect(link.title).toBeDefined();
+      expect(typeof link.updatedAt).toBe('number');
+    }
+
+    // Different workspace returns empty
+    const otherWorkspaceId = crypto.randomUUID();
+    const otherBacklinks = await repo().listBacklinks(targetId, otherWorkspaceId);
+    expect(otherBacklinks).toHaveLength(0);
+
+    // Soft-deleting one source removes it from backlinks
+    await repo().softDelete(source1Id, Date.now());
+    const afterDelete = await repo().listBacklinks(targetId, workspaceId);
+    expect(afterDelete.map((b) => b.id)).toEqual([source2Id]);
+  });
 });
+

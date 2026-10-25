@@ -299,34 +299,65 @@ export function createNotepadRepository(db: DB): INotepadRepository {
     },
 
     // Link validation
-    async isValidLink(link: { targetType: string; targetId: string }): Promise<boolean> {
-      // Simplified: just check if target exists
+    async isValidLink(
+      slugOrId: string | { targetType: string; targetId: string },
+      workspaceId: string,
+    ): Promise<boolean> {
+      const link =
+        typeof slugOrId === 'string'
+          ? { targetType: 'notepad', targetId: slugOrId }
+          : slugOrId;
+
       if (link.targetType === 'notepad') {
         const [row] = await db
           .select({ id: t.notepads.id })
           .from(t.notepads)
-          .where(eq(t.notepads.id, link.targetId));
+          .where(
+            and(
+              eq(t.notepads.id, link.targetId),
+              eq(t.notepads.workspaceId, workspaceId),
+              isNull(t.notepads.deletedAt),
+            ),
+          );
         return !!row;
       }
       if (link.targetType === 'card') {
         const [row] = await db
           .select({ id: t.cards.id })
           .from(t.cards)
-          .where(eq(t.cards.id, link.targetId));
+          .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+          .where(
+            and(
+              eq(t.cards.id, link.targetId),
+              eq(t.notepads.workspaceId, workspaceId),
+              isNull(t.notepads.deletedAt),
+            ),
+          );
         return !!row;
       }
       if (link.targetType === 'board') {
         const [row] = await db
           .select({ id: t.boards.id })
           .from(t.boards)
-          .where(eq(t.boards.id, link.targetId));
+          .where(
+            and(
+              eq(t.boards.id, link.targetId),
+              eq(t.boards.workspaceId, workspaceId),
+              isNull(t.boards.deletedAt),
+            ),
+          );
         return !!row;
       }
       if (link.targetType === 'user') {
         const [row] = await db
-          .select({ id: t.user.id })
-          .from(t.user)
-          .where(eq(t.user.id, link.targetId));
+          .select({ userId: t.members.userId })
+          .from(t.members)
+          .where(
+            and(
+              eq(t.members.userId, link.targetId),
+              eq(t.members.workspaceId, workspaceId),
+            ),
+          );
         return !!row;
       }
       return false;
@@ -433,18 +464,24 @@ export function createNotepadRepository(db: DB): INotepadRepository {
 
     async listBacklinks(
       notepadId: string,
-    ): Promise<{ id: string; title: string; icon?: string | null }[]> {
+      workspaceId: string,
+    ): Promise<Array<{ id: string; title: string; updatedAt: number }>> {
+      const conditions = [
+        eq(t.notepadLinks.targetId, notepadId),
+        eq(t.notepadLinks.targetType, 'notepad'),
+        isNull(t.notepads.deletedAt),
+        eq(t.notepads.workspaceId, workspaceId),
+      ];
       const rows = await db
-        .select({ id: t.notepads.id, title: t.notepads.title, icon: t.notepads.icon })
+        .select({
+          id: t.notepads.id,
+          title: t.notepads.title,
+          updatedAt: t.notepads.updatedAt,
+          icon: t.notepads.icon,
+        })
         .from(t.notepadLinks)
         .innerJoin(t.notepads, eq(t.notepads.id, t.notepadLinks.sourceId))
-        .where(
-          and(
-            eq(t.notepadLinks.targetId, notepadId),
-            eq(t.notepadLinks.targetType, 'notepad'),
-            isNull(t.notepads.deletedAt),
-          ),
-        );
+        .where(and(...conditions));
       return rows;
     },
 

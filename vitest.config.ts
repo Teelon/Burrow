@@ -26,7 +26,13 @@ export default defineConfig({
         plugins: [
           cloudflareTest({
             wrangler: { configPath: './wrangler.jsonc' },
-            miniflare: { bindings: { TEST_MIGRATIONS } },
+            miniflare: {
+              bindings: {
+                TEST_MIGRATIONS,
+                RESEND_API_KEY: '',
+                EMAIL_FROM: 'Burrow Tests <noreply@burrow.test>',
+              },
+            },
           }),
         ],
         test: {

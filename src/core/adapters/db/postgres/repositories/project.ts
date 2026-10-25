@@ -4,7 +4,7 @@ import type {
   CreateProjectData,
   UpdateProjectData,
 } from '../../../../infrastructure/types';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
 import { projects } from '../schema';
 
@@ -15,7 +15,7 @@ export class PostgresProjectRepository implements IProjectRepository {
     return this.db
       .select()
       .from(projects)
-      .where(eq(projects.workspaceId, workspaceId))
+      .where(and(eq(projects.workspaceId, workspaceId), isNull(projects.archivedAt)))
       .orderBy(projects.position);
   }
 
