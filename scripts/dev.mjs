@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bin, loadEnv, root, run } from './lib.mjs';
+import { bin, getBootstrapToken, loadEnv, root, run } from './lib.mjs';
 
 /**
  * One-command local dev server:
@@ -13,7 +13,7 @@ loadEnv();
 
 const authSecret = process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me-32-bytes-minimum!!';
 const authUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3005';
-const bootstrapToken = process.env.BOOTSTRAP_TOKEN || 'dev-bootstrap-token';
+const bootstrapToken = getBootstrapToken();
 
 const assetsDir = path.join(root, 'dist', 'web');
 if (!fs.existsSync(path.join(assetsDir, 'index.html'))) {

@@ -18,6 +18,7 @@ import readline from 'node:readline/promises';
 import {
   argValue,
   bin,
+  getBootstrapToken,
   hasFlag,
   isRemoteTarget,
   printTargetBanner,
@@ -57,7 +58,7 @@ async function main() {
   });
 
   if (!isRemote) {
-    const localBootstrapToken = process.env.BOOTSTRAP_TOKEN || 'dev-bootstrap-token';
+    const localBootstrapToken = getBootstrapToken();
     const localUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3005';
     console.log('\n======================================================');
     console.log('✅ Local setup complete!');
@@ -138,10 +139,7 @@ async function main() {
   step('Provision Worker secrets');
   const originForAuth = domain ? `https://${domain}` : origin;
   const generated = {};
-  const activeBootstrapToken =
-    process.env.BOOTSTRAP_TOKEN && process.env.BOOTSTRAP_TOKEN !== 'dev-bootstrap-token'
-      ? process.env.BOOTSTRAP_TOKEN
-      : crypto.randomBytes(16).toString('hex');
+  const activeBootstrapToken = getBootstrapToken();
 
   if (!dryRun) {
     const existing = new Set(

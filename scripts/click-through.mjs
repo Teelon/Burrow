@@ -12,10 +12,12 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
-import { bin, run } from './lib.mjs';
+import { bin, getBootstrapToken, loadEnv, run } from './lib.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+loadEnv();
 const root = path.resolve(__dirname, '..');
+const bootstrapToken = getBootstrapToken();
 
 async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -57,6 +59,7 @@ async function main() {
     cwd: root,
     stdio: 'inherit',
     shell: false,
+    env: { ...process.env, BOOTSTRAP_TOKEN: bootstrapToken },
   });
 
   const cleanup = () => {
@@ -91,7 +94,7 @@ async function main() {
         email: 'clickthrough-owner@example.com',
         password: 'Password123!',
         name: 'Clickthrough Owner',
-        bootstrapToken: '26dadbc46ca855c1c8663dfa7735e65a',
+        bootstrapToken,
       },
     });
 

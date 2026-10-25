@@ -1,9 +1,20 @@
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * Resolves the bootstrap token for local development, setup, and click-through tests.
+ * Returns env.BOOTSTRAP_TOKEN if non-empty and not 'dev-bootstrap-token', or generates
+ * a secure random 32-character hex token.
+ */
+export function getBootstrapToken(env = process.env) {
+  const token = env.BOOTSTRAP_TOKEN?.trim();
+  return token && token !== 'dev-bootstrap-token' ? token : crypto.randomBytes(16).toString('hex');
+}
 
 /** Resolve a dependency's executable path without relying on PATH/shell shims. */
 export function bin(pkg, sub) {
