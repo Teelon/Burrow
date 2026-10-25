@@ -99,6 +99,14 @@ export function step(title) {
   console.log(`\n==> ${title}`);
 }
 
+/** Parse a JSON string that may contain comments or trailing commas (JSONC). */
+export function parseJsonc(text) {
+  const cleaned = text
+    .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+    .replace(/,(\s*[}\]])/g, '$1');
+  return JSON.parse(cleaned);
+}
+
 /** Parse the first JSON value found in a string (wrangler mixes logs with output). */
 export function parseFirstJson(text) {
   const start = text.search(/[[{]/);
@@ -173,12 +181,12 @@ export function getWranglerConfigArgs(options = {}) {
     d1IdOverride ||
     (!ignoreCached ? process.env.D1_DATABASE_ID || process.env.CLOUDFLARE_D1_DATABASE_ID : null);
   const configPath = path.join(root, 'wrangler.jsonc');
-  const baseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const baseConfig = parseJsonc(fs.readFileSync(configPath, 'utf8'));
   const localConfigPath = path.join(root, 'wrangler.local.jsonc');
 
   if (!d1Id && !ignoreCached && fs.existsSync(localConfigPath)) {
     try {
-      const existingLocal = JSON.parse(fs.readFileSync(localConfigPath, 'utf8'));
+      const existingLocal = parseJsonc(fs.readFileSync(localConfigPath, 'utf8'));
       if (existingLocal.d1_databases?.[0]?.database_id) {
         d1Id = existingLocal.d1_databases[0].database_id;
       }

@@ -28,6 +28,7 @@ import {
   parseFirstJson,
   loadEnv,
   getWranglerConfigArgs,
+  parseJsonc,
 } from './lib.mjs';
 
 const dryRun = hasFlag('--dry-run');
@@ -219,7 +220,7 @@ async function main() {
 
 function ensureCloudflareResources(dryRun) {
   const configPath = path.join(root, 'wrangler.jsonc');
-  const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const cfg = parseJsonc(fs.readFileSync(configPath, 'utf8'));
   const d1 = cfg.d1_databases?.[0];
   if (!d1) {
     console.error('wrangler.jsonc has no d1_databases entry');

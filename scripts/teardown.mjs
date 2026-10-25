@@ -12,7 +12,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline/promises';
-import { bin, hasFlag, isRemoteTarget, printTargetBanner, root, run, step } from './lib.mjs';
+import {
+  bin,
+  hasFlag,
+  isRemoteTarget,
+  parseJsonc,
+  printTargetBanner,
+  root,
+  run,
+  step,
+} from './lib.mjs';
 
 const isRemote = isRemoteTarget();
 const force = hasFlag('--force');
@@ -21,11 +30,7 @@ function readWranglerConfig() {
   const configPath = path.join(root, 'wrangler.jsonc');
   if (!fs.existsSync(configPath)) return {};
   try {
-    const raw = fs.readFileSync(configPath, 'utf8');
-    const cleaned = raw
-      .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
-      .replace(/,(\s*[}\]])/g, '$1');
-    return JSON.parse(cleaned);
+    return parseJsonc(fs.readFileSync(configPath, 'utf8'));
   } catch {
     return {};
   }
