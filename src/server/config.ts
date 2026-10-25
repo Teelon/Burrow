@@ -10,6 +10,12 @@ const configSchema = z.object({
   DATABASE_URL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY: z.string().optional(),
+  S3_SECRET_KEY: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z.string().optional(),
 });
 
 export type ServerConfig = z.infer<typeof configSchema>;
@@ -26,5 +32,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     DATABASE_URL: env.DATABASE_URL,
     RESEND_API_KEY: env.RESEND_API_KEY,
     EMAIL_FROM: env.EMAIL_FROM,
+    S3_ENDPOINT: env.S3_ENDPOINT,
+    S3_REGION: env.S3_REGION,
+    S3_BUCKET: env.S3_BUCKET,
+    S3_ACCESS_KEY: env.S3_ACCESS_KEY,
+    S3_SECRET_KEY: env.S3_SECRET_KEY,
+    S3_FORCE_PATH_STYLE: env.S3_FORCE_PATH_STYLE,
   });
 }

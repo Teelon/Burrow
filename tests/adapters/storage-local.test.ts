@@ -4,8 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LocalStorageAdapter } from '../../src/worker/adapters/storage/local';
-import type { StorageObject } from '../../src/worker/adapters/storage/types';
+import { LocalStorageAdapter } from '../../src/core/adapters/storage/local';
+import type { StorageObject } from '../../src/core/adapters/storage/types';
 
 async function bodyToBytes(body: StorageObject['body']): Promise<Uint8Array> {
   if (body instanceof Uint8Array) return body;
@@ -55,8 +55,7 @@ describe('LocalStorageAdapter', () => {
     if (!obj) throw new Error('expected stored object');
     expect(new TextDecoder().decode(await bodyToBytes(obj.body))).toBe('hello burrow carrot');
     expect(obj.contentLength).toBe(data.byteLength);
-    // The local adapter accepts contentType on put but persists bytes only.
-    expect(obj.contentType).toBeUndefined();
+    expect(obj.contentType).toBe('text/plain');
   });
 
   it('round-trips an ArrayBuffer payload', async () => {

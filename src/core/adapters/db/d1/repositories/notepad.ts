@@ -1,6 +1,6 @@
 import type { DB } from '../client';
 import * as t from '../schema';
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { runBatch } from '../lib/batch';
 import { positionAfterLast } from '../lib/ordering';
@@ -222,6 +222,18 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       await runBatch(db, statements);
 
       return allRows.map((r) => ({ id: r.id, coverKey: r.coverKey }));
+    },
+
+    async countByCoverKey(coverKey: string, excludeNotepadId?: string): Promise<number> {
+      const conditions = [eq(t.notepads.coverKey, coverKey)];
+      if (excludeNotepadId) {
+        conditions.push(ne(t.notepads.id, excludeNotepadId));
+      }
+      const [row] = await db
+        .select({ count: count() })
+        .from(t.notepads)
+        .where(and(...conditions));
+      return Number(row?.count ?? 0);
     },
 
     // Content & versioning

@@ -9,6 +9,7 @@ import type {
 } from '../infrastructure/types';
 import { notFound, badRequest } from './errors';
 import { positionAfterLast, positionBetween } from './utils/ordering';
+import type { IStorageAdapter } from '../adapters/storage/types';
 
 export interface CreateProjectArgs {
   workspaceId: string;
@@ -38,14 +39,17 @@ export interface PermanentDeleteProjectArgs {
   confirmName: string;
 }
 
+export type Repositories = {
+  projects: IProjectRepository;
+  notepads: INotepadRepository;
+  boards: IBoardRepository;
+  tags: ITagRepository;
+};
+
 export class ProjectService {
   constructor(
-    private readonly repos: {
-      projects: IProjectRepository;
-      notepads: INotepadRepository;
-      boards: IBoardRepository;
-      tags: ITagRepository;
-    },
+    private readonly repos: Repositories,
+    private readonly storage?: IStorageAdapter,
   ) {}
 
   async listProjects(workspaceId: string): Promise<Project[]> {
@@ -133,15 +137,25 @@ export class ProjectService {
     // NOTE: listByProject returns live tree rows only, so trashed rows must come from listDeletedByProject.
     const liveNotepads = await this.repos.notepads.listByProject(projectId);
     const trashedNotepads = await this.repos.notepads.listDeletedByProject(projectId);
+    const coverKeys: string[] = [];
     for (const np of [...liveNotepads, ...trashedNotepads]) {
       try {
         const exists = await this.repos.notepads.findById(np.id);
         if (exists) {
-          await this.repos.notepads.hardDelete(np.id);
+          const deletedNotepads = await this.repos.notepads.hardDelete(np.id);
+          for (const d of deletedNotepads ?? []) {
+            if (d.coverKey) {
+              coverKeys.push(d.coverKey);
+            }
+          }
         }
       } catch (err: any) {
         if (!err?.message?.includes('not found')) throw err;
       }
+    }
+
+    if (this.storage && coverKeys.length > 0) {
+      await Promise.allSettled(coverKeys.map((k) => this.storage!.delete(k)));
     }
 
     // 2. Hard delete all boards in the project

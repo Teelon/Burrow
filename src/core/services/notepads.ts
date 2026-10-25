@@ -13,6 +13,7 @@ import { extractFromContent, extractPlainText, type ExtractedLink } from '../sha
 import { diffLinks } from '../shared/links';
 import { getDescendantIds, getDepth, getSubtreeHeight, wouldCauseCycle } from '../shared/tree';
 import type { ILockAdapter } from '../adapters/lock';
+import type { IStorageAdapter } from '../adapters/storage/types';
 
 /** Root notepads are depth 1; reject anything deeper than 8. */
 export const MAX_NOTEPAD_DEPTH = 8;
@@ -92,10 +93,6 @@ export interface ClaimLockArgs {
   userId: string;
   clientId: string;
   takeover?: boolean;
-}
-
-export interface IStorageAdapter {
-  delete(key: string): Promise<void>;
 }
 
 export class NotepadService {
@@ -378,9 +375,10 @@ export class NotepadService {
     }
 
     // Post-batch best-effort cleanup of R2 files
-    if (this.storage && r2Keys.length > 0) {
+    const storage = args.storage ?? this.storage;
+    if (storage && r2Keys.length > 0) {
       try {
-        await Promise.allSettled(r2Keys.map((k) => this.storage!.delete(k)));
+        await Promise.allSettled(r2Keys.map((k) => storage.delete(k)));
       } catch (err) {
         console.warn('R2 cleanup error after notepad deletion', err);
       }

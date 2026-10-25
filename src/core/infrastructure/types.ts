@@ -149,6 +149,11 @@ export interface INotepadRepository {
   // Tree navigation (for core services)
   getChildren(parentIds: string[]): Promise<{ id: string; parentId: string | null }[]>;
   getParent(id: string): Promise<{ id: string; parentId: string | null } | null>;
+  /**
+   * Counts how many notepads currently reference the given coverKey.
+   * If excludeNotepadId is specified, excludes that notepad row from the count.
+   */
+  countByCoverKey(coverKey: string, excludeNotepadId?: string): Promise<number>;
   // Link validation
   isValidLink(link: { targetType: string; targetId: string }): Promise<boolean>;
   // Tags

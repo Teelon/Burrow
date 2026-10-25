@@ -38,6 +38,7 @@ export default defineConfig({
             'tests/adapters/lock.contract.test.ts',
             'tests/adapters/search.contract.test.ts',
             'tests/adapters/notepad.contract.test.ts',
+            'tests/adapters/storage.contract.test.ts',
           ],
           setupFiles: ['./tests/api/setup.ts'],
         },

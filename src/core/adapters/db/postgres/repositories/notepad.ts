@@ -10,7 +10,7 @@ import type {
   EditLock,
   MentionNotificationArgs,
 } from '../../../../infrastructure/types';
-import { eq, and, inArray, desc, sql, isNull, isNotNull } from 'drizzle-orm';
+import { eq, ne, and, inArray, desc, sql, isNull, isNotNull, count } from 'drizzle-orm';
 import type { PostgresDb } from '../index';
 import {
   notepads,
@@ -133,6 +133,18 @@ export class PostgresNotepadRepository implements INotepadRepository {
 
     await this.db.delete(notepads).where(eq(notepads.id, id));
     return result;
+  }
+
+  async countByCoverKey(coverKey: string, excludeNotepadId?: string): Promise<number> {
+    const conditions = [eq(notepads.coverKey, coverKey)];
+    if (excludeNotepadId) {
+      conditions.push(ne(notepads.id, excludeNotepadId));
+    }
+    const [row] = await this.db
+      .select({ count: count() })
+      .from(notepads)
+      .where(and(...conditions));
+    return Number(row?.count ?? 0);
   }
 
   // Content & versioning

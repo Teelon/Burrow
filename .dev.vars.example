@@ -7,3 +7,16 @@ CLOUDFLARE_ACCOUNT_ID=
 BETTER_AUTH_SECRET=dev-secret-change-me-32-bytes-minimum!!
 BETTER_AUTH_URL=http://localhost:3005
 BOOTSTRAP_TOKEN=dev-bootstrap-token
+
+# Storage Configuration
+# Local disk storage (used when R2 / S3 bindings are absent):
+# LOCAL_STORAGE_PATH=./data/uploads
+
+# S3-compatible object storage (optional):
+# S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
+# S3_REGION=us-east-1
+# S3_BUCKET=burrow-files
+# S3_ACCESS_KEY=your-access-key-id
+# S3_SECRET_KEY=your-secret-access-key
+# S3_FORCE_PATH_STYLE=false
+

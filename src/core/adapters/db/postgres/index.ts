@@ -18,6 +18,7 @@ import { PostgresSearchAdapter } from './search';
 import { PostgresLockAdapter } from './lock';
 import { createPostgresAuthProvider } from './auth';
 import { createEmailFromEnv } from '../d1/adapters/email/factory';
+import { createStorageFromEnv } from '../d1/adapters/storage/factory';
 
 /**
  * Postgres database instance type
@@ -66,9 +67,8 @@ export async function createPostgresInfrastructure(config: ServerConfig): Promis
     invites: new PostgresInviteRepository(db),
   };
 
-  // Create storage adapter (local for now, can be extended to S3) - use dynamic import
-  const { LocalStorageAdapter } = await import('../../../../worker/adapters/storage/local');
-  const storage = new LocalStorageAdapter(config.LOCAL_STORAGE_PATH ?? './data/uploads');
+  // Create storage adapter (local for now, can be extended to S3)
+  const storage = createStorageFromEnv(config);
 
   // Create search adapter
   const search = new PostgresSearchAdapter(db);

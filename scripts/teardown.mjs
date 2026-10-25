@@ -17,6 +17,20 @@ import { bin, hasFlag, isRemoteTarget, printTargetBanner, root, run, step } from
 const isRemote = isRemoteTarget();
 const force = hasFlag('--force');
 
+function readWranglerConfig() {
+  const configPath = path.join(root, 'wrangler.jsonc');
+  if (!fs.existsSync(configPath)) return {};
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    const cleaned = raw
+      .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+      .replace(/,(\s*[}\]])/g, '$1');
+    return JSON.parse(cleaned);
+  } catch {
+    return {};
+  }
+}
+
 async function main() {
   printTargetBanner('Teardown', isRemote);
 
@@ -46,6 +60,9 @@ async function main() {
     return;
   }
 
+  const cfg = readWranglerConfig();
+  const bucketName = cfg.r2_buckets?.[0]?.bucket_name || 'burrow-files';
+
   // --- Remote Cloudflare Teardown ---
   console.log('======================================================');
   console.log('⚠️  DANGER: CLOUDFLARE PRODUCTION RESOURCE TEARDOWN');
@@ -53,7 +70,7 @@ async function main() {
   console.log('This will PERMANENTLY delete the following remote resources:');
   console.log('  1. Cloudflare Worker: "burrow"');
   console.log('  2. Cloudflare D1 Database: "burrow" (and all data)');
-  console.log('  3. Cloudflare R2 Bucket: "burrow-files" (and all files)');
+  console.log(`  3. Cloudflare R2 Bucket: "${bucketName}" (and all files)`);
   console.log('======================================================\n');
 
   if (!force) {
@@ -78,8 +95,8 @@ async function main() {
   run(bin('wrangler'), ['d1', 'delete', 'burrow', '-y'], { allowFail: true });
 
   // 3. Delete R2 Bucket
-  step('Deleting Cloudflare R2 bucket ("burrow-files")');
-  run(bin('wrangler'), ['r2', 'bucket', 'delete', 'burrow-files'], { allowFail: true });
+  step(`Deleting Cloudflare R2 bucket ("${bucketName}")`);
+  run(bin('wrangler'), ['r2', 'bucket', 'delete', bucketName], { allowFail: true });
 
   // 4. Clean up ephemeral wrangler.local.jsonc
   const localConfigPath = path.join(root, 'wrangler.local.jsonc');

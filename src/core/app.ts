@@ -5,6 +5,7 @@ import type { Infrastructure } from './infrastructure/types';
 import { securityHeaders, bodyLimit } from './middleware/security';
 import { createSessionMiddleware, requireSession, requireRole } from './middleware/session';
 import { httpError, isHttpError } from './services/errors';
+import { validateStorageKey } from './adapters/storage/validation';
 import { ProjectService } from './services/projects';
 import { NotepadService } from './services/notepads';
 import { BoardService } from './services/boards';
@@ -41,12 +42,15 @@ export function createCoreApp(infra: Infrastructure) {
     email: emailProvider,
     bootstrapToken,
   } = infra;
-  const projects = new ProjectService({
-    projects: repositories.projects,
-    notepads: repositories.notepads,
-    boards: repositories.boards,
-    tags: repositories.tags,
-  });
+  const projects = new ProjectService(
+    {
+      projects: repositories.projects,
+      notepads: repositories.notepads,
+      boards: repositories.boards,
+      tags: repositories.tags,
+    },
+    storage,
+  );
   const notepads = new NotepadService(
     { notepads: repositories.notepads, tags: repositories.tags, members: repositories.members },
     locks,
@@ -81,7 +85,12 @@ export function createCoreApp(infra: Infrastructure) {
   // Build the app
   const app = new Hono<Env>()
     .use('*', securityHeaders)
-    .use('/api/*', bodyLimit())
+    .use('/api/*', (c, next) => {
+      if (c.req.path === '/api/uploads') {
+        return bodyLimit(5 * 1024 * 1024)(c, next);
+      }
+      return bodyLimit()(c, next);
+    })
     .use('/api/*', createSessionMiddleware(auth, repositories.members))
     .get('/api/health', (c) => c.json({ ok: true, now: Date.now() }));
 
@@ -517,6 +526,20 @@ export function createCoreApp(infra: Infrastructure) {
       const notepad = await repositories.notepads.findByIdAndWorkspace(notepadId, workspaceId);
       if (!notepad) throw httpError(404, 'not_found', 'Notepad not found');
 
+      if (body.coverKey !== undefined && body.coverKey !== null) {
+        let validatedCoverKey: string;
+        try {
+          validatedCoverKey = validateStorageKey(body.coverKey);
+        } catch {
+          throw httpError(400, 'invalid_cover_key', 'Cover key must belong to workspace');
+        }
+        if (!validatedCoverKey.startsWith(`${workspaceId}/`)) {
+          throw httpError(400, 'invalid_cover_key', 'Cover key must belong to workspace');
+        }
+        body.coverKey = validatedCoverKey;
+      }
+
+      const oldCoverKey = notepad.coverKey;
       const updates: any = { updatedAt: Date.now() };
       if (body.title !== undefined) updates.title = body.title.trim() || 'Untitled';
       if (body.icon !== undefined) updates.icon = body.icon;
@@ -524,6 +547,31 @@ export function createCoreApp(infra: Infrastructure) {
       if (body.isFavorite !== undefined) updates.isFavorite = body.isFavorite;
 
       await repositories.notepads.update(notepadId, updates);
+
+      if (
+        body.coverKey !== undefined &&
+        oldCoverKey &&
+        oldCoverKey !== body.coverKey &&
+        storage
+      ) {
+        const cleanupPromise = (async () => {
+          try {
+            const count = await repositories.notepads.countByCoverKey(oldCoverKey, notepadId);
+            if (count === 0) {
+              await storage.delete(oldCoverKey);
+            }
+          } catch (err) {
+            console.error('Failed to cleanup replaced coverKey:', err);
+          }
+        })();
+
+        if (c.executionCtx?.waitUntil) {
+          c.executionCtx.waitUntil(cleanupPromise);
+        } else {
+          await cleanupPromise;
+        }
+      }
+
       return c.json({ ok: true, notepadId });
     },
   );
@@ -1431,6 +1479,14 @@ export function createCoreApp(infra: Infrastructure) {
     'image/gif': 'gif',
     'image/svg+xml': 'svg',
   };
+  const MIME_BY_EXT: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+  };
 
   app.post('/api/uploads', requireSession, requireRole('editor'), async (c) => {
     const workspaceId = c.get('workspaceId');
@@ -1461,7 +1517,21 @@ export function createCoreApp(infra: Infrastructure) {
 
   app.get('/api/files/:key', requireSession, async (c) => {
     const workspaceId = c.get('workspaceId');
-    const key = decodeURIComponent(c.req.param('key'));
+    let key: string;
+    try {
+      key = decodeURIComponent(c.req.param('key'));
+    } catch (err) {
+      if (err instanceof URIError) {
+        throw httpError(400, 'invalid_key', 'Invalid file key');
+      }
+      throw err;
+    }
+
+    try {
+      key = validateStorageKey(key);
+    } catch {
+      throw httpError(404, 'not_found', 'File not found');
+    }
 
     if (!key.startsWith(`${workspaceId}/`)) {
       throw httpError(404, 'not_found', 'File not found');
@@ -1474,9 +1544,15 @@ export function createCoreApp(infra: Infrastructure) {
     const object = await storage.get(key);
     if (!object) throw httpError(404, 'not_found', 'File not found');
 
+    const ext = key.split('.').pop()?.toLowerCase() ?? '';
+    const contentType = object.contentType || MIME_BY_EXT[ext] || 'application/octet-stream';
+
     const headers = new Headers();
-    headers.set('Content-Type', object.contentType || 'application/octet-stream');
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    headers.set('Content-Type', contentType);
+    if (contentType === 'image/svg+xml') {
+      headers.set('Content-Security-Policy', 'sandbox');
+    }
+    headers.set('Cache-Control', 'private, max-age=31536000, immutable');
 
     return new Response(object.body as any, { headers });
   });

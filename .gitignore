@@ -11,3 +11,6 @@ playwright-report/
 .vite/
 coverage/
 .secrets.tmp.json
+.tsbuild/
+data/
+

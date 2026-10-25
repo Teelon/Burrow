@@ -10,11 +10,14 @@
  *   --force                Bypass interactive confirmation on remote
  */
 import readline from 'node:readline/promises';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   bin,
   hasFlag,
   isRemoteTarget,
   printTargetBanner,
+  root,
   run,
   step,
   getWranglerConfigArgs,
@@ -101,6 +104,13 @@ async function main() {
     ],
     { allowFail: false },
   );
+
+  const uploadsDir = path.join(root, 'data', 'uploads');
+  if (fs.existsSync(uploadsDir)) {
+    step('Pruning local uploads directory (./data/uploads)');
+    fs.rmSync(uploadsDir, { recursive: true, force: true });
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 
   console.log('\n======================================================');
   console.log(`✅ ${targetName} database has been reset to clean default state.`);

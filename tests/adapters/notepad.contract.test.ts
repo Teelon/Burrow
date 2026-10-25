@@ -202,4 +202,30 @@ describe('createNotepadRepository contract', () => {
     await repo().deleteLock(notepadId);
     expect(await repo().getLock(notepadId)).toBeNull();
   });
+
+  it('countByCoverKey accurately counts notepads referencing coverKey and supports excludeNotepadId', async () => {
+    const projectId = await seedProject();
+    const coverKey = `${workspaceId}/cover-shared-${crypto.randomUUID()}.png`;
+
+    // 0 before any notepad uses it
+    expect(await repo().countByCoverKey(coverKey)).toBe(0);
+
+    const np1 = await seedNotepad({ projectId, title: 'cover test 1', position: 'a0' });
+    await repo().update(np1, { coverKey, updatedAt: Date.now() });
+
+    expect(await repo().countByCoverKey(coverKey)).toBe(1);
+    expect(await repo().countByCoverKey(coverKey, np1)).toBe(0);
+
+    const np2 = await seedNotepad({ projectId, title: 'cover test 2', position: 'a1' });
+    await repo().update(np2, { coverKey, updatedAt: Date.now() });
+
+    expect(await repo().countByCoverKey(coverKey)).toBe(2);
+    expect(await repo().countByCoverKey(coverKey, np1)).toBe(1);
+    expect(await repo().countByCoverKey(coverKey, np2)).toBe(1);
+
+    // After np1 changes coverKey
+    await repo().update(np1, { coverKey: null, updatedAt: Date.now() });
+    expect(await repo().countByCoverKey(coverKey)).toBe(1);
+    expect(await repo().countByCoverKey(coverKey, np2)).toBe(0);
+  });
 });
