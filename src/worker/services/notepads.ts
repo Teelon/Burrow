@@ -24,7 +24,7 @@ import {
   type StoredLink,
 } from '../lib/links';
 import { getDescendantIds, getNotepadDepth, getSubtreeHeight, wouldCauseCycle } from '../lib/tree';
-import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList } from '../lib/chunk';
 import { SqlLockAdapter } from '../adapters/lock/sql-lock';
 
 /** Root notepads are depth 1; reject anything deeper than 8 (PLAN.md section 6). */
@@ -265,8 +265,9 @@ export async function softDeleteNotepad(db: DB, args: SoftDeleteNotepadArgs) {
     statements.push(db.delete(t.editLocks).where(inArray(t.editLocks.notepadId, chunk)));
   }
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+  if (statements.length > 0) {
+    await runBatch(db, statements);
   }
 }
 
@@ -359,8 +360,9 @@ export async function restoreNotepad(db: DB, args: RestoreNotepadArgs) {
     statements.push(db.run(ftsInsertNowStmt(item.id, item.title, extractPlainText(item.content))));
   }
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+  if (statements.length > 0) {
+    await runBatch(db, statements);
   }
 }
 
@@ -408,8 +410,9 @@ export async function permanentDeleteNotepad(db: DB, args: PermanentDeleteNotepa
     );
   }
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+  if (statements.length > 0) {
+    await runBatch(db, statements);
   }
 
   if (args.storage && r2Keys.length > 0) {

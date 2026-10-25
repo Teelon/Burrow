@@ -1,7 +1,12 @@
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DB } from '../client';
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
-import { D1_MAX_BATCH_STATEMENTS, D1_MAX_BOUND_PARAMS } from './chunk';
+import { D1_MAX_BOUND_PARAMS } from './chunk';
+
+// Cloudflare D1 documented limit: max 100 bound parameters per query/statement
+// (https://developers.cloudflare.com/d1/platform/limits/).
+// Cloudflare D1 has NO statement cap for db.batch() — batches are single atomic
+// transactions limited only by the 30-second query execution duration limit.
 
 type D1BindValue = Parameters<D1PreparedStatement['bind']>[number];
 
@@ -62,11 +67,6 @@ export async function runBatch(db: DB, statements: BatchItem<'sqlite'>[]): Promi
   const [first, ...rest] = statements;
   if (first === undefined) {
     throw new Error('runBatch: refusing to execute an empty statement batch');
-  }
-  if (statements.length > D1_MAX_BATCH_STATEMENTS) {
-    throw new Error(
-      `D1 limit exceeded: batch has ${statements.length} statements (maximum is ${D1_MAX_BATCH_STATEMENTS})`,
-    );
   }
   const client = (db as { $client: unknown }).$client;
   if (isD1Client(client)) {

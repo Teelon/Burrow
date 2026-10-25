@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { D1Database } from '@cloudflare/workers-types';
 import * as schema from './schema';
-import { D1_MAX_BATCH_STATEMENTS, D1_MAX_BOUND_PARAMS } from '../lib/chunk';
+import { D1_MAX_BOUND_PARAMS } from '../lib/chunk';
 
 function createD1Db(d1: D1Database) {
   return drizzle(d1, { schema });
@@ -152,19 +152,6 @@ function makeLazyNodeDb(db: NodeDb): NodeDb {
             );
           }
           return lazyRaw(() => inner.session[action](sequel), compiled);
-        };
-      }
-      if (prop === 'batch') {
-        return (statements: unknown[]) => {
-          if (statements.length > D1_MAX_BATCH_STATEMENTS) {
-            throw new Error(
-              `D1 limit exceeded: batch has ${statements.length} statements (maximum is ${D1_MAX_BATCH_STATEMENTS})`,
-            );
-          }
-          const origBatch = (target as any).batch;
-          if (typeof origBatch === 'function') {
-            return origBatch.call(target, statements);
-          }
         };
       }
       const value: unknown = Reflect.get(target, prop, target);

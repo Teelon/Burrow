@@ -6,7 +6,7 @@ import * as t from '../db/schema';
 import { HttpError } from '../lib/errors';
 import { runBatch } from '../lib/batch';
 import { positionAfterLast, positionBetween } from '../lib/ordering';
-import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList } from '../lib/chunk';
 import { extractPlainText } from '../../shared/extract';
 import { ftsInsertNowStmt } from '../lib/search';
 
@@ -285,9 +285,8 @@ export async function softDeleteBoard(db: DB, workspaceId: string, boardId: stri
     }
   }
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-  }
+  // Execute in a single atomic batch (Cloudflare D1 batch duration limit: 30s)
+  await runBatch(db, statements);
 }
 
 export async function restoreBoard(db: DB, workspaceId: string, boardId: string) {
@@ -343,9 +342,8 @@ export async function restoreBoard(db: DB, workspaceId: string, boardId: string)
     }
   }
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-  }
+  // Execute in a single atomic batch (Cloudflare D1 batch duration limit: 30s)
+  await runBatch(db, statements);
 }
 
 export async function permanentDeleteBoard(db: DB, workspaceId: string, boardId: string) {
@@ -376,9 +374,8 @@ export async function permanentDeleteBoard(db: DB, workspaceId: string, boardId:
 
   statements.push(db.delete(t.boards).where(eq(t.boards.id, boardId)));
 
-  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-  }
+  // Execute in a single atomic batch (Cloudflare D1 batch duration limit: 30s)
+  await runBatch(db, statements);
 }
 
 // ---------------------------------------------------------------------------

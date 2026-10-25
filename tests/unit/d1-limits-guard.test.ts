@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { wrapNodeDb } from '../../src/worker/db/client';
 import { runBatch } from '../../src/core/adapters/db/d1/lib/batch';
-import { D1_MAX_BATCH_STATEMENTS, D1_MAX_BOUND_PARAMS } from '../../src/core/adapters/db/d1/lib/chunk';
+import { D1_MAX_BOUND_PARAMS } from '../../src/core/adapters/db/d1/lib/chunk';
 
 describe('Node DB wrapper D1 limit guards', () => {
   it('exports valid named constants matching Cloudflare D1 documentation', () => {
     expect(D1_MAX_BOUND_PARAMS).toBe(100);
-    expect(D1_MAX_BATCH_STATEMENTS).toBe(100);
   });
 
   it('allows statements with up to 100 bound parameters and throws on 101', () => {
@@ -43,26 +42,18 @@ describe('Node DB wrapper D1 limit guards', () => {
     );
   });
 
-  it('allows batches with up to 100 statements and throws on 101 in runBatch', async () => {
+  it('allows batches with 100+ statements in a single atomic transaction without arbitrary statement cap', async () => {
     const mockSqlite = {
       prepare: vi.fn(() => ({ run: vi.fn() })),
       transaction: (fn: any) => fn,
     };
     const mockDb = { $client: mockSqlite } as any;
 
-    // 100 statements succeeds
-    const okStatements = Array.from({ length: 100 }, (_, i) => ({
+    // Cloudflare D1 has no statement cap for db.batch(): 150 statements execute in one batch
+    const statements = Array.from({ length: 150 }, (_, i) => ({
       getQuery: () => ({ sql: `INSERT INTO t VALUES (${i})`, params: [] }),
     }));
-    await expect(runBatch(mockDb, okStatements as any)).resolves.toEqual([]);
-
-    // 101 statements throws
-    const overStatements = Array.from({ length: 101 }, (_, i) => ({
-      getQuery: () => ({ sql: `INSERT INTO t VALUES (${i})`, params: [] }),
-    }));
-    await expect(runBatch(mockDb, overStatements as any)).rejects.toThrow(
-      /D1 limit exceeded: batch has 101 statements \(maximum is 100\)/,
-    );
+    await expect(runBatch(mockDb, statements as any)).resolves.toEqual([]);
   });
 
   it('throws in runBatch if any statement in the batch has more than 100 parameters', async () => {

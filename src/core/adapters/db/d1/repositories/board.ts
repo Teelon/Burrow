@@ -13,7 +13,7 @@ import type {
 } from '../../../../infrastructure/types';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { runBatch } from '../lib/batch';
-import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList } from '../lib/chunk';
 import { extractPlainText } from '../../../../shared/extract';
 
 export function createBoardRepository(db: DB): IBoardRepository {
@@ -85,9 +85,7 @@ export function createBoardRepository(db: DB): IBoardRepository {
         }
       }
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-      }
+      await runBatch(db, statements);
     },
 
     async restore(id: string): Promise<void> {
@@ -145,9 +143,8 @@ export function createBoardRepository(db: DB): IBoardRepository {
         }
       }
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-      }
+      // Execute in a single atomic batch (Cloudflare D1 batch duration limit: 30s)
+      await runBatch(db, statements);
     },
 
     async hardDelete(id: string): Promise<void> {
@@ -170,9 +167,8 @@ export function createBoardRepository(db: DB): IBoardRepository {
       }
       statements.push(db.delete(t.boards).where(eq(t.boards.id, id)));
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
-      }
+      // Execute in a single atomic batch (Cloudflare D1 batch duration limit: 30s)
+      await runBatch(db, statements);
     },
 
     // Columns

@@ -18,7 +18,7 @@ import {
   type StoredLink,
 } from '../lib/links';
 import { getDescendantIds } from '../lib/tree';
-import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList } from '../lib/chunk';
 import { extractPlainText } from '../../../../shared/extract';
 import type {
   INotepadRepository,
@@ -119,8 +119,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
       }
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+      if (statements.length > 0) {
+        await runBatch(db, statements);
       }
     },
 
@@ -194,8 +195,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         );
       }
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+      if (statements.length > 0) {
+        await runBatch(db, statements);
       }
 
       return matchingNotepads.map((n) => ({
@@ -232,8 +234,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         );
       }
 
-      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
-        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      // Execute in a single atomic batch if there are updates to apply (Cloudflare D1 batch duration limit: 30s)
+      if (statements.length > 0) {
+        await runBatch(db, statements);
       }
 
       return allRows.map((r) => ({ id: r.id, coverKey: r.coverKey }));
