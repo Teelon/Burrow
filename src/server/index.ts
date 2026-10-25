@@ -1,4 +1,7 @@
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createCoreApp } from '../core/app';
 import { loadConfig } from './config';
 import { openNodeDb } from './db';
@@ -41,6 +44,18 @@ async function buildInfrastructure(config: ServerConfig) {
 const infrastructurePromise = buildInfrastructure(config);
 
 const app = createCoreApp(await infrastructurePromise);
+
+// Serve static frontend assets if dist/web exists (production SPA mode)
+const webDistPath = path.resolve(process.cwd(), 'dist/web');
+if (fs.existsSync(webDistPath)) {
+  app.use('/*', serveStatic({ root: './dist/web' }));
+  app.get('*', (c, next) => {
+    if (c.req.path.startsWith('/api')) {
+      return next();
+    }
+    return serveStatic({ path: './dist/web/index.html' })(c, next);
+  });
+}
 
 const server = serve(
   {

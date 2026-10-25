@@ -443,6 +443,133 @@ describe('Security Contract Suite', () => {
     });
   });
 
+  describe('Soft-Deleted Card Mutation Rejection', () => {
+    let boardId = '';
+    let colId1 = '';
+    let colId2 = '';
+    let trashedCardId = '';
+
+    it('creates board, columns, card and soft-deletes the card', async () => {
+      const boardRes = await app.request(
+        `http://localhost/api/projects/${ws1ProjectId}/boards`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({ name: 'Card Security Board' }),
+        },
+        env,
+      );
+      expect(boardRes.status).toBe(201);
+      const boardData = (await boardRes.json()) as { id: string };
+      boardId = boardData.id;
+
+      const col1Res = await app.request(
+        `http://localhost/api/boards/${boardId}/columns`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({ name: 'Column 1' }),
+        },
+        env,
+      );
+      expect(col1Res.status).toBe(201);
+      const col1Data = (await col1Res.json()) as { id: string };
+      colId1 = col1Data.id;
+
+      const col2Res = await app.request(
+        `http://localhost/api/boards/${boardId}/columns`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({ name: 'Column 2' }),
+        },
+        env,
+      );
+      expect(col2Res.status).toBe(201);
+      const col2Data = (await col2Res.json()) as { id: string };
+      colId2 = col2Data.id;
+
+      const cardRes = await app.request(
+        `http://localhost/api/columns/${colId1}/cards`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({
+            title: 'Card To Soft Delete',
+          }),
+        },
+        env,
+      );
+      expect(cardRes.status).toBe(201);
+      const cardData = (await cardRes.json()) as { cardId: string };
+      trashedCardId = cardData.cardId;
+
+      const delRes = await app.request(
+        `http://localhost/api/cards/${trashedCardId}`,
+        {
+          method: 'DELETE',
+          headers: { Cookie: ws1OwnerCookie },
+        },
+        env,
+      );
+      expect(delRes.status).toBe(200);
+    });
+
+    it('rejects attempting to PATCH /api/cards/:id on a soft-deleted card with 400 card_deleted', async () => {
+      const res = await app.request(
+        `http://localhost/api/cards/${trashedCardId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({
+            title: 'Mutated Trashed Card Title',
+          }),
+        },
+        env,
+      );
+      expect(res.status).toBe(400);
+      const data = (await res.json()) as { error: { code: string; message: string } | string };
+      const code = typeof data.error === 'object' && data.error ? data.error.code : data.error;
+      expect(code).toBe('card_deleted');
+    });
+
+    it('rejects attempting to move a soft-deleted card with 400 card_deleted', async () => {
+      const res = await app.request(
+        `http://localhost/api/cards/${trashedCardId}/move`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: ws1OwnerCookie,
+          },
+          body: JSON.stringify({
+            columnId: colId2,
+          }),
+        },
+        env,
+      );
+      expect(res.status).toBe(400);
+      const data = (await res.json()) as { error: { code: string; message: string } | string };
+      const code = typeof data.error === 'object' && data.error ? data.error.code : data.error;
+      expect(code).toBe('card_deleted');
+    });
+  });
+
   describe('Invites Security & Token Protection', () => {
     let inviteToken = '';
     const inviteEmail = 'contract-invitee@example.com';

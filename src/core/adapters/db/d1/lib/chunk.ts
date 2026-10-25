@@ -1,10 +1,14 @@
 /**
- * D1 hard limit: at most 100 bound parameters per statement.
+ * Cloudflare D1 Platform Limits (from Cloudflare documentation):
+ * - D1_MAX_BOUND_PARAMS = 100 (maximum bound parameters per query)
+ * - D1_MAX_BATCH_STATEMENTS = 100 (batch statement cap matching D1 HTTP API / query limits)
+ *
  * Any bulk write (link sync, tags, assignees, large IN (...) lists) must be
  * chunked BEFORE it goes into a db.batch() array. Routes and services must use
  * this helper instead of hand-rolling chunking.
  */
 export const D1_MAX_BOUND_PARAMS = 100;
+export const D1_MAX_BATCH_STATEMENTS = 100;
 
 /**
  * Split `items` into chunks so each chunk's statement stays within the bound

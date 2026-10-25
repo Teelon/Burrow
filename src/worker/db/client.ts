@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { D1Database } from '@cloudflare/workers-types';
 import * as schema from './schema';
+import { D1_MAX_BATCH_STATEMENTS, D1_MAX_BOUND_PARAMS } from '../lib/chunk';
 
 function createD1Db(d1: D1Database) {
   return drizzle(d1, { schema });
@@ -49,7 +50,47 @@ export interface NodeDbHandle {
   __nodeDb: NodeDb;
 }
 
+function countParams(args: unknown[]): number {
+  if (args.length === 0) return 0;
+  if (args.length === 1) {
+    if (Array.isArray(args[0])) return args[0].length;
+    if (typeof args[0] === 'object' && args[0] !== null) return Object.keys(args[0]).length;
+  }
+  return args.length;
+}
+
+function enforceNodeDbLimits(sqlite: unknown): void {
+  if (!sqlite || typeof sqlite !== 'object' || typeof (sqlite as any).prepare !== 'function') {
+    return;
+  }
+  const db = sqlite as { prepare: (sql: string) => any; __d1_limits_enforced?: boolean };
+  if (db.__d1_limits_enforced) return;
+  db.__d1_limits_enforced = true;
+
+  const origPrepare = db.prepare.bind(db);
+  db.prepare = function (sqlText: string) {
+    const stmt = origPrepare(sqlText);
+    for (const m of ['run', 'all', 'get', 'iterate', 'bind'] as const) {
+      const origMethod = stmt[m];
+      if (typeof origMethod === 'function') {
+        stmt[m] = function (...args: unknown[]) {
+          const count = countParams(args);
+          if (count > D1_MAX_BOUND_PARAMS) {
+            throw new Error(
+              `D1 limit exceeded: statement has ${count} bound parameters (maximum is ${D1_MAX_BOUND_PARAMS})`,
+            );
+          }
+          return origMethod.apply(this, args);
+        };
+      }
+    }
+    return stmt;
+  };
+}
+
 export function wrapNodeDb(db: NodeDb): NodeDbHandle {
+  const client = (db as any).$client;
+  enforceNodeDbLimits(client);
   return { __nodeDb: db };
 }
 
@@ -105,7 +146,25 @@ function makeLazyNodeDb(db: NodeDb): NodeDb {
         return (query: SQLWrapper | string) => {
           const sequel = typeof query === 'string' ? sql.raw(query) : query.getSQL();
           const compiled = inner.dialect.sqlToQuery(sequel);
+          if (compiled.params.length > D1_MAX_BOUND_PARAMS) {
+            throw new Error(
+              `D1 limit exceeded: statement has ${compiled.params.length} bound parameters (maximum is ${D1_MAX_BOUND_PARAMS})`,
+            );
+          }
           return lazyRaw(() => inner.session[action](sequel), compiled);
+        };
+      }
+      if (prop === 'batch') {
+        return (statements: unknown[]) => {
+          if (statements.length > D1_MAX_BATCH_STATEMENTS) {
+            throw new Error(
+              `D1 limit exceeded: batch has ${statements.length} statements (maximum is ${D1_MAX_BATCH_STATEMENTS})`,
+            );
+          }
+          const origBatch = (target as any).batch;
+          if (typeof origBatch === 'function') {
+            return origBatch.call(target, statements);
+          }
         };
       }
       const value: unknown = Reflect.get(target, prop, target);

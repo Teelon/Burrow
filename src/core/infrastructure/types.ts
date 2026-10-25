@@ -411,6 +411,7 @@ export interface Card {
   content?: string;
   version?: number;
   workspaceId?: string;
+  deletedAt?: number | null;
 }
 
 export interface CardWithDetails extends Card {

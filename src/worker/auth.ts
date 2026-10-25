@@ -5,16 +5,8 @@ import * as schema from './db/schema';
 import type { Env } from './env';
 
 export function createAuth(db: DB, env: Env['Bindings']) {
-  const trustedOrigins = [
-    'http://localhost',
-    'http://127.0.0.1',
-    'http://localhost:3005',
-    'http://127.0.0.1:3005',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:8787',
-    'http://127.0.0.1:8787',
-  ];
+  const trustedOrigins: string[] = [];
+  const isProd = Boolean(env.BETTER_AUTH_URL && env.BETTER_AUTH_URL.startsWith('https://'));
   if (env.BETTER_AUTH_URL) {
     try {
       const urlOrigin = new URL(env.BETTER_AUTH_URL).origin;
@@ -23,6 +15,23 @@ export function createAuth(db: DB, env: Env['Bindings']) {
       }
     } catch {
       // ignore
+    }
+  }
+  if (!isProd) {
+    const localOrigins = [
+      'http://localhost',
+      'http://127.0.0.1',
+      'http://localhost:3005',
+      'http://127.0.0.1:3005',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:8787',
+      'http://127.0.0.1:8787',
+    ];
+    for (const origin of localOrigins) {
+      if (!trustedOrigins.includes(origin)) {
+        trustedOrigins.push(origin);
+      }
     }
   }
 

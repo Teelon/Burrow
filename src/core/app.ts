@@ -1304,23 +1304,16 @@ export function createCoreApp(infra: Infrastructure) {
 
   app.post(
     '/api/invites/accept',
-    requireSession,
     zValidator('json', acceptInviteSchema),
     async (c) => {
-      const userId = c.get('userId');
+      const sessionRes = await auth.getSession(c.req.raw.headers);
+      const userId = c.get('userId') || sessionRes?.userId;
+      if (!userId) {
+        return c.json({ error: { code: 'unauthorized', message: 'Authentication required' } }, 401);
+      }
       const { token } = c.req.valid('json');
       const member = await repositories.members.findByUserIdGlobal(userId);
-      let email = member?.email;
-      if (!email) {
-        try {
-          const session =
-            (await (auth as any).api?.getSession?.({ headers: c.req.raw.headers })) ??
-            (await auth.getSession(c.req.raw.headers));
-          email = (session as any)?.user?.email ?? (session as any)?.email;
-        } catch {
-          // ignore session retrieval error
-        }
-      }
+      const email = member?.email ?? sessionRes?.email;
       const result = await invites.acceptInvite(userId, token, email);
       return c.json({ ok: true, ...result });
     },

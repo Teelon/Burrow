@@ -14,8 +14,9 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:node": "esbuild src/server/index.ts --bundle --platform=node --format=cjs --outfile=dist/server.cjs --external:better-sqlite3 && node dist/server.cjs",
-    "build": "vite build",
+    "dev:worker": "node scripts/dev-worker.mjs",
+    "build": "vite build && esbuild src/server/index.ts --bundle --platform=node --format=esm --outfile=dist/server.mjs --packages=external",
+    "start": "node dist/server.mjs",
     "setup": "node scripts/setup.mjs",
     "deploy": "node scripts/deploy.mjs",
     "reset": "node scripts/reset.mjs",

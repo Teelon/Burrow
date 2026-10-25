@@ -5,20 +5,15 @@ import { bin, loadEnv, root, run } from './lib.mjs';
 
 /**
  * One-command local dev server:
- * 1. Applies pending local D1 migrations automatically
- * 2. Resolves local config in memory (never writes .env or .dev.vars) and outputs to console
- * 3. Starts Wrangler dev (Worker + local D1) on :8787 and Vite (SPA + HMR) on :3005
+ * 1. Ensures ./data/burrow.db parent directories and SQLite migrations are applied
+ * 2. Starts Node backend server (API + D1 adapter + uploads) on :8787
+ * 3. Starts Vite (SPA + HMR) on :3005 (proxying /api to :8787)
  */
 loadEnv();
 
 const authSecret = process.env.BETTER_AUTH_SECRET || 'dev-secret-change-me-32-bytes-minimum!!';
 const authUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3005';
 const bootstrapToken = process.env.BOOTSTRAP_TOKEN || 'dev-bootstrap-token';
-
-console.log('==> Ensuring local D1 migrations are applied');
-run(bin('wrangler'), ['d1', 'migrations', 'apply', 'burrow', '--local'], {
-  env: { CI: '1' },
-});
 
 const assetsDir = path.join(root, 'dist', 'web');
 if (!fs.existsSync(path.join(assetsDir, 'index.html'))) {
@@ -30,13 +25,14 @@ if (!fs.existsSync(path.join(assetsDir, 'index.html'))) {
 }
 
 const children = [];
-function launch(label, cmd, args) {
-  // Stdin is ignored so child processes (Wrangler/Vite) don't fight over the console
+function launch(label, cmd, args, env = process.env) {
+  // Stdin is ignored so child processes (Wrangler/Vite/Server) don't fight over the console
   // or put Windows terminal into raw modes that trap keystrokes / block Ctrl+C.
   const child = spawn(cmd, args, {
     cwd: root,
     stdio: ['ignore', 'inherit', 'inherit'],
     shell: false,
+    env,
   });
   child.on('exit', (code) => {
     console.log(`${label} exited (${code})`);
@@ -89,25 +85,22 @@ if (process.stdin.isTTY) {
   });
 }
 
-const wranglerVars = [
-  '--var',
-  `BETTER_AUTH_SECRET:${authSecret}`,
-  '--var',
-  `BETTER_AUTH_URL:${authUrl}`,
-  '--var',
-  `BOOTSTRAP_TOKEN:${bootstrapToken}`,
-];
-if (process.env.RESEND_API_KEY) {
-  wranglerVars.push('--var', `RESEND_API_KEY:${process.env.RESEND_API_KEY}`);
-}
-if (process.env.EMAIL_FROM) {
-  wranglerVars.push('--var', `EMAIL_FROM:${process.env.EMAIL_FROM}`);
-}
+const nodeEnv = {
+  ...process.env,
+  PORT: '8787',
+  SQLITE_PATH: path.join(root, 'data', 'burrow.db'),
+  LOCAL_STORAGE_PATH: path.join(root, 'data', 'uploads'),
+  BETTER_AUTH_SECRET: authSecret,
+  BETTER_AUTH_URL: authUrl,
+  BOOTSTRAP_TOKEN: bootstrapToken,
+};
 
 console.log('\n======================================================');
-console.log('Burrow Local Development');
+console.log('Burrow Local Development (Unified Node + SQLite)');
 console.log(`  Web App (Vite):     ${authUrl}`);
-console.log('  Worker API:         http://127.0.0.1:8787');
+console.log('  Backend API (Node): http://127.0.0.1:8787');
+console.log(`  Database:           ./data/burrow.db`);
+console.log(`  Uploads:            ./data/uploads`);
 console.log(`  BOOTSTRAP_TOKEN:    ${bootstrapToken}`);
 console.log(
   `  Email Delivery:     ${process.env.RESEND_API_KEY ? `Resend (${process.env.EMAIL_FROM || 'default'})` : 'Console log fallback'}`,
@@ -115,14 +108,19 @@ console.log(
 console.log('======================================================');
 console.log('Press Ctrl+C or "q" at any time to stop\n');
 
-launch('wrangler', process.execPath, [
-  bin('wrangler'),
-  'dev',
-  '--port',
-  '8787',
-  '--show-interactive-dev-session=false',
-  ...wranglerVars,
+console.log('==> Ensuring server bundle is compiled (dist/server.mjs)');
+run('pnpm', [
+  'exec',
+  'esbuild',
+  'src/server/index.ts',
+  '--bundle',
+  '--platform=node',
+  '--format=esm',
+  '--outfile=dist/server.mjs',
+  '--packages=external',
 ]);
+
+launch('server', process.execPath, [path.join(root, 'dist', 'server.mjs')], nodeEnv);
 launch('vite', process.execPath, [
   bin('vite'),
   '--port',

@@ -34,7 +34,7 @@ export {
   rebalancePositions,
   MAX_POSITION_KEY_LENGTH,
 } from './services/utils/ordering';
-export { chunkByParamBudget, chunkInList, D1_MAX_BOUND_PARAMS } from './services/utils/chunk';
+export { chunkByParamBudget, chunkInList, D1_MAX_BOUND_PARAMS, D1_MAX_BATCH_STATEMENTS } from './services/utils/chunk';
 
 // Re-export shared
 export {

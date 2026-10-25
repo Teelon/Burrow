@@ -40,6 +40,7 @@ export function createCardRepository(db: DB): ICardRepository {
           version: t.notepads.version,
           projectId: t.notepads.projectId,
           workspaceId: t.notepads.workspaceId,
+          deletedAt: t.notepads.deletedAt,
         })
         .from(t.cards)
         .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
@@ -63,6 +64,7 @@ export function createCardRepository(db: DB): ICardRepository {
           version: t.notepads.version,
           projectId: t.notepads.projectId,
           workspaceId: t.notepads.workspaceId,
+          deletedAt: t.notepads.deletedAt,
         })
         .from(t.cards)
         .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
@@ -498,45 +500,70 @@ export function createCardRepository(db: DB): ICardRepository {
 
     async getCardsSummary(workspaceId: string, cardIds: string[]): Promise<CardSummary[]> {
       if (cardIds.length === 0) return [];
-      const cappedIds = cardIds.slice(0, 50);
+      const cappedIds = cardIds.slice(0, 500);
 
-      const rows = await db
-        .select({
-          id: t.cards.id,
-          notepadId: t.cards.notepadId,
-          boardId: t.cards.boardId,
-          columnId: t.cards.columnId,
-          priority: t.cards.priority,
-          dueDate: t.cards.dueDate,
-          title: t.notepads.title,
-          boardName: t.boards.name,
-          columnName: t.boardColumns.name,
-        })
-        .from(t.cards)
-        .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-        .innerJoin(t.boards, eq(t.boards.id, t.cards.boardId))
-        .innerJoin(t.boardColumns, eq(t.boardColumns.id, t.cards.columnId))
-        .where(
-          and(
-            inArray(t.cards.id, cappedIds),
-            eq(t.notepads.workspaceId, workspaceId),
-            isNull(t.notepads.deletedAt),
-          ),
-        );
+      const rows: {
+        id: string;
+        notepadId: string;
+        boardId: string;
+        columnId: string;
+        priority: string | null;
+        dueDate: number | null;
+        title: string;
+        boardName: string;
+        columnName: string;
+      }[] = [];
+
+      for (const chunk of chunkInList(cappedIds, 1)) {
+        const chunkRows = await db
+          .select({
+            id: t.cards.id,
+            notepadId: t.cards.notepadId,
+            boardId: t.cards.boardId,
+            columnId: t.cards.columnId,
+            priority: t.cards.priority,
+            dueDate: t.cards.dueDate,
+            title: t.notepads.title,
+            boardName: t.boards.name,
+            columnName: t.boardColumns.name,
+          })
+          .from(t.cards)
+          .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
+          .innerJoin(t.boards, eq(t.boards.id, t.cards.boardId))
+          .innerJoin(t.boardColumns, eq(t.boardColumns.id, t.cards.columnId))
+          .where(
+            and(
+              inArray(t.cards.id, chunk),
+              eq(t.notepads.workspaceId, workspaceId),
+              isNull(t.notepads.deletedAt),
+            ),
+          );
+        rows.push(...chunkRows);
+      }
 
       if (rows.length === 0) return [];
 
       const fetchedCardIds = rows.map((r) => r.id);
-      const assignees = await db
-        .select({
-          cardId: t.cardAssignees.cardId,
-          userId: t.cardAssignees.userId,
-          name: t.user.name,
-          image: t.user.image,
-        })
-        .from(t.cardAssignees)
-        .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
-        .where(inArray(t.cardAssignees.cardId, fetchedCardIds));
+      const assignees: {
+        cardId: string;
+        userId: string;
+        name: string;
+        image: string | null;
+      }[] = [];
+
+      for (const chunk of chunkInList(fetchedCardIds, 0)) {
+        const chunkAssignees = await db
+          .select({
+            cardId: t.cardAssignees.cardId,
+            userId: t.cardAssignees.userId,
+            name: t.user.name,
+            image: t.user.image,
+          })
+          .from(t.cardAssignees)
+          .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
+          .where(inArray(t.cardAssignees.cardId, chunk));
+        assignees.push(...chunkAssignees);
+      }
 
       const assigneesByCard = new Map<string, typeof assignees>();
       for (const a of assignees) {
@@ -614,6 +641,7 @@ interface CardRow {
   version: number;
   projectId: string;
   workspaceId: string;
+  deletedAt?: number | null;
 }
 
 function mapCard(row: CardRow): Card {
@@ -631,6 +659,7 @@ function mapCard(row: CardRow): Card {
     version: row.version,
     projectId: row.projectId,
     workspaceId: row.workspaceId,
+    deletedAt: row.deletedAt ?? null,
   } as Card;
 }
 

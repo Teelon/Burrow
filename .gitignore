@@ -7,10 +7,12 @@ wrangler.local.jsonc
 *.local
 test-results/
 playwright-report/
+.wrangler
 .wrangler/
 .vite/
 coverage/
 .secrets.tmp.json
 .tsbuild/
+data
 data/
-
+./data

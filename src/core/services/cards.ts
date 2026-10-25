@@ -256,6 +256,9 @@ export class CardService {
   ): Promise<{ columnId: string; position: string }> {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId);
     if (!card) throw notFound('not_found', 'Card not found');
+    if (card.deletedAt !== null && card.deletedAt !== undefined) {
+      throw badRequest('card_deleted', 'Cannot modify a deleted card');
+    }
 
     const column = await this.repos.boards.findColumnById(columnId);
     if (!column || column.boardId !== card.boardId) {
@@ -297,6 +300,9 @@ export class CardService {
   ): Promise<{ ok: true; cardId: string }> {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId);
     if (!card) throw notFound('not_found', 'Card not found');
+    if (card.deletedAt !== null && card.deletedAt !== undefined) {
+      throw badRequest('card_deleted', 'Cannot modify a deleted card');
+    }
 
     const now = Date.now();
 
@@ -370,7 +376,9 @@ export class CardService {
 
   async deleteCard(workspaceId: string, cardId: string): Promise<{ ok: true; cardId: string }> {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId);
-    if (!card) throw notFound('not_found', 'Card not found');
+    if (!card || (card.deletedAt !== null && card.deletedAt !== undefined)) {
+      throw notFound('not_found', 'Card not found');
+    }
 
     const now = Date.now();
     // Invariant I5: Card and its notepad always have the same soft-delete state
@@ -417,7 +425,7 @@ export class CardService {
 
   async getCardsSummary(workspaceId: string, cardIds: string[]): Promise<CardSummary[]> {
     if (cardIds.length === 0) return [];
-    const cappedIds = cardIds.slice(0, 50);
+    const cappedIds = cardIds.slice(0, 500);
     return this.repos.cards.getCardsSummary(workspaceId, cappedIds);
   }
 
@@ -505,7 +513,9 @@ export class CardService {
 
   private async requireCardForWorkspace(workspaceId: string, cardId: string): Promise<void> {
     const card = await this.repos.cards.findByIdAndWorkspace(cardId, workspaceId);
-    if (!card) throw notFound('not_found', 'Card not found');
+    if (!card || (card.deletedAt !== null && card.deletedAt !== undefined)) {
+      throw notFound('not_found', 'Card not found');
+    }
   }
 
   private async validateAssignees(

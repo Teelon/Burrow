@@ -1,12 +1,12 @@
 import { nanoid } from 'nanoid';
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DB } from '../db/client';
 import * as t from '../db/schema';
 import { HttpError } from '../lib/errors';
 import { runBatch } from '../lib/batch';
 import { positionAfterLast, positionBetween } from '../lib/ordering';
-import { chunkByParamBudget } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
 import { extractPlainText } from '../../shared/extract';
 import { ftsInsertNowStmt } from '../lib/search';
 
@@ -120,19 +120,22 @@ export async function getBoard(db: DB, workspaceId: string, boardId: string) {
 
   // Fetch assignees
   const cardIds = cardsWithNotepads.map((c) => c.id);
-  const assignees =
-    cardIds.length > 0
-      ? await db
-          .select({
-            cardId: t.cardAssignees.cardId,
-            userId: t.cardAssignees.userId,
-            name: t.user.name,
-            image: t.user.image,
-          })
-          .from(t.cardAssignees)
-          .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
-          .where(inArray(t.cardAssignees.cardId, cardIds))
-      : [];
+  const assignees: { cardId: string; userId: string; name: string; image: string | null }[] = [];
+  if (cardIds.length > 0) {
+    for (const chunk of chunkInList(cardIds)) {
+      const rows = await db
+        .select({
+          cardId: t.cardAssignees.cardId,
+          userId: t.cardAssignees.userId,
+          name: t.user.name,
+          image: t.user.image,
+        })
+        .from(t.cardAssignees)
+        .innerJoin(t.user, eq(t.user.id, t.cardAssignees.userId))
+        .where(inArray(t.cardAssignees.cardId, chunk));
+      assignees.push(...rows);
+    }
+  }
 
   const assigneesByCard = new Map<string, typeof assignees>();
   for (const a of assignees) {
@@ -143,33 +146,39 @@ export async function getBoard(db: DB, workspaceId: string, boardId: string) {
 
   // Fetch tags for card notepads
   const notepadIds = cardsWithNotepads.map((c) => c.notepadId);
-  const tags =
-    notepadIds.length > 0
-      ? await db
-          .select({
-            notepadId: t.notepadTags.notepadId,
-            tagId: t.tags.id,
-            name: t.tags.name,
-            color: t.tags.color,
-          })
-          .from(t.notepadTags)
-          .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
-          .where(inArray(t.notepadTags.notepadId, notepadIds))
-      : [];
+  const tags: { notepadId: string; tagId: string; name: string; color: string | null }[] = [];
+  if (notepadIds.length > 0) {
+    for (const chunk of chunkInList(notepadIds)) {
+      const rows = await db
+        .select({
+          notepadId: t.notepadTags.notepadId,
+          tagId: t.tags.id,
+          name: t.tags.name,
+          color: t.tags.color,
+        })
+        .from(t.notepadTags)
+        .innerJoin(t.tags, eq(t.tags.id, t.notepadTags.tagId))
+        .where(inArray(t.notepadTags.notepadId, chunk));
+      tags.push(...rows);
+    }
+  }
 
   // Subtask progress per card (for tile progress pills)
-  const subtaskCounts =
-    cardIds.length > 0
-      ? await db
-          .select({
-            cardId: t.cardSubtasks.cardId,
-            total: sql<number>`count(*)`,
-            completed: sql<number>`coalesce(sum(case when ${t.cardSubtasks.completed} then 1 else 0 end), 0)`,
-          })
-          .from(t.cardSubtasks)
-          .where(inArray(t.cardSubtasks.cardId, cardIds))
-          .groupBy(t.cardSubtasks.cardId)
-      : [];
+  const subtaskCounts: { cardId: string; total: number; completed: number }[] = [];
+  if (cardIds.length > 0) {
+    for (const chunk of chunkInList(cardIds)) {
+      const rows = await db
+        .select({
+          cardId: t.cardSubtasks.cardId,
+          total: sql<number>`count(*)`,
+          completed: sql<number>`coalesce(sum(case when ${t.cardSubtasks.completed} then 1 else 0 end), 0)`,
+        })
+        .from(t.cardSubtasks)
+        .where(inArray(t.cardSubtasks.cardId, chunk))
+        .groupBy(t.cardSubtasks.cardId);
+      subtaskCounts.push(...rows);
+    }
+  }
 
   const subtasksByCard = new Map<string, { total: number; completed: number }>();
   for (const row of subtaskCounts) {
@@ -263,7 +272,7 @@ export async function softDeleteBoard(db: DB, workspaceId: string, boardId: stri
   ];
 
   if (notepadIds.length > 0) {
-    for (const chunk of chunkByParamBudget(notepadIds, 1, 1)) {
+    for (const chunk of chunkByParamBudget(notepadIds, 1, 2)) {
       statements.push(
         db
           .update(t.notepads)
@@ -276,7 +285,9 @@ export async function softDeleteBoard(db: DB, workspaceId: string, boardId: stri
     }
   }
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 }
 
 export async function restoreBoard(db: DB, workspaceId: string, boardId: string) {
@@ -284,14 +295,19 @@ export async function restoreBoard(db: DB, workspaceId: string, boardId: string)
     .select()
     .from(t.boards)
     .where(and(eq(t.boards.id, boardId), eq(t.boards.workspaceId, workspaceId)));
-  if (!board || board.deletedAt === null) {
-    throw new HttpError(404, 'not_found', 'Deleted board not found');
+  if (!board) {
+    throw new HttpError(404, 'not_found', 'Board not found');
   }
 
   const deleteTimestamp = board.deletedAt;
   const now = Date.now();
 
-  // Find cards whose notepads share this deletion timestamp
+  // Find cards whose notepads share this deletion timestamp, or any remaining deleted cards under this board if retrying
+  const cardCondition =
+    deleteTimestamp !== null
+      ? and(eq(t.cards.boardId, boardId), eq(t.notepads.deletedAt, deleteTimestamp))
+      : and(eq(t.cards.boardId, boardId), isNotNull(t.notepads.deletedAt));
+
   const cards = await db
     .select({
       id: t.notepads.id,
@@ -300,7 +316,7 @@ export async function restoreBoard(db: DB, workspaceId: string, boardId: string)
     })
     .from(t.cards)
     .innerJoin(t.notepads, eq(t.notepads.id, t.cards.notepadId))
-    .where(and(eq(t.cards.boardId, boardId), eq(t.notepads.deletedAt, deleteTimestamp)));
+    .where(cardCondition);
 
   const notepadIds = cards.map((c) => c.id);
 
@@ -309,7 +325,7 @@ export async function restoreBoard(db: DB, workspaceId: string, boardId: string)
   ];
 
   if (notepadIds.length > 0) {
-    for (const chunk of chunkByParamBudget(notepadIds, 1, 1)) {
+    for (const chunk of chunkByParamBudget(notepadIds, 1, 2)) {
       statements.push(
         db
           .update(t.notepads)
@@ -317,14 +333,19 @@ export async function restoreBoard(db: DB, workspaceId: string, boardId: string)
           .where(inArray(t.notepads.id, chunk)),
       );
     }
-    // Invariant I7: Re-insert FTS row for each restored card notepad
+    // Idempotent: delete existing FTS rows for restored card notepads before re-inserting
+    for (const chunk of chunkByParamBudget(notepadIds, 1, 0)) {
+      statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
+    }
     for (const card of cards) {
       const plainText = extractPlainText(card.content);
       statements.push(db.run(ftsInsertNowStmt(card.id, card.title, plainText)));
     }
   }
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 }
 
 export async function permanentDeleteBoard(db: DB, workspaceId: string, boardId: string) {
@@ -355,7 +376,9 @@ export async function permanentDeleteBoard(db: DB, workspaceId: string, boardId:
 
   statements.push(db.delete(t.boards).where(eq(t.boards.id, boardId)));
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 }
 
 // ---------------------------------------------------------------------------

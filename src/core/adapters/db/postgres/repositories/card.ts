@@ -48,8 +48,10 @@ export class PostgresCardRepository implements ICardRepository {
         dueDate: cards.dueDate,
         createdAt: cards.createdAt,
         projectId: projects.id,
+        deletedAt: notepads.deletedAt,
       })
       .from(cards)
+      .innerJoin(notepads, eq(cards.notepadId, notepads.id))
       .innerJoin(boards, eq(cards.boardId, boards.id))
       .innerJoin(projects, eq(boards.projectId, projects.id))
       .where(eq(cards.id, id))
@@ -73,6 +75,7 @@ export class PostgresCardRepository implements ICardRepository {
         title: notepads.title,
         content: notepads.content,
         version: notepads.version,
+        deletedAt: notepads.deletedAt,
       })
       .from(cards)
       .innerJoin(notepads, eq(cards.notepadId, notepads.id))

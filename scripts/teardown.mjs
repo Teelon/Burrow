@@ -3,7 +3,7 @@
  * Completely tear down Burrow resources.
  *
  * Targets:
- *   (default)              Local cleanup (clears .wrangler local state, dist/ bundles, ephemeral configs)
+ *   (default)              Local cleanup (removes ./data and ./dist only)
  *   --remote, --r, -r      Remote Cloudflare teardown (permanently deletes Worker, D1, R2 on Cloudflare)
  *
  * Flags:
@@ -35,25 +35,24 @@ async function main() {
   printTargetBanner('Teardown', isRemote);
 
   if (!isRemote) {
-    step('Cleaning local development state');
-    const localConfigPath = path.join(root, 'wrangler.local.jsonc');
-    if (fs.existsSync(localConfigPath)) {
-      fs.rmSync(localConfigPath, { force: true });
-      console.log('  Removed wrangler.local.jsonc');
-    }
-    const wranglerDir = path.join(root, '.wrangler');
-    if (fs.existsSync(wranglerDir)) {
-      fs.rmSync(wranglerDir, { recursive: true, force: true });
-      console.log('  Removed .wrangler/ local state');
-    }
+    step('Cleaning local development state (removing ./data and ./dist only)');
     const distDir = path.join(root, 'dist');
     if (fs.existsSync(distDir)) {
       fs.rmSync(distDir, { recursive: true, force: true });
       console.log('  Removed dist/ build directory');
     }
+    const dataDir = path.join(root, 'data');
+    try {
+      if (fs.existsSync(dataDir)) {
+        fs.rmSync(dataDir, { recursive: true, force: true });
+        console.log('  Removed data/ directory (local SQLite database, Miniflare state & uploads)');
+      }
+    } catch (err) {
+      console.warn(`  Could not remove data/ (file locked by active server): ${err.message}`);
+    }
     console.log('\n======================================================');
-    console.log('✅ Local cleanup complete. Local state reset.');
-    console.log('Run `pnpm dev` or `pnpm run setup` to initialize fresh.');
+    console.log('✅ Local cleanup complete. ./data and ./dist removed.');
+    console.log('Run `pnpm dev` or `pnpm run reset` to initialize fresh.');
     console.log('To tear down remote Cloudflare production resources, run:');
     console.log('  pnpm run teardown -r\n');
     console.log('======================================================\n');
@@ -90,24 +89,26 @@ async function main() {
   step('Deleting Cloudflare Worker ("burrow")');
   run(bin('wrangler'), ['delete', 'burrow', '--force'], { allowFail: true });
 
-  // 2. Delete D1 Database
-  step('Deleting Cloudflare D1 database ("burrow")');
-  run(bin('wrangler'), ['d1', 'delete', 'burrow', '-y'], { allowFail: true });
+  // 2. Delete Cloudflare D1 Database
+  step('Deleting Cloudflare D1 Database ("burrow")');
+  run(bin('wrangler'), ['d1', 'delete', 'burrow', '--skip-confirmation'], { allowFail: true });
 
-  // 3. Delete R2 Bucket
-  step(`Deleting Cloudflare R2 bucket ("${bucketName}")`);
+  // 3. Delete Cloudflare R2 Bucket
+  step(`Deleting Cloudflare R2 Bucket ("${bucketName}")`);
   run(bin('wrangler'), ['r2', 'bucket', 'delete', bucketName], { allowFail: true });
 
-  // 4. Clean up ephemeral wrangler.local.jsonc
-  const localConfigPath = path.join(root, 'wrangler.local.jsonc');
-  if (fs.existsSync(localConfigPath)) {
-    fs.rmSync(localConfigPath, { force: true });
-    console.log('  Removed ephemeral wrangler.local.jsonc');
+  // Clean local build artifacts and data
+  const distDir = path.join(root, 'dist');
+  if (fs.existsSync(distDir)) {
+    fs.rmSync(distDir, { recursive: true, force: true });
+  }
+  const dataDir = path.join(root, 'data');
+  if (fs.existsSync(dataDir)) {
+    fs.rmSync(dataDir, { recursive: true, force: true });
   }
 
   console.log('\n======================================================');
-  console.log('✅ Teardown complete. All remote Burrow resources deleted.');
-  console.log('Run `pnpm run setup -r` at any time to provision a fresh deployment.');
+  console.log('✅ Remote teardown complete. All Cloudflare resources deleted.');
   console.log('======================================================\n');
 }
 

@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { DB } from '../db/client';
 import * as t from '../db/schema';
+import { chunkInList } from './chunk';
 
 /**
  * Collect all descendant notepad IDs for a given root notepad.
@@ -10,10 +11,14 @@ export async function getDescendantIds(db: DB, rootId: string): Promise<string[]
   let currentParentIds = [rootId];
 
   while (currentParentIds.length > 0) {
-    const children = await db
-      .select({ id: t.notepads.id })
-      .from(t.notepads)
-      .where(inArray(t.notepads.parentId, currentParentIds));
+    const children: { id: string }[] = [];
+    for (const chunk of chunkInList(currentParentIds)) {
+      const rows = await db
+        .select({ id: t.notepads.id })
+        .from(t.notepads)
+        .where(inArray(t.notepads.parentId, chunk));
+      children.push(...rows);
+    }
 
     if (children.length === 0) break;
     const childIds = children.map((c) => c.id);
@@ -53,10 +58,14 @@ export async function getSubtreeHeight(db: DB, rootId: string): Promise<number> 
   let currentParentIds = [rootId];
 
   while (currentParentIds.length > 0) {
-    const children = await db
-      .select({ id: t.notepads.id })
-      .from(t.notepads)
-      .where(inArray(t.notepads.parentId, currentParentIds));
+    const children: { id: string }[] = [];
+    for (const chunk of chunkInList(currentParentIds)) {
+      const rows = await db
+        .select({ id: t.notepads.id })
+        .from(t.notepads)
+        .where(inArray(t.notepads.parentId, chunk));
+      children.push(...rows);
+    }
 
     if (children.length === 0) break;
     height++;

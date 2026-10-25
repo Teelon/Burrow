@@ -24,7 +24,7 @@ import {
   type StoredLink,
 } from '../lib/links';
 import { getDescendantIds, getNotepadDepth, getSubtreeHeight, wouldCauseCycle } from '../lib/tree';
-import { chunkByParamBudget } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
 import { SqlLockAdapter } from '../adapters/lock/sql-lock';
 
 /** Root notepads are depth 1; reject anything deeper than 8 (PLAN.md section 6). */
@@ -251,7 +251,7 @@ export async function softDeleteNotepad(db: DB, args: SoftDeleteNotepadArgs) {
 
   // Invariant I6 & I7: Set identical deleted_at timestamp on subtree and remove from FTS
   const statements: BatchItem<'sqlite'>[] = [];
-  for (const chunk of chunkByParamBudget(allIds, 1, 1)) {
+  for (const chunk of chunkByParamBudget(allIds, 1, 2)) {
     statements.push(
       db
         .update(t.notepads)
@@ -265,7 +265,9 @@ export async function softDeleteNotepad(db: DB, args: SoftDeleteNotepadArgs) {
     statements.push(db.delete(t.editLocks).where(inArray(t.editLocks.notepadId, chunk)));
   }
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 }
 
 export interface RestoreNotepadArgs {
@@ -327,7 +329,7 @@ export async function restoreNotepad(db: DB, args: RestoreNotepadArgs) {
   const matchingIds = matchingNotepads.map((n) => n.id);
 
   const statements: BatchItem<'sqlite'>[] = [];
-  for (const chunk of chunkByParamBudget(matchingIds, 1, 1)) {
+  for (const chunk of chunkByParamBudget(matchingIds, 1, 2)) {
     statements.push(
       db
         .update(t.notepads)
@@ -349,12 +351,17 @@ export async function restoreNotepad(db: DB, args: RestoreNotepadArgs) {
     );
   }
 
-  // Restore FTS entries (I7)
+  // Restore FTS entries (I7) - delete existing rows first so re-running restore is idempotent
+  for (const chunk of chunkByParamBudget(matchingIds, 1, 0)) {
+    statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
+  }
   for (const item of matchingNotepads) {
     statements.push(db.run(ftsInsertNowStmt(item.id, item.title, extractPlainText(item.content))));
   }
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 }
 
 export interface PermanentDeleteNotepadArgs {
@@ -381,10 +388,14 @@ export async function permanentDeleteNotepad(db: DB, args: PermanentDeleteNotepa
   const allIds = [args.notepadId, ...descendants];
 
   // Collect cover keys for R2 cleanup
-  const allRows = await db
-    .select({ id: t.notepads.id, coverKey: t.notepads.coverKey })
-    .from(t.notepads)
-    .where(inArray(t.notepads.id, allIds));
+  const allRows: { id: string; coverKey: string | null }[] = [];
+  for (const chunk of chunkInList(allIds)) {
+    const rows = await db
+      .select({ id: t.notepads.id, coverKey: t.notepads.coverKey })
+      .from(t.notepads)
+      .where(inArray(t.notepads.id, chunk));
+    allRows.push(...rows);
+  }
 
   const r2Keys = allRows.map((r) => r.coverKey).filter((k): k is string => Boolean(k));
 
@@ -397,7 +408,9 @@ export async function permanentDeleteNotepad(db: DB, args: PermanentDeleteNotepa
     );
   }
 
-  await runBatch(db, statements);
+  for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+    await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+  }
 
   if (args.storage && r2Keys.length > 0) {
     try {

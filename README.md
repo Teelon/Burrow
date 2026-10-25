@@ -50,7 +50,9 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
 - `pnpm`
 - Cloudflare Wrangler CLI logged into your account (`pnpm exec wrangler login`)
 
-### Local Development (One-Command Setup)
+### Local Development (Unified Node & Worker Runtimes)
+
+Burrow unifies local development on a single SQLite database (`./data/burrow.db`) and local uploads directory (`./data/uploads`), while also supporting Miniflare under `./data`:
 
 1. **Install dependencies:**
 
@@ -58,27 +60,45 @@ Burrow follows an adapter-driven (hexagonal) architecture where core business lo
    pnpm install
    ```
 
-2. **Start local dev server:**
+2. **Run local dev environment (`pnpm dev`):**
    ```bash
    pnpm dev
    ```
-   `pnpm dev` is a complete one-command local setup:
-   - Automatically applies all pending local D1 migrations (`migrations/`).
-   - Injects sensible local development defaults in memory without writing to `.env` or `.dev.vars`.
-   - Prints your active local URLs and `BOOTSTRAP_TOKEN` directly to the console:
-     ```text
-     ======================================================
-     Burrow Local Development
-       Web App (Vite):     http://localhost:3005
-       Worker API:         http://127.0.0.1:8787
-       BOOTSTRAP_TOKEN:    dev-bootstrap-token
-       Email Delivery:     Console log fallback
-     ======================================================
-     ```
-   - Open [http://localhost:3005](http://localhost:3005) and sign up as the initial owner account using the `BOOTSTRAP_TOKEN` printed in your terminal.
+   `pnpm dev` runs the Node server alongside Vite:
+   - Starts Node backend server (Hono + better-sqlite3 + local disk storage) on `http://127.0.0.1:8787`.
+   - Starts Vite frontend dev server (with HMR) on `http://localhost:3005`, proxying `/api` requests to `:8787`.
+   - Uses `./data/burrow.db` for SQLite data and `./data/uploads` for uploaded files.
+   - Automatically creates parent directories and applies all unapplied `migrations/*.sql` on startup.
+   - Prints active URLs and `BOOTSTRAP_TOKEN` to the terminal for owner signup.
+
+3. **Run Cloudflare Worker runtime locally (`pnpm run dev:worker`):**
+   ```bash
+   pnpm run dev:worker
+   ```
+   Runs `wrangler dev --persist-to ./data` on `:8787` alongside Vite on `:3005`. Miniflare D1 and R2 state persists under `./data`. Automatically ensures D1 migrations are applied before launching.
+
+4. **Run compiled production server (`pnpm start`):**
+   ```bash
+   pnpm start
+   ```
+   Runs `dist/server.mjs` on `http://localhost:3005`, serving both API endpoints and production SPA assets from `dist/web` backed by `./data/burrow.db` and `./data/uploads`. (Run `pnpm run build` first if not already compiled).
+
+5. **Reset local database & uploads (`pnpm run reset`):**
+   ```bash
+   pnpm run reset
+   ```
+   Wipes `./data/burrow.db`, clears `./data/uploads`, reapplies all migrations cleanly from scratch, and rebuilds the project bundles (`pnpm run build`).
+
+6. **Tear down local development state (`pnpm run teardown`):**
+   ```bash
+   pnpm run teardown
+   ```
+   Completely removes `./data` (SQLite database, Miniflare state, and uploads) and `./dist` only.
 
 > [!NOTE]
-> The database starts completely clean (0 users, 0 workspaces). If you want demo mock data for testing, run `pnpm seed`. To wipe test data and return to a clean state at any time, run `pnpm run reset`. (Both target your local Miniflare database by default).
+> The database starts completely clean (0 users, 0 workspaces). Sign up via `http://localhost:3005` using the `BOOTSTRAP_TOKEN` printed in your console. If you want demo mock data for testing, run `pnpm seed`. To wipe test data and return to a clean state at any time, run `pnpm run reset`.
+>
+> **D1 Limits & Restore Idempotency**: Cloudflare D1 enforces a limit of 100 bound parameters per SQL statement. All bulk queries and mutations are chunked via parameter budgeting to guarantee safety. Restore operations on large boards and notepad trees are designed to be completely idempotent: if an operation is ever interrupted midway, re-running restore on the item safely finishes restoring remaining cards, notepads, and FTS search indexes without duplicate entries or errors.
 
 ---
 
@@ -247,16 +267,18 @@ TARGET: 💻 LOCAL (Miniflare SQLite)
 
 | Script              | Local Default (`pnpm run <cmd>`)                                      | Remote Production (`-r` or `--remote`)                              |
 | :------------------ | :-------------------------------------------------------------------- | :------------------------------------------------------------------ |
-| `pnpm dev`          | Starts Vite (`:3005`) and Worker (`:8787`) with auto D1 migrations    | _(Local only)_                                                      |
+| `pnpm dev`          | Starts Node server (`:8787`) alongside Vite (`:3005`) with SQLite (`./data/burrow.db`) | _(Local only)_                                                      |
+| `pnpm run dev:worker` | Starts Cloudflare Worker (`:8787`) alongside Vite (`:3005`) via `wrangler dev --persist-to ./data` | _(Local only)_                                                      |
+| `pnpm start`        | Runs compiled production Node server (`dist/server.mjs`) on `:3005`   | —                                                                   |
+| `pnpm run reset`    | Resets `./data/burrow.db`, clears `./data/uploads`, applies migrations, rebuilds | Prompts `"RESET-PRODUCTION"`, then wipes remote D1                  |
+| `pnpm run teardown` | Removes `./data` and `./dist` only                                    | Prompts `"TEARDOWN"`, then deletes Worker, D1, and R2               |
 | `pnpm run setup`    | Installs deps, migrates local D1, prints dev URLs & token             | Provisions remote D1/R2, deploys Worker, uploads secrets            |
 | `pnpm run deploy`   | —                                                                     | Checks, builds, records D1 Time Travel snapshot, migrates & deploys |
-| `pnpm run reset`    | Wipes local D1 database without prompt                                | Prompts `"RESET-PRODUCTION"`, then wipes remote D1                  |
-| `pnpm run teardown` | Cleans `.wrangler` local state and build artifacts                    | Prompts `"TEARDOWN"`, then deletes Worker, D1, and R2               |
 | `pnpm check:data`   | Verifies the 10 data invariants against local D1                      | Verifies the 10 data invariants against remote Cloudflare D1        |
 | `pnpm seed`         | Seeds local D1 database with demo workspace & cards                   | _(Local only to protect production)_                                |
 | `pnpm check`        | Full local CI gate: `tsc -b`, Basalt design guard, ESLint, and Vitest | —                                                                   |
 | `pnpm test`         | Runs all Vitest test suites (supports `pnpm test <path>`)             | —                                                                   |
-| `pnpm build`        | Production Vite bundle to `dist/web`                                  | —                                                                   |
+| `pnpm build`        | Production bundles (Vite to `dist/web` & Node server to `dist/server.mjs`) | —                                                                   |
 | `pnpm logs`         | Streams live Worker logs via `wrangler tail`                          | _(Remote only)_                                                     |
 | `pnpm format`       | Formats all code with Prettier                                        | —                                                                   |
 

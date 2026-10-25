@@ -18,7 +18,7 @@ import {
   type StoredLink,
 } from '../lib/links';
 import { getDescendantIds } from '../lib/tree';
-import { chunkByParamBudget } from '../lib/chunk';
+import { chunkByParamBudget, chunkInList, D1_MAX_BATCH_STATEMENTS } from '../lib/chunk';
 import { extractPlainText } from '../../../../shared/extract';
 import type {
   INotepadRepository,
@@ -106,7 +106,7 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       const now = deletedAt;
 
       const statements: BatchItem<'sqlite'>[] = [];
-      for (const chunk of chunkByParamBudget(allIds, 1, 1)) {
+      for (const chunk of chunkByParamBudget(allIds, 1, 2)) {
         statements.push(
           db
             .update(t.notepads)
@@ -119,7 +119,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
       }
 
-      await runBatch(db, statements);
+      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      }
     },
 
     async restore(id: string, deleteTimestamp: number): Promise<RestoredNotepad[]> {
@@ -159,7 +161,7 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       const matchingIds = matchingNotepads.map((n) => n.id);
 
       const statements: BatchItem<'sqlite'>[] = [];
-      for (const chunk of chunkByParamBudget(matchingIds, 1, 1)) {
+      for (const chunk of chunkByParamBudget(matchingIds, 1, 2)) {
         statements.push(
           db
             .update(t.notepads)
@@ -181,13 +183,20 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         );
       }
 
+      // Delete existing FTS rows for matchingIds first so re-running restore is idempotent
+      for (const chunk of chunkByParamBudget(matchingIds, 1, 0)) {
+        statements.push(db.run(sql`DELETE FROM notepads_fts WHERE notepad_id IN ${chunk}`));
+      }
+
       for (const item of matchingNotepads) {
         statements.push(
           db.run(ftsInsertNowStmt(item.id, item.title, extractPlainText(item.content))),
         );
       }
 
-      await runBatch(db, statements);
+      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      }
 
       return matchingNotepads.map((n) => ({
         id: n.id,
@@ -205,10 +214,14 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       const descendants = await getDescendantIds(db, id);
       const allIds = [id, ...descendants];
 
-      const allRows = await db
-        .select({ id: t.notepads.id, coverKey: t.notepads.coverKey })
-        .from(t.notepads)
-        .where(inArray(t.notepads.id, allIds));
+      const allRows: { id: string; coverKey: string | null }[] = [];
+      for (const chunk of chunkInList(allIds)) {
+        const rows = await db
+          .select({ id: t.notepads.id, coverKey: t.notepads.coverKey })
+          .from(t.notepads)
+          .where(inArray(t.notepads.id, chunk));
+        allRows.push(...rows);
+      }
 
       const statements: BatchItem<'sqlite'>[] = [];
       for (const chunk of chunkByParamBudget(allIds, 1, 0)) {
@@ -219,7 +232,9 @@ export function createNotepadRepository(db: DB): INotepadRepository {
         );
       }
 
-      await runBatch(db, statements);
+      for (let i = 0; i < statements.length; i += D1_MAX_BATCH_STATEMENTS) {
+        await runBatch(db, statements.slice(i, i + D1_MAX_BATCH_STATEMENTS));
+      }
 
       return allRows.map((r) => ({ id: r.id, coverKey: r.coverKey }));
     },
@@ -283,10 +298,14 @@ export function createNotepadRepository(db: DB): INotepadRepository {
     // Tree navigation
     async getChildren(parentIds: string[]): Promise<{ id: string; parentId: string | null }[]> {
       if (parentIds.length === 0) return [];
-      const rows = await db
-        .select({ id: t.notepads.id, parentId: t.notepads.parentId })
-        .from(t.notepads)
-        .where(and(inArray(t.notepads.parentId, parentIds), isNull(t.notepads.deletedAt)));
+      const rows: { id: string; parentId: string | null }[] = [];
+      for (const chunk of chunkInList(parentIds, 1)) {
+        const chunkRows = await db
+          .select({ id: t.notepads.id, parentId: t.notepads.parentId })
+          .from(t.notepads)
+          .where(and(inArray(t.notepads.parentId, chunk), isNull(t.notepads.deletedAt)));
+        rows.push(...chunkRows);
+      }
       return rows.map((r) => ({ id: r.id, parentId: r.parentId }));
     },
 

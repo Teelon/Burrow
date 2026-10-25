@@ -42,7 +42,7 @@ export function isRemoteTarget() {
 
 /** Print a loud, prominent target banner at the start of a command. */
 export function printTargetBanner(action, isRemote) {
-  const target = isRemote ? '☁️  REMOTE (Cloudflare Production)' : '💻 LOCAL (Miniflare SQLite)';
+  const target = isRemote ? '☁️  REMOTE (Cloudflare Production)' : '💻 LOCAL (SQLite ./data)';
   console.log('======================================================');
   console.log(`ACTION: ${action.toUpperCase()}`);
   console.log(`TARGET: ${target}`);

@@ -1,6 +1,7 @@
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { DB } from '../client';
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types';
+import { D1_MAX_BATCH_STATEMENTS, D1_MAX_BOUND_PARAMS } from './chunk';
 
 type D1BindValue = Parameters<D1PreparedStatement['bind']>[number];
 
@@ -62,15 +63,33 @@ export async function runBatch(db: DB, statements: BatchItem<'sqlite'>[]): Promi
   if (first === undefined) {
     throw new Error('runBatch: refusing to execute an empty statement batch');
   }
+  if (statements.length > D1_MAX_BATCH_STATEMENTS) {
+    throw new Error(
+      `D1 limit exceeded: batch has ${statements.length} statements (maximum is ${D1_MAX_BATCH_STATEMENTS})`,
+    );
+  }
   const client = (db as { $client: unknown }).$client;
   if (isD1Client(client)) {
     const batch = [first, ...rest].map((chunk) => {
       const query = compileStatement(chunk);
+      if (query.params.length > D1_MAX_BOUND_PARAMS) {
+        throw new Error(
+          `D1 limit exceeded: statement in batch has ${query.params.length} bound parameters (maximum is ${D1_MAX_BOUND_PARAMS})`,
+        );
+      }
       return client.prepare(query.sql).bind(...(query.params as D1BindValue[]));
     });
     return client.batch(batch);
   }
-  const compiled = [first, ...rest].map(compileStatement);
+  const compiled = [first, ...rest].map((chunk) => {
+    const query = compileStatement(chunk);
+    if (query.params.length > D1_MAX_BOUND_PARAMS) {
+      throw new Error(
+        `D1 limit exceeded: statement in batch has ${query.params.length} bound parameters (maximum is ${D1_MAX_BOUND_PARAMS})`,
+      );
+    }
+    return query;
+  });
   const sqlite = client as {
     prepare(sql: string): { run(...params: unknown[]): unknown };
     transaction<T>(fn: () => T): () => T;
