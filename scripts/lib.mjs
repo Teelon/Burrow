@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv as canonicalLoadEnv } from '../src/server/env.ts';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -149,29 +150,8 @@ export async function smoke(url, { attempts = 3, delayMs = 2000 } = {}) {
 }
 
 /** Load environment variables from .env and .dev.vars if present. */
-export function loadEnv() {
-  const envFiles = [path.join(root, '.env'), path.join(root, '.dev.vars')];
-  for (const file of envFiles) {
-    if (!fs.existsSync(file)) continue;
-    const content = fs.readFileSync(file, 'utf8');
-    for (const rawLine of content.split('\n')) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith('#')) continue;
-      const idx = line.indexOf('=');
-      if (idx === -1) continue;
-      const key = line.slice(0, idx).trim();
-      let val = line.slice(idx + 1).trim();
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      if (process.env[key] === undefined) {
-        process.env[key] = val;
-      }
-    }
-  }
+export function loadEnv(target = process.env) {
+  return canonicalLoadEnv({ rootDir: root, env: target });
 }
 
 /**

@@ -24,6 +24,12 @@
 - **Co-locate unit tests before touching UI.** Any algorithm module must have co-located unit tests (`*.test.ts`) covering all edge cases (empty states, boundaries, cycle/depth limits, invalid IDs) before or alongside UI integration.
 - **Components are thin wrappers.** React components should only be responsible for rendering DOM/tokens and forwarding user gestures/events into the tested pure functions.
 
+## Single Source of Truth & Zero Duplicate Implementations (learned 2026-10-26)
+
+- **Zero duplicate implementations.** Whenever you encounter duplicate or copy-pasted implementations across different execution contexts (e.g. CLI scripts vs server vs worker, `dev` vs `start`, adapters vs handlers), NEVER maintain duplicate copies.
+- **Refactor to pure, functional single implementations.** Extract shared logic into pure, functional modules (deterministic inputs/outputs, minimal side effects) that serve as the single source of truth across all call sites.
+- **Eliminate divergent behavior and delete old code.** Never leave legacy or redundant implementations in place when unifying. All entry points (`pnpm dev`, `pnpm start`, `pnpm dev:worker`, CLI scripts, tests) must consume the exact same canonical code.
+
 ## Parallel Subagent Instruction
 
 - **Always parallelize large tasks.** If a task touches 3+ files, spans multiple independent areas/components, or has separable workstreams (e.g. foundation + feature areas, independent files, research + implementation), split it into parallel `subagent` workers instead of doing it sequentially.

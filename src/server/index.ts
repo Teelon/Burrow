@@ -5,8 +5,10 @@ import path from 'node:path';
 import { createCoreApp } from '../core/app';
 import { loadConfig } from './config';
 import { openNodeDb } from './db';
+import { loadEnv } from './env';
 import type { ServerConfig } from './config';
 
+loadEnv();
 const config = loadConfig();
 
 function isPostgresUrl(url?: string): boolean {
@@ -69,6 +71,9 @@ const server = serve(
     console.log(`  Listening URL:      http://localhost:${info.port}`);
     console.log(
       `  BOOTSTRAP_TOKEN:    ${isProd ? '[REDACTED in production]' : config.BOOTSTRAP_TOKEN}`,
+    );
+    console.log(
+      `  Email Delivery:     ${config.RESEND_API_KEY ? `Resend (${config.EMAIL_FROM || 'default'})` : 'Console log fallback'}`,
     );
     console.log('======================================================\n');
   },
