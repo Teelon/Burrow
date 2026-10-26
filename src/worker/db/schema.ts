@@ -171,6 +171,7 @@ export const notepads = sqliteTable(
   (t) => [
     index('notepads_tree').on(t.projectId, t.parentId, t.position),
     index('notepads_deleted_idx').on(t.projectId, t.deletedAt),
+    index('notepads_project_deleted_position_idx').on(t.projectId, t.deletedAt, t.position),
   ],
 );
 

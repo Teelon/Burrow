@@ -272,6 +272,7 @@ export function createCoreApp(infra: Infrastructure) {
     // which throws if the request body is empty. Fall back gracefully to {} if body is empty.
     const req = c.req.raw;
     const contentType = req.headers.get('content-type') || '';
+    let res: Response;
     if (req.method !== 'GET' && req.method !== 'HEAD' && contentType.includes('application/json')) {
       const cloned = req.clone();
       const text = await cloned.text();
@@ -283,10 +284,20 @@ export function createCoreApp(infra: Infrastructure) {
           body: JSON.stringify({}),
           duplex: 'half',
         } as RequestInit);
-        return auth.handler(fixedReq);
+        res = await auth.handler(fixedReq);
+      } else {
+        res = await auth.handler(req);
       }
+    } else {
+      res = await auth.handler(req);
     }
-    return auth.handler(req);
+
+    if (path.endsWith('/sign-out')) {
+      const userId = c.get('userId');
+      repositories.members.clearCache?.(userId);
+    }
+
+    return res;
   });
 
   app.get('/api/me', requireSession, async (c) => {
@@ -633,6 +644,7 @@ export function createCoreApp(infra: Infrastructure) {
           baseVersion,
           actorId,
           clientId,
+          notepad,
         });
         return c.json(result);
       } catch (err: unknown) {

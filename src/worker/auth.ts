@@ -51,6 +51,12 @@ export function createAuth(db: DB, env: Env['Bindings']) {
     emailAndPassword: {
       enabled: true,
     },
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 60,
+      },
+    },
   });
 }
 

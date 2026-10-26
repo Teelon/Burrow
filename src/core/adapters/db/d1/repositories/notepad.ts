@@ -1,6 +1,6 @@
 import type { DB } from '../client';
 import * as t from '../schema';
-import { and, asc, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { runBatch } from '../lib/batch';
 import { positionAfterLast } from '../lib/ordering';
@@ -12,6 +12,8 @@ import {
   LIVE_CONTENT_COND_PARAMS,
 } from '../lib/search';
 import {
+  diffLinks,
+  filterWorkspaceTargets,
   linkDeleteStatements,
   linkInsertStatements,
   mentionNotificationStatements,
@@ -30,6 +32,7 @@ import type {
   HardDeletedNotepad,
   EditLock,
   MentionNotificationArgs,
+  SaveContentBatchArgs,
 } from '../../../../infrastructure/types';
 
 export const MAX_NOTEPAD_DEPTH = 8;
@@ -282,20 +285,112 @@ export function createNotepadRepository(db: DB): INotepadRepository {
       }
 
       const now = Date.now();
-      await db
+      const result = await db
         .update(t.notepads)
         .set({ content, version: expectedVersion + 1, updatedAt: now })
-        .where(and(eq(t.notepads.id, id), eq(t.notepads.version, expectedVersion)));
+        .where(and(eq(t.notepads.id, id), eq(t.notepads.version, expectedVersion)))
+        .returning({ version: t.notepads.version });
 
-      const [after] = await db
-        .select({ content: t.notepads.content, version: t.notepads.version })
-        .from(t.notepads)
-        .where(eq(t.notepads.id, id));
-
-      if (!after || after.content !== content) {
+      const updatedRow = result[0];
+      if (!updatedRow) {
         throw new Error('version_conflict');
       }
-      return after.version;
+      return updatedRow.version;
+    },
+
+    async saveContentBatch(args: SaveContentBatchArgs): Promise<number> {
+      if (byteLength(args.content) > MAX_CONTENT_BYTES) {
+        throw new Error('content_too_large');
+      }
+
+      const { row, content, baseVersion, actorId, validLinks, previousLinks, now, lock } = args;
+      const newVersion = baseVersion + 1;
+      const cond = liveContentCond(row.id, newVersion, content);
+      const plain = extractPlainText(content);
+      const { added, removed } = diffLinks(previousLinks, validLinks);
+
+      const statements: BatchItem<'sqlite'>[] = [
+        db
+          .update(t.notepads)
+          .set({
+            content,
+            version: sql`${t.notepads.version} + 1`,
+            updatedAt: now,
+          })
+          .where(and(eq(t.notepads.id, row.id), eq(t.notepads.version, baseVersion)))
+          .returning({ version: t.notepads.version }),
+        db.run(ftsDeleteStmt(row.id, cond)),
+        db.run(ftsInsertStmt(row.id, row.title, plain, cond)),
+      ];
+
+      const addedUserIds = added.filter((l) => l.targetType === 'user').map((l) => l.targetId);
+      if (addedUserIds.length > 0) {
+        statements.push(
+          ...mentionNotificationStatements(db, {
+            workspaceId: row.workspaceId,
+            notepadId: row.id,
+            actorId,
+            addedUserIds,
+            cond,
+            condParams: LIVE_CONTENT_COND_PARAMS,
+            now,
+          }),
+        );
+      }
+
+      if (removed.length > 0 || added.length > 0) {
+        statements.push(
+          ...linkDeleteStatements(db, {
+            sourceId: row.id,
+            removed,
+            cond,
+            condParams: LIVE_CONTENT_COND_PARAMS,
+          }),
+          ...linkInsertStatements(db, {
+            sourceId: row.id,
+            added,
+            cond,
+            condParams: LIVE_CONTENT_COND_PARAMS,
+          }),
+        );
+      }
+
+      if (lock) {
+        statements.push(
+          db
+            .insert(t.editLocks)
+            .values({
+              notepadId: row.id,
+              userId: lock.userId,
+              clientId: lock.clientId,
+              expiresAt: lock.expiresAt,
+            })
+            .onConflictDoUpdate({
+              target: t.editLocks.notepadId,
+              set: {
+                userId: lock.userId,
+                clientId: lock.clientId,
+                expiresAt: lock.expiresAt,
+              },
+              where: or(
+                lte(t.editLocks.expiresAt, now),
+                and(eq(t.editLocks.userId, lock.userId), eq(t.editLocks.clientId, lock.clientId)),
+              ),
+            }),
+        );
+      }
+
+      const results = (await runBatch(db, statements)) as any[];
+      const firstRes = results?.[0];
+      const rows = firstRes?.results ?? (Array.isArray(firstRes) ? firstRes : []);
+      if (!rows || rows.length === 0) {
+        throw new Error('version_conflict');
+      }
+      return rows[0]?.version ?? newVersion;
+    },
+
+    async filterWorkspaceTargets(workspaceId: string, links: StoredLink[]): Promise<StoredLink[]> {
+      return filterWorkspaceTargets(db, workspaceId, links);
     },
 
     // Tree navigation

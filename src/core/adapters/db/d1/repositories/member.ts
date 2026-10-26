@@ -4,8 +4,26 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { runBatch } from '../lib/batch';
 import type { IMemberRepository, Member, CreateMemberData } from '../../../../infrastructure/types';
 
+interface MemberCacheEntry {
+  member: Member | null;
+  expiresAt: number;
+}
+const memberCache = new Map<string, MemberCacheEntry>();
+const MEMBER_CACHE_TTL_MS = 45_000;
+
+export function clearMemberCache(userId?: string): void {
+  if (userId) {
+    memberCache.delete(userId);
+  } else {
+    memberCache.clear();
+  }
+}
+
 export function createMemberRepository(db: DB): IMemberRepository {
   return {
+    clearCache(userId?: string): void {
+      clearMemberCache(userId);
+    },
     async listByWorkspace(workspaceId: string): Promise<Member[]> {
       const rows = await db
         .select({
@@ -24,6 +42,12 @@ export function createMemberRepository(db: DB): IMemberRepository {
     },
 
     async findByUserId(workspaceId: string, userId: string): Promise<Member | null> {
+      const now = Date.now();
+      const cached = memberCache.get(userId);
+      if (cached && cached.expiresAt > now && cached.member?.workspaceId === workspaceId) {
+        return cached.member;
+      }
+
       const [row] = await db
         .select({
           workspaceId: t.members.workspaceId,
@@ -37,10 +61,20 @@ export function createMemberRepository(db: DB): IMemberRepository {
         .from(t.members)
         .leftJoin(t.user, eq(t.user.id, t.members.userId))
         .where(and(eq(t.members.workspaceId, workspaceId), eq(t.members.userId, userId)));
-      return row ? mapMember(row) : null;
+      const member = row ? mapMember(row) : null;
+      if (member) {
+        memberCache.set(userId, { member, expiresAt: now + MEMBER_CACHE_TTL_MS });
+      }
+      return member;
     },
 
     async findByUserIdGlobal(userId: string): Promise<Member | null> {
+      const now = Date.now();
+      const cached = memberCache.get(userId);
+      if (cached && cached.expiresAt > now) {
+        return cached.member;
+      }
+
       const [row] = await db
         .select({
           workspaceId: t.members.workspaceId,
@@ -54,7 +88,10 @@ export function createMemberRepository(db: DB): IMemberRepository {
         .from(t.members)
         .leftJoin(t.user, eq(t.user.id, t.members.userId))
         .where(eq(t.members.userId, userId));
-      return row ? mapMember(row) : null;
+
+      const member = row ? mapMember(row) : null;
+      memberCache.set(userId, { member, expiresAt: now + MEMBER_CACHE_TTL_MS });
+      return member;
     },
 
     async findByUserIds(workspaceId: string, userIds: string[]): Promise<{ userId: string }[]> {
@@ -93,6 +130,7 @@ export function createMemberRepository(db: DB): IMemberRepository {
       userId: string,
       role: 'owner' | 'editor' | 'viewer',
     ): Promise<void> {
+      memberCache.delete(userId);
       await db
         .update(t.members)
         .set({ role })
@@ -100,6 +138,7 @@ export function createMemberRepository(db: DB): IMemberRepository {
     },
 
     async remove(workspaceId: string, userId: string): Promise<void> {
+      memberCache.delete(userId);
       // Invariant I10: Removing a member deletes that member's card_assignees rows in the same batch
       await runBatch(db, [
         db.run(sql`
@@ -119,11 +158,13 @@ export function createMemberRepository(db: DB): IMemberRepository {
     },
 
     async create(data: CreateMemberData): Promise<Member> {
+      memberCache.delete(data.userId);
       await db.insert(t.members).values(data);
       return data;
     },
 
     async deleteSessions(userId: string): Promise<void> {
+      memberCache.delete(userId);
       await db.delete(t.session).where(eq(t.session.userId, userId));
     },
 

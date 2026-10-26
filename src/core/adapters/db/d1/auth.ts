@@ -72,6 +72,12 @@ export function createAuthProviderWithDB(db: any, env: EnvBindings): AuthProvide
     emailAndPassword: {
       enabled: true,
     },
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 60,
+      },
+    },
   });
 
   return {

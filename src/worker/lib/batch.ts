@@ -93,13 +93,21 @@ export async function runBatch(
     return query;
   });
   const sqlite = client as {
-    prepare(sql: string): { run(...params: unknown[]): unknown };
+    prepare(sql: string): { run(...params: unknown[]): unknown; all(...params: unknown[]): unknown };
     transaction<T>(fn: () => T): () => T;
   };
+  let firstResults: unknown[] = [];
   sqlite.transaction(() => {
+    let isFirst = true;
     for (const query of compiled) {
-      sqlite.prepare(query.sql).run(...query.params);
+      const stmt = sqlite.prepare(query.sql);
+      if (isFirst && query.sql.toUpperCase().includes('RETURNING')) {
+        firstResults = stmt.all(...query.params) as unknown[];
+      } else {
+        stmt.run(...query.params);
+      }
+      isFirst = false;
     }
   })();
-  return [];
+  return firstResults.length > 0 ? [{ results: firstResults }] : [];
 }

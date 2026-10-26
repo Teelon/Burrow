@@ -146,6 +146,8 @@ export interface INotepadRepository {
   // Content & versioning
   getContent(id: string): Promise<NotepadContent | null>;
   saveContent(id: string, content: string, expectedVersion: number): Promise<number>;
+  saveContentBatch?(args: SaveContentBatchArgs): Promise<number>;
+  filterWorkspaceTargets?(workspaceId: string, links: StoredLink[]): Promise<StoredLink[]>;
   // Tree navigation (for core services)
   getChildren(parentIds: string[]): Promise<{ id: string; parentId: string | null }[]>;
   getParent(id: string): Promise<{ id: string; parentId: string | null } | null>;
@@ -264,6 +266,7 @@ export interface IMemberRepository {
   create(data: CreateMemberData): Promise<Member>;
   deleteSessions(userId: string): Promise<void>;
   listOwners(workspaceId: string): Promise<Member[]>;
+  clearCache?(userId?: string): void;
 }
 
 export interface IInviteRepository {
@@ -698,6 +701,17 @@ export interface MentionNotificationArgs {
   version: number;
   content: string;
   now: number;
+}
+
+export interface SaveContentBatchArgs {
+  row: { id: string; workspaceId: string; title: string };
+  content: string;
+  baseVersion: number;
+  actorId: string;
+  validLinks: StoredLink[];
+  previousLinks: StoredLink[];
+  now: number;
+  lock?: { clientId: string; userId: string; expiresAt: number };
 }
 
 export interface LinkTargetType {

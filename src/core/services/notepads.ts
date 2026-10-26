@@ -66,6 +66,7 @@ export interface SaveContentArgs {
   baseVersion: number;
   actorId: string;
   clientId?: string;
+  notepad?: Notepad | { id: string; workspaceId: string; title: string; version: number };
 }
 
 export interface SaveContentResult {
@@ -405,16 +406,13 @@ export class NotepadService {
   // Content Save
   // ---------------------------------------------------------------------------
   async prepareSave(args: SaveContentArgs): Promise<PreparedSave> {
-    const row = await this.repos.notepads.getContent(args.notepadId);
+    const row = args.notepad ?? (await this.repos.notepads.getContent(args.notepadId));
     if (!row) throw notFound('not_found', 'Notepad not found');
 
     const extraction = extractFromContent(args.content);
-    const validLinks: StoredLink[] = [];
-    for (const link of extraction.links as ExtractedLink[]) {
-      if (await this.repos.notepads.isValidLink(link, row.workspaceId)) {
-        validLinks.push(link);
-      }
-    }
+    const validLinks = this.repos.notepads.filterWorkspaceTargets
+      ? await this.repos.notepads.filterWorkspaceTargets(row.workspaceId, extraction.links as ExtractedLink[])
+      : await this.filterLinksFallback(row.workspaceId, extraction.links as ExtractedLink[]);
     const previousLinks = await this.repos.notepads.listLinks(args.notepadId);
 
     return {
@@ -427,6 +425,16 @@ export class NotepadService {
       validLinks,
       previousLinks,
     };
+  }
+
+  private async filterLinksFallback(workspaceId: string, links: ExtractedLink[]): Promise<StoredLink[]> {
+    const validLinks: StoredLink[] = [];
+    for (const link of links) {
+      if (await this.repos.notepads.isValidLink(link, workspaceId)) {
+        validLinks.push(link);
+      }
+    }
+    return validLinks;
   }
 
   async saveContent(args: SaveContentArgs): Promise<SaveContentResult> {
@@ -463,28 +471,50 @@ export class NotepadService {
       throw conflict('version_conflict', 'This notepad changed elsewhere');
     }
 
-    await this.buildAndExecuteSaveStatements({
-      row: prepared.row,
-      content: args.content,
-      baseVersion: args.baseVersion,
-      actorId: args.actorId,
-      validLinks: prepared.validLinks,
-      previousLinks: prepared.previousLinks,
-      now,
-    });
-
-    const after = await this.repos.notepads.getContent(args.notepadId);
-    if (!after || after.content !== args.content) {
-      throw conflict('version_conflict', 'This notepad changed elsewhere');
+    let newVersion: number;
+    if (this.repos.notepads.saveContentBatch) {
+      try {
+        newVersion = await this.repos.notepads.saveContentBatch({
+          row: prepared.row,
+          content: args.content,
+          baseVersion: args.baseVersion,
+          actorId: args.actorId,
+          validLinks: prepared.validLinks,
+          previousLinks: prepared.previousLinks,
+          now,
+          lock: args.clientId
+            ? {
+                clientId: args.clientId,
+                userId: args.actorId,
+                expiresAt: now + LOCK_TTL_MS,
+              }
+            : undefined,
+        });
+      } catch (err: any) {
+        if (err?.message === 'version_conflict') {
+          throw conflict('version_conflict', 'This notepad changed elsewhere');
+        }
+        throw err;
+      }
+    } else {
+      newVersion = await this.repos.notepads.saveContent(prepared.row.id, args.content, args.baseVersion);
+      await this.buildAndExecuteSaveStatements({
+        row: prepared.row,
+        content: args.content,
+        baseVersion: args.baseVersion,
+        actorId: args.actorId,
+        validLinks: prepared.validLinks,
+        previousLinks: prepared.previousLinks,
+        now,
+      });
+      if (args.clientId) {
+        await this.locks
+          .acquire(args.notepadId, args.actorId, args.clientId, LOCK_TTL_MS)
+          .catch(() => false);
+      }
     }
 
-    if (args.clientId) {
-      await this.locks
-        .acquire(args.notepadId, args.actorId, args.clientId, LOCK_TTL_MS)
-        .catch(() => false);
-    }
-
-    return { version: after.version };
+    return { version: newVersion };
   }
 
   private async buildAndExecuteSaveStatements(args: SaveStatementArgs): Promise<void> {

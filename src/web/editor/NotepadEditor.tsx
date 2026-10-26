@@ -606,7 +606,17 @@ function NotepadEditorInner({
           } | null;
           throw new Error(err?.error?.message || 'Failed to save title');
         }
-        queryClient.invalidateQueries({ queryKey: ['notepads', initialData.projectId] });
+        queryClient.setQueryData<Array<{ id: string; title: string } & Record<string, unknown>>>(
+          ['notepads', initialData.projectId],
+          (old) =>
+            old
+              ? old.map((n) =>
+                  n.id === initialData.id
+                    ? { ...n, title: newTitle.trim() || 'Untitled' }
+                    : n,
+                )
+              : old,
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to save title';
         console.error('Title save error', err);
